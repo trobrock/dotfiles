@@ -30,6 +30,12 @@ task :install do
       link_file(file)
     end
   end
+  mate = `which mate`.chomp
+  puts "Trying to symlink #{mate} -> #{mate}_wait (May need your sudo password)"
+  unless system "ln -s #{mate} #{mate}_wait"
+    puts "Trying with sudo"
+    system "sudo ln -s #{mate} #{mate}_wait"
+  end
 end
 
 def replace_file(file)
