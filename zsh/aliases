@@ -23,11 +23,12 @@ alias changelog='git log `git log -1 --format=%H -- CHANGELOG*`..; cat CHANGELOG
 alias sc='script/console'
 alias ss='script/server'
 alias sg='script/generate'
-alias a='autotest -rails'
+alias a='autospec'
 alias tlog='tail -f log/development.log'
-alias scaffold='script/generate nifty_scaffold'
+alias scaffold='script/generate scaffold'
 alias migrate='rake db:migrate db:test:clone'
 alias rst='touch tmp/restart.txt'
+alias bunicorn='bundle exec unicorn_rails'
 
 # commands starting with % for pasting from web
 alias %=' '
