@@ -28,6 +28,7 @@ alias tlog='tail -f log/development.log'
 alias scaffold='script/generate scaffold'
 alias migrate='rake db:migrate db:test:clone'
 alias rst='touch tmp/restart.txt'
+alias urst="kill -USR2 `ps aux | grep unicorn | grep master |awk '{print $2}'`"
 alias bunicorn='bundle exec unicorn_rails -p 3000'
 
 # commands starting with % for pasting from web
