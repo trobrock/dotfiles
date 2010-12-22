@@ -28,7 +28,7 @@ if (&t_Co > 2 || has("gui_running")) && !exists("syntax_on")
   set hlsearch
 endif
 
-set guifont=Bitstream\ Vera\ Sans\ Mono:h15
+set guifont=Bitstream\ Vera\ Sans\ Mono:h17
 set list
 set listchars=eol:¬
 
@@ -94,8 +94,6 @@ set laststatus=2
 " \ is the leader character
 let mapleader = "\\"
 
-" Edit the README_FOR_APP (makes :R commands work)
-map <Leader>R :e doc/README_FOR_APP<CR>
 
 " Leader shortcuts for Rails commands
 map <Leader>m :Rmodel 
@@ -209,3 +207,4 @@ function! OpenURL()
 endfunction
 map <Leader>w :call OpenURL()<CR>
 
+au BufNewFile,BufRead *.ejs setfiletype html
