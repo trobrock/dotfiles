@@ -14,6 +14,9 @@ set ruler		" show the cursor position all the time
 set showcmd		" display incomplete commands
 set incsearch		" do incremental searching
 
+" Color scheme
+colorscheme sunburst
+
 " Don't use Ex mode, use Q for formatting
 map Q gq
 
@@ -28,9 +31,8 @@ if (&t_Co > 2 || has("gui_running")) && !exists("syntax_on")
   set hlsearch
 endif
 
-set guifont=Bitstream\ Vera\ Sans\ Mono:h17
-set list
-set listchars=eol:¬
+set guifont=Bitstream\ Vera\ Sans\ Mono:h14
+set list listchars=eol:¬,tab:»·,trail:·
 
 " Switch wrap off for everything
 set nowrap
@@ -166,11 +168,6 @@ if executable("ack")
   set grepprg=ack\ -H\ --nogroup\ --nocolor\ --ignore-dir=tmp\ --ignore-dir=coverage
 endif
 
-" Color scheme
-" colorscheme vividchalk
-" highlight NonText guibg=#060606
-" highlight Folded  guibg=#0A0A0A guifg=#9090D0
-
 " Numbers
 set number
 set numberwidth=5
@@ -193,18 +190,5 @@ let g:Tlist_Ctags_Cmd="ctags --exclude='*.js'"
 set tags=./tags;
 
 let g:fuf_splitPathMatching=1
-
-" Open URL
-command -bar -nargs=1 OpenURL :!open <args>
-function! OpenURL()
-  let s:uri = matchstr(getline("."), '[a-z]*:\/\/[^ >,;:]*')
-  echo s:uri
-  if s:uri != ""
-	  exec "!open \"" . s:uri . "\""
-  else
-	  echo "No URI found in line."
-  endif
-endfunction
-map <Leader>w :call OpenURL()<CR>
 
 au BufNewFile,BufRead *.ejs setfiletype html
