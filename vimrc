@@ -51,6 +51,8 @@ if has("autocmd")
   " Enable soft-wrapping for text files
   autocmd FileType text,markdown,html,xhtml,eruby setlocal wrap linebreak nolist
 
+  au BufNewFile,BufRead *.ejs setfiletype html
+
   " Put these in an autocmd group, so that we can delete them easily.
   augroup vimrcEx
   au!
@@ -98,11 +100,11 @@ let mapleader = "\\"
 
 
 " Leader shortcuts for Rails commands
-map <Leader>m :Rmodel 
-map <Leader>c :Rcontroller 
-map <Leader>v :Rview 
-map <Leader>u :Runittest 
-map <Leader>f :Rfunctionaltest 
+" map <Leader>m :Rmodel 
+" map <Leader>c :Rcontroller 
+" map <Leader>v :Rview 
+" map <Leader>u :Runittest 
+" map <Leader>f :Rfunctionaltest 
 map <Leader>tm :RTmodel 
 map <Leader>tc :RTcontroller 
 map <Leader>tv :RTview 
@@ -147,7 +149,7 @@ nmap <F1> <Esc>
 imap <C-F> <C-R>=expand("%")<CR>
 
 " Maps autocomplete to tab
-imap <Tab> <C-N>
+" imap <Tab> <C-N>
 
 imap <C-L> <Space>=><Space>
 
@@ -191,4 +193,6 @@ set tags=./tags;
 
 let g:fuf_splitPathMatching=1
 
-au BufNewFile,BufRead *.ejs setfiletype html
+map <F2> :source $MYVIMRC<CR>:echoe "Vimrc Reloaded!!!"<CR>
+
+set statusline=%<\ %n:%f\ %y\ %{fugitive#statusline()}\ %m%r%=%-35.(line:\ %l\ of\ %L,\ col:\ %c%V\ (%P)%)
