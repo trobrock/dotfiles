@@ -197,3 +197,5 @@ map <F2> :source $MYVIMRC<CR>:echoe "Vimrc Reloaded!!!"<CR>
 
 set statusline=%<\ %n:%f\ %y\ %{fugitive#statusline()}\ %m%r%=%-35.(line:\ %l\ of\ %L,\ col:\ %c%V\ (%P)%)
 set wildignore+=**/vendor/**,**/log/**,*.orig,*.swp
+
+command W w !sudo tee % > /dev/null
