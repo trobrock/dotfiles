@@ -4,6 +4,7 @@ require 'erb'
 desc "install the dot files into user's home directory"
 task :install do
   replace_all = false
+  system("vim/install.sh")
   Dir['*'].each do |file|
     next if %w[Rakefile README.rdoc LICENSE].include? file
     
