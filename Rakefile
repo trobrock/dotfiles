@@ -4,6 +4,7 @@ require 'erb'
 desc "install the dot files into user's home directory"
 task :install do
   replace_all = false
+  system("vim/install.sh")
   Dir['*'].each do |file|
     next if %w[Rakefile README.rdoc LICENSE].include? file
     
@@ -29,6 +30,12 @@ task :install do
     else
       link_file(file)
     end
+  end
+  mate = `which mate`.chomp
+  puts "Trying to symlink #{mate} -> #{mate}_wait (May need your sudo password)"
+  unless system "ln -s #{mate} #{mate}_wait"
+    puts "Trying with sudo"
+    system "sudo ln -s #{mate} #{mate}_wait"
   end
 end
 

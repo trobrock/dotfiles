@@ -16,6 +16,7 @@ alias gca='git commit -a'
 alias gco='git checkout'
 alias gb='git branch'
 alias gs='git status'
+alias gf='git fetch -p'
 alias grm="git status | grep deleted | awk '{print \$3}' | xargs git rm"
 alias changelog='git log `git log -1 --format=%H -- CHANGELOG*`..; cat CHANGELOG*'
 
@@ -23,11 +24,17 @@ alias changelog='git log `git log -1 --format=%H -- CHANGELOG*`..; cat CHANGELOG
 alias sc='script/console'
 alias ss='script/server'
 alias sg='script/generate'
-alias a='autotest -rails'
+alias a='autospec'
 alias tlog='tail -f log/development.log'
-alias scaffold='script/generate nifty_scaffold'
+alias scaffold='script/generate scaffold'
 alias migrate='rake db:migrate db:test:clone'
+alias migrater='rake db:migrate:reset db:fixtures:load db:test:clone'
+alias fixtures='rake db:fixtures:load'
 alias rst='touch tmp/restart.txt'
+alias urst="kill -USR2 `ps aux | grep unicorn | grep master |awk '{print $2}'`"
+alias bunicorn='bundle exec unicorn_rails -p 3000'
 
 # commands starting with % for pasting from web
 alias %=' '
+
+# Custom
