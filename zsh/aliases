@@ -20,6 +20,7 @@ alias gf='git fetch -p'
 alias grm="git status | grep deleted | awk '{print \$3}' | xargs git rm"
 alias changelog='git log `git log -1 --format=%H -- CHANGELOG*`..; cat CHANGELOG*'
 alias gm='git merge --no-ff'
+alias gmff='git merge'
 
 # rails
 alias sc='script/console'
