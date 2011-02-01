@@ -38,5 +38,3 @@ alias bunicorn='bundle exec unicorn_rails -p 3000'
 
 # commands starting with % for pasting from web
 alias %=' '
-
-# Custom
