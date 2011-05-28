@@ -7,6 +7,9 @@ alias l="ls -lAh"
 alias ll="ls -l"
 alias la='ls -A'
 
+# mongo
+alias mongod='mongod --fork --logpath /var/log/mongod/mongod.log --logappend'
+
 # git
 alias gl='git pull'
 alias gp='git push'
@@ -36,7 +39,7 @@ alias migrater='rake db:migrate:reset ; rake db:fixtures:load ; rake db:test:clo
 alias fixtures='rake db:fixtures:load'
 alias rst='touch tmp/restart.txt'
 alias urst="kill -USR2 `ps aux | grep unicorn | grep master |awk '{print $2}'`"
-alias bunicorn='bundle exec unicorn_rails -p 3000'
+alias bunicorn='bundle exec unicorn_rails -p 3000 -c ~/.local_unicorn_config.rb'
 
 # commands starting with % for pasting from web
 alias %=' '
