@@ -10,11 +10,15 @@ alias la='ls -A'
 # mongo
 alias mongod='mongod --fork --logpath /var/log/mongod/mongod.log --logappend'
 
+# bundler
+alias be='bundle exec'
+
 # git
 alias gl='git pull'
 alias gp='git push'
 alias gd='git diff'
 alias gc='git commit'
+alias gcn='git commit --no-verify'
 alias gca='git commit -a'
 alias gco='git checkout'
 alias gb='git branch'
@@ -24,6 +28,7 @@ alias grm="git status | grep deleted | awk '{print \$3}' | xargs git rm"
 alias changelog='git log `git log -1 --format=%H -- CHANGELOG*`..; cat CHANGELOG*'
 alias gm='git merge --no-ff'
 alias gmff='git merge'
+alias gcp='git cherry-pick'
 
 # rails
 alias sc='script/console'
