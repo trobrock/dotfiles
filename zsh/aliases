@@ -7,6 +7,9 @@ alias l="ls -lAh"
 alias ll="ls -l"
 alias la='ls -A'
 
+# top
+alias top='top -s1 -o cpu -R -F'
+
 # mongo
 alias mongod='mongod --fork --logpath /var/log/mongod/mongod.log --logappend'
 
@@ -15,6 +18,7 @@ alias be='bundle exec'
 
 # git
 alias gl='git pull'
+alias gld="gl | grep Updating | cut -d ' ' -f2 | xargs git diff"
 alias gp='git push'
 alias gd='git diff'
 alias gc='git commit'
