@@ -31,9 +31,11 @@ pushd ~/bin > /dev/null
 echo -e "\tDownloading https://github.com/stripe/stripe-cli/releases/download/v$STRIPE_CLI_VERSION/stripe_${STRIPE_CLI_VERSION}_linux_x86_64.tar.gz"
 curl -L --silent "https://github.com/stripe/stripe-cli/releases/download/v$STRIPE_CLI_VERSION/stripe_${STRIPE_CLI_VERSION}_linux_x86_64.tar.gz" | tar xzv
 popd > /dev/null
-mkd /workspaces/.codespaces/.persistedshare/stripe
 mkd $HOME/.config/stripe
-ln -s /workspaces/.codespaces/.persistedshare/stripe/config.toml $HOME/.config/stripe/config.toml
+if [ -d /workspaces/.codespaces ]; then
+  mkd /workspaces/.codespaces/.persistedshare/stripe
+  ln -s /workspaces/.codespaces/.persistedshare/stripe/config.toml $HOME/.config/stripe/config.toml
+fi
 
 # Install diff-so-fancy
 log "Installing diff-so-fancy"
