@@ -44,6 +44,7 @@ ln -s ~/usr/diff-so-fancy/diff-so-fancy ~/bin/diff-so-fancy
 
 # Install direnv
 log "Installing direnv"
+export bin_path=$HOME/bin
 curl -sfL https://direnv.net/install.sh | bash
 
 # Link dotfiles and directories
