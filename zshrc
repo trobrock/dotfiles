@@ -5,7 +5,7 @@ source ~/.zsh/completion.zsh
 source ~/.zsh/aliases.zsh
 
 export EDITOR="$HOME/code_wait"
-export PATH="./bin:$PATH"
+export PATH="$HOME/bin:./bin:$PATH"
 
 eval "$(direnv hook zsh)"
 # eval "$(rbenv init - zsh)"
