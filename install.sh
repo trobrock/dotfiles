@@ -42,6 +42,10 @@ log "Installing diff-so-fancy"
 git clone https://github.com/so-fancy/diff-so-fancy.git ~/usr/diff-so-fancy
 ln -s ~/usr/diff-so-fancy/diff-so-fancy ~/bin/diff-so-fancy
 
+# Install direnv
+log "Installing direnv"
+curl -sfL https://direnv.net/install.sh | bash
+
 # Link dotfiles and directories
 log "Linking dotfiles and directories"
 link zsh

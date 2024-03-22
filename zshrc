@@ -8,4 +8,4 @@ export EDITOR="$HOME/code_wait"
 export PATH="./bin:$PATH"
 
 eval "$(direnv hook zsh)"
-eval "$(rbenv init - zsh)"
+# eval "$(rbenv init - zsh)"
