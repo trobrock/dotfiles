@@ -15,6 +15,7 @@ source ~/.zsh/history.zsh
 source ~/.zsh/completion.zsh
 source ~/.zsh/aliases.zsh
 
+eval "$(zoxide init --cmd cd zsh)"
 source <(fzf --zsh)
 eval "$(direnv hook zsh)"
 eval "$(rbenv init - zsh)"
