@@ -1,10 +1,10 @@
 alias reload='exec $SHELL -l'
-alias zrc='$EDITOR ~/.zshrc'
-alias zrcc='$EDITOR ~/.oh-my-zsh/custom/trobrock.zsh'
 
-export THOR_MERGE="opendiff"
-export AWS_PAGER=""
+alias ls='lsd'
+alias ll='lsd -lah'
+alias lt='lsd -lah -I .git --tree'
 
+alias lg='lazygit'
 alias gaa='git add -A'
 alias gb='git branch'
 alias gbc='git branch --merged | grep -v main | xargs git branch -d'
@@ -14,6 +14,7 @@ alias gd='git diff'
 alias gdc='git diff --cached'
 alias gf='git fetch -p'
 alias gl='git pull'
+alias gld='git pull && gbc'
 alias glm='git pull origin main'
 alias gm='git merge --no-ff'
 alias gm='git merge --no-ff'
@@ -29,6 +30,12 @@ alias clean='find ./**/*.orig | xargs rm'
 alias b='bundle install'
 alias ip='curl http://ipv4.icanhazip.com'
 alias cov="open coverage/index.html"
+
+alias update='brew update && brew upgrade'
+
+alias t='bin/rails test'
+alias ts='bin/rails test:system'
+alias ta='bin/rails test && bin/rails test:system'
 
 function gbisect() {
   good=$1

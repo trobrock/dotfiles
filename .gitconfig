@@ -1,0 +1,28 @@
+[core]
+  excludesfile = /Users/trobrock/.gitignore
+  pager = diff-so-fancy | less --tabs=4 -RFX
+  editor = code --wait
+[user]
+  name = Trae Robrock
+  email = trobrock@gmail.com
+[alias]
+  ls = log --color --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+  lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+[diff-so-fancy]
+  stripLeadingSymbols = false
+[filter "lfs"]
+  process = git-lfs filter-process
+  required = true
+  clean = git-lfs clean -- %f
+  smudge = git-lfs smudge -- %f
+[merge]
+  tool = vscode
+[mergetool "vscode"]
+  cmd = code --wait $MERGED
+[mergetool]
+  prompt = false
+  keepBackup = false
+[pull]
+  rebase = false
+[init]
+  defaultBranch = main
