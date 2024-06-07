@@ -1,0 +1,3 @@
+return {
+	"realprogrammersusevim/readability.nvim",
+}
