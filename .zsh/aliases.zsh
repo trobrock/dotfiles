@@ -1,8 +1,10 @@
 alias reload='exec $SHELL -l'
 
-alias ls='lsd'
-alias ll='lsd -lah'
-alias lt='lsd -lah -I .git --tree'
+alias vim="nvim"
+
+alias ls='eza'
+alias ll='eza -lah'
+alias lt='eza -lah -I .git --tree'
 
 alias lg='lazygit'
 alias gaa='git add -A'
