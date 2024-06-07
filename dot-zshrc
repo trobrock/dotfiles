@@ -11,7 +11,8 @@ zinit light zsh-users/zsh-autosuggestions
 zinit light Aloxaf/fzf-tab
 
 # Key bindings for autosuggestions
-bindkey '^ ' autosuggest-execute # Ctrl+Space to run the command
+bindkey '^\r' autosuggest-execute # Ctrl+Enter to run the command
+bindkey '^ ' autosuggest-accept # Ctrl+Space to accept the command
 
 source ~/.zsh/prompt.zsh
 source ~/.zsh/history.zsh
