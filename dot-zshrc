@@ -10,6 +10,9 @@ zinit light zsh-users/zsh-completions
 zinit light zsh-users/zsh-autosuggestions
 zinit light Aloxaf/fzf-tab
 
+# Key bindings for autosuggestions
+bindkey '^ ' autosuggest-execute # Ctrl+Space to run the command
+
 source ~/.zsh/prompt.zsh
 source ~/.zsh/history.zsh
 source ~/.zsh/completion.zsh
