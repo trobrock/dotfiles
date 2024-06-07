@@ -1,7 +1,6 @@
 [core]
   excludesfile = /Users/trobrock/.gitignore
   pager = diff-so-fancy | less --tabs=4 -RFX
-  editor = code --wait
 [user]
   name = Trae Robrock
   email = trobrock@gmail.com
@@ -15,10 +14,6 @@
   required = true
   clean = git-lfs clean -- %f
   smudge = git-lfs smudge -- %f
-[merge]
-  tool = vscode
-[mergetool "vscode"]
-  cmd = code --wait $MERGED
 [mergetool]
   prompt = false
   keepBackup = false
