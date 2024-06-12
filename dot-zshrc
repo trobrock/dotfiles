@@ -20,7 +20,6 @@ source ~/.zsh/aliases.zsh
 
 eval "$(zoxide init --cmd cd zsh)"
 source <(fzf --zsh)
-eval "$($(brew --prefix)/bin/mise activate zsh)"
 
 export EDITOR="nvim"
 export PATH="./bin:$PATH"
