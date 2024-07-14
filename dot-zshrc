@@ -11,7 +11,7 @@ zinit light zsh-users/zsh-autosuggestions
 zinit light Aloxaf/fzf-tab
 
 # Key bindings for autosuggestions
-bindkey '^ ' autosuggest-accept # Ctrl+Space to accept the command
+bindkey '^n' autosuggest-accept # Ctrl+Space to accept the command
 
 source ~/.zsh/prompt.zsh
 source ~/.zsh/history.zsh
