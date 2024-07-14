@@ -15,5 +15,8 @@ vim.opt.clipboard = "unnamedplus"
 vim.cmd("set number")
 vim.cmd("set relativenumber")
 
+-- No wrapping
+vim.opt.wrap = false
+
 vim.keymap.set("n", "]<Space>", "o<Esc>", { desc = "New line below" })
 vim.keymap.set("n", "[<Space>", "O<Esc>", { desc = "New line above" })
