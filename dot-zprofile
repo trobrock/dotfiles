@@ -3,9 +3,9 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 export XDG_CONFIG_HOME="$HOME/.config"
 export PATH="$HOME/.local/bin:$PATH"
 
-eval "$(~/.local/bin/mise activate zsh)"
-
 typeset -U PATH # Clean up dupes
+
+eval "$(~/.local/bin/mise activate zsh)"
 
 # Added by OrbStack: command-line tools and integration
 source ~/.orbstack/shell/init.zsh 2>/dev/null || :
