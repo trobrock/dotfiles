@@ -25,9 +25,7 @@ return {
 			})
 			lspconfig.rubocop.setup({
 				on_attach = require("lsp-format").on_attach,
-			})
-			lspconfig.ruby_lsp.setup({
-				on_attach = require("lsp-format").on_attach,
+				cmd = { "mise", "exec", "ruby", "--", "bundle", "exec", "rubocop", "--lsp" },
 			})
 		end,
 	},
