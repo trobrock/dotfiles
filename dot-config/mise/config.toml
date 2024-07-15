@@ -1,3 +1,4 @@
 [tools]
 ruby = "3.3.4"
 terraform = "1.8.5"
+node = "latest"
