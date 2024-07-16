@@ -18,8 +18,8 @@ return {
 	end,
   -- stylua: ignore
   keys = {
-    { '<leader>r',  function() require("neotest").run.run() end,                   desc = 'Run current test' },
-    { '<leader>R',  function() require("neotest").run.run(vim.fn.expand("%")) end, desc = 'Run current test' },
+    { '<leader>tr', function() require("neotest").run.run() end,                   desc = 'Run current test' },
+    { '<leader>tR', function() require("neotest").run.run(vim.fn.expand("%")) end, desc = 'Run current test file' },
     { '<leader>to', function() require("neotest").output_panel.toggle() end,       desc = 'Toggle test output window' }
   }
 ,
