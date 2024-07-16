@@ -22,6 +22,7 @@ return {
       { "<leader><space>", function() require("telescope.builtin").find_files({ follow = true }) end, desc = "Find Files (Root Dir)", },
       { "<leader>:",       "<cmd>Telescope command_history<cr>",                                      desc = "Command History" },
       { "<leader>/",       function() require("telescope.builtin").live_grep() end,                   desc = "Grep (Root Dir)", },
+      { "<leader>#",       "<cmd>Telescope grep_string<cr>",                                          desc = "Grep (word under cursor)", },
     },
 	},
 	{
