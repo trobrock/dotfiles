@@ -45,3 +45,6 @@ alias b='bundle install'
 alias t='bin/rails test'
 alias ts='bin/rails test:system'
 alias ta='bin/rails test && bin/rails test:system'
+
+# huntress
+alias ha='aws-vault exec huntress --'
