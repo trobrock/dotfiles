@@ -24,6 +24,11 @@ return {
         require("neo-tree.command").execute({ source = "buffers", toggle = true })
       end,
       desc = "Buffer Explorer",
-    }
+    },
+    {
+      "<leader>fr",
+      ":Neotree reveal<CR>",
+      desc = "Reveal in File Explorer",
+    },
   },
 }

@@ -6,7 +6,7 @@ return {
 	{
 		"williamboman/mason-lspconfig.nvim",
 		opts = {
-			ensure_installed = { "lua_ls", "tsserver", "rubocop", "ruby_lsp" },
+			ensure_installed = { "lua_ls", "tsserver", "rubocop", "ruby_lsp", "eslint" },
 		},
 	},
 	{
@@ -21,6 +21,9 @@ return {
 				on_attach = require("lsp-format").on_attach,
 			})
 			lspconfig.tsserver.setup({
+				on_attach = require("lsp-format").on_attach,
+			})
+			lspconfig.eslint.setup({
 				on_attach = require("lsp-format").on_attach,
 			})
 			lspconfig.rubocop.setup({
