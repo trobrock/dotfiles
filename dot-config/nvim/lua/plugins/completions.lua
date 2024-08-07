@@ -6,25 +6,6 @@ return {
 		end,
 	},
 	{
-		"zbirenbaum/copilot.lua",
-		build = ":Copilot auth",
-		opts = {
-			suggestion = { enabled = false },
-			panel = { enabled = false },
-			filetypes = {
-				markdown = true,
-				help = true,
-				yaml = true,
-			},
-		},
-	},
-	{
-		"zbirenbaum/copilot-cmp",
-		config = function()
-			require("copilot_cmp").setup({})
-		end,
-	},
-	{
 		"hrsh7th/nvim-cmp",
 		dependencies = {
 			"hrsh7th/cmp-buffer",
