@@ -5,7 +5,5 @@ export PATH="$HOME/.local/bin:$PATH"
 
 typeset -U PATH # Clean up dupes
 
-eval "$(~/.local/bin/mise activate zsh)"
-
 # Added by OrbStack: command-line tools and integration
 source ~/.orbstack/shell/init.zsh 2>/dev/null || :

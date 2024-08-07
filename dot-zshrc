@@ -23,3 +23,5 @@ source <(fzf --zsh)
 
 export EDITOR="nvim"
 export PATH="./bin:$PATH"
+
+eval "$(~/.local/bin/mise activate zsh)"
