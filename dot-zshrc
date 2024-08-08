@@ -18,10 +18,9 @@ source ~/.zsh/history.zsh
 source ~/.zsh/completion.zsh
 source ~/.zsh/aliases.zsh
 
+eval "$(direnv hook zsh)"
 eval "$(zoxide init --cmd cd zsh)"
 source <(fzf --zsh)
 
 export EDITOR="nvim"
 export PATH="./bin:$PATH"
-
-eval "$(~/.local/bin/mise activate zsh)"
