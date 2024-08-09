@@ -2,6 +2,8 @@ git:
   paging:
     colorArg: always
     pager: diff-so-fancy
+gui:
+  nerdFontsVersion: "3"
 customCommands:
   - key: "<c-r>"
     command: "gh pr create --fill --web"
