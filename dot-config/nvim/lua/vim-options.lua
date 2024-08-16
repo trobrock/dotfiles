@@ -23,3 +23,6 @@ vim.keymap.set("n", "[<Space>", "O<Esc>", { desc = "New line above" })
 vim.keymap.set("n", "<C-t>", ":tabnew<CR>", { desc = "New tab" })
 vim.keymap.set("n", "]t", ":tabnext<CR>", { desc = "Next tab" })
 vim.keymap.set("n", "[t", ":tabprev<CR>", { desc = "Previous tab" })
+
+-- vim autocmd on focus lost
+vim.cmd("autocmd BufLeave,FocusLost * silent! wall")
