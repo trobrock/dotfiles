@@ -37,6 +37,10 @@ return {
       local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
       require("null-ls").setup({
         sources = {
+          null_ls.builtins.diagnostics.terraform_validate,
+          null_ls.builtins.formatting.terraform_fmt,
+          null_ls.builtins.formatting.xmllint,
+          null_ls.builtins.diagnostics.yamllint,
           null_ls.builtins.diagnostics.haml_lint,
           null_ls.builtins.diagnostics.rubocop.with({
             command = "bundle",

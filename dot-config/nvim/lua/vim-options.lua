@@ -26,3 +26,6 @@ vim.keymap.set("n", "[t", ":tabprev<CR>", { desc = "Previous tab" })
 
 -- vim autocmd on focus lost
 vim.cmd("autocmd BufLeave,FocusLost * silent! wall")
+
+-- enable local .nvim.lua config
+vim.opt.exrc = true

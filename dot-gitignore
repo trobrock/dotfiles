@@ -2,3 +2,4 @@
 .bin/
 .envrc
 .vscode/
+.nvim.lua
