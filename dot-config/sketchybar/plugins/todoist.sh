@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+todoist sync
 count=$(todoist list --filter "(today | overdue)" | wc -l | tr -d '[:space:]')
 overdue_count=$(todoist list --filter "overdue" | wc -l | tr -d '[:space:]')
 sketchybar --set $NAME label="$count"
