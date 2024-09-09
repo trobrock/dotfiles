@@ -3,6 +3,7 @@
 sketchybar \
            --add item todoist.today right \
            --set      todoist.today icon= \
+                                    icon.color=0xff737aa2 \
                                     icon.padding_left=10 \
                                     label="0" \
                                     label.padding_right=10 \
