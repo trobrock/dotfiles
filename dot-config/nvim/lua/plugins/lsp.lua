@@ -41,6 +41,7 @@ return {
           null_ls.builtins.diagnostics.terraform_validate,
           null_ls.builtins.formatting.terraform_fmt,
           null_ls.builtins.formatting.xmllint,
+          null_ls.builtins.formatting.gofmt,
           null_ls.builtins.diagnostics.yamllint,
           null_ls.builtins.diagnostics.haml_lint,
           null_ls.builtins.diagnostics.rubocop.with({
