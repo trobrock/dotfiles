@@ -2,7 +2,9 @@
 
 PID=$(pgrep -f "/usr/bin/caffeinate")
 if [ -n "$PID" ]; then
-  kill "$PID"
+  for pid in $(pgrep -f "/usr/bin/caffeinate"); do
+    kill "$pid"
+  done
 else
   /usr/bin/caffeinate -dmi &
 fi
