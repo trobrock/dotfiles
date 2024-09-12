@@ -63,7 +63,7 @@ inner.horizontal = 10
 inner.vertical =   10
 outer.left =       10
 outer.bottom =     10
-outer.top =        [{ monitor.main = 40 }, 10]
+outer.top =        [{ monitor.main = 45 }, 10]
 outer.right =      10
 
 # 'main' binding mode declaration
@@ -217,3 +217,11 @@ run = 'move-node-to-workspace 5'
 [[on-window-detected]]
 if.app-id = 'com.todoist.mac.Todoist'
 run = 'move-node-to-workspace 5'
+
+[[on-window-detected]]
+if.app-id = 'com.tinyspeck.slackmacgap'
+run = 'move-node-to-workspace S'
+
+[[on-window-detected]]
+if.app-id = 'com.basecamp.basecamp3'
+run = 'move-node-to-workspace B'
