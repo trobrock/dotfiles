@@ -46,6 +46,7 @@ source "$ITEM_DIR/clock.sh"
 source "$ITEM_DIR/volume.sh"
 source "$ITEM_DIR/battery.sh"
 source "$ITEM_DIR/todoist.sh"
+source "$ITEM_DIR/github.sh"
 
 sketchybar --add bracket status_right clock volume battery \
            --set         status_right background.color=0x44000000 \

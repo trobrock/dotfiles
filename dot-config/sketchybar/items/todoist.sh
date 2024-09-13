@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 sketchybar \
            --add item todoist.today right \
            --set      todoist.today icon= \
@@ -12,5 +10,5 @@ sketchybar \
                                     background.height=20 \
                                     update_freq=300 \
                                     script="$PLUGIN_DIR/todoist.sh" \
-                                    click_script="open -a Todoist" \
+                                    click_script="open -a Todoist"
 
