@@ -1,29 +1,21 @@
 #!/usr/bin/env bash
 
-if [ -z "$FOCUSED_WORKSPACE" ]; then
-  FOCUSED_WORKSPACE=$(aerospace list-workspaces --focused)
-fi
+FOCUSED_WORKSPACE=${FOCUSED_WORKSPACE:-$(aerospace list-workspaces --focused)}
 
 windows=$(aerospace list-windows --all --format "%{workspace},%{window-id}")
+mapfile -t sids < <(sketchybar --query aerospace | jq -r '.bracket[]')
 
 commands=()
-for sid in $(sketchybar --query aerospace | jq -r '.bracket[]'); do
+for sid in "${sids[@]}"; do
   sid=${sid#space.}
-  window_count=$(echo "$windows" | grep "^$sid," | wc -l)
+  window_count=$(echo "$windows" | grep -c "^$sid,")
 
-  if [ $window_count -eq 0 ] && [ "$FOCUSED_WORKSPACE" != "$sid" ]; then
-    # No windows in this space, hide it
-    commands+=(--set space.$sid drawing=off)
+  if [ "$window_count" -eq 0 ] && [ "$FOCUSED_WORKSPACE" != "$sid" ]; then
+    commands+=(--set "space.$sid" drawing=off)
   else
-    # Windows in this space, show it
-    if [ "$FOCUSED_WORKSPACE" = "$sid" ]; then
-      commands+=(--set space.$sid drawing=on label.color=0xffc3e88d)
-    else
-      commands+=(--set space.$sid drawing=on label.color=0xffffffff)
-    fi
+    label_color=$([[ "$FOCUSED_WORKSPACE" = "$sid" ]] && echo "0xffc3e88d" || echo "0xffffffff")
+    commands+=(--set "space.$sid" drawing=on label.color="$label_color")
   fi
 done
 
-if [ ! -z "$commands" ]; then
-  sketchybar "${commands[@]}"
-fi
+[ "${#commands[@]}" -gt 0 ] && sketchybar "${commands[@]}"
