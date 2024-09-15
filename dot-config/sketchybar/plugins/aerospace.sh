@@ -13,8 +13,11 @@ for sid in "${sids[@]}"; do
   if [ "$window_count" -eq 0 ] && [ "$FOCUSED_WORKSPACE" != "$sid" ]; then
     commands+=(--set "space.$sid" drawing=off)
   else
-    label_color=$([[ "$FOCUSED_WORKSPACE" = "$sid" ]] && echo "0xffc3e88d" || echo "0xffffffff")
-    commands+=(--set "space.$sid" drawing=on label.color="$label_color")
+    if [ "$FOCUSED_WORKSPACE" = "$sid" ]; then
+      commands+=(--animate sin 30 --set "space.$sid" drawing=on background.color=0x66c3e88d)
+    else
+      commands+=(--animate sin 30 --set "space.$sid" drawing=on background.color=0x00000000)
+    fi
   fi
 done
 

@@ -8,6 +8,27 @@ PLUGIN_DIR="$CONFIG_DIR/plugins"
 SCRIPT_DIR="$CONFIG_DIR/scripts"
 FONT_FAMILY="CaskaydiaCove Nerd Font"
 
+BACKGROUND_COLOR=0x44000000
+BACKGROUND_CORNER_RADIUS=3
+BACKGROUND_HEIGHT=25
+BACKGROUND_OPTIONS=(
+  background.color="$BACKGROUND_COLOR"
+  background.corner_radius="$BACKGROUND_CORNER_RADIUS"
+  background.height="$BACKGROUND_HEIGHT"
+)
+
+
+BRACKET_SPACER_WIDTH=10
+BRACKET_LEFT_PADDING=5
+BRACKET_RIGHT_PADDING=5
+BRACKET_SEPERATOR_PADDING=5
+function spacer() {
+  sketchybar --add item spacer_${1} right \
+             --set      spacer_${1} icon.drawing=off \
+                                    label.drawing=off \
+                                    width=$BRACKET_SPACER_WIDTH
+}
+
 ##### Bar Appearance #####
 # Configuring the general appearance of the bar.
 # These are only some of the options available. For all options see:
@@ -15,7 +36,7 @@ FONT_FAMILY="CaskaydiaCove Nerd Font"
 # If you are looking for other colors, see the color picker:
 # https://felixkratz.github.io/SketchyBar/config/tricks#color-picker
 
-sketchybar --bar position=top height=33 blur_radius=30 color=0x40000000
+sketchybar --bar position=top height=39 blur_radius=30 color=0x40000000
 
 ##### Changing Defaults #####
 # We now change some default values, which are applied to all further items.
@@ -42,16 +63,11 @@ source "$ITEM_DIR/coffee.sh"
 source "$ITEM_DIR/aerospace.sh"
 
 # Right Items
-source "$ITEM_DIR/clock.sh"
-source "$ITEM_DIR/volume.sh"
-source "$ITEM_DIR/battery.sh"
+source "$ITEM_DIR/system_info.sh"
+spacer "one"
 source "$ITEM_DIR/todoist.sh"
+spacer "two"
 source "$ITEM_DIR/github.sh"
-
-sketchybar --add bracket status_right clock volume battery \
-           --set         status_right background.color=0x44000000 \
-                                      background.corner_radius=3  \
-                                      background.height=20
 
 ##### Force all scripts to run the first time (never do this in a script) #####
 sketchybar --update

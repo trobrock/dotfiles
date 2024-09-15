@@ -2,13 +2,12 @@ sketchybar \
            --add item todoist.today right \
            --set      todoist.today icon= \
                                     icon.color=0xff737aa2 \
-                                    icon.padding_left=10 \
                                     label="0" \
-                                    label.padding_right=10 \
-                                    background.color=0x44000000 \
-                                    background.corner_radius=3  \
-                                    background.height=20 \
+                                    icon.padding_left=$BRACKET_LEFT_PADDING \
+                                    label.padding_right=$BRACKET_RIGHT_PADDING \
                                     update_freq=300 \
                                     script="$PLUGIN_DIR/todoist.sh" \
-                                    click_script="open -a Todoist"
+                                    click_script="open -a Todoist" \
+           --add bracket todoist '/todoist\./' \
+           --set         todoist ${BACKGROUND_OPTIONS[@]}
 
