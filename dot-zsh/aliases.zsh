@@ -10,6 +10,9 @@ alias ls='eza'
 alias ll='eza -lah'
 alias lt='eza -lah -I .git --tree'
 
+# ssh
+alias ssh='kitten ssh'
+
 # git
 alias lg='lazygit'
 alias gaa='git add -A'
