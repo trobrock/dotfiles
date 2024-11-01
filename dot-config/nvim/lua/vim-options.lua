@@ -21,11 +21,20 @@ vim.opt.wrap = false
 vim.keymap.set("n", "]<Space>", "o<Esc>", { desc = "New line below" })
 vim.keymap.set("n", "[<Space>", "O<Esc>", { desc = "New line above" })
 vim.keymap.set("n", "<C-t>", ":tabnew<CR>", { desc = "New tab" })
-vim.keymap.set("n", "]t", ":tabnext<CR>", { desc = "Next tab" })
-vim.keymap.set("n", "[t", ":tabprev<CR>", { desc = "Previous tab" })
+vim.keymap.set("n", "]t", "gt", { desc = "Next tab" })
+vim.keymap.set("n", "[t", "gT", { desc = "Previous tab" })
 
 -- vim autocmd on focus lost
 vim.cmd("autocmd BufLeave,FocusLost * silent! wall")
 
 -- enable local .nvim.lua config
 vim.opt.exrc = true
+--
+--fix terraform and hcl comment string
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("FixTerraformCommentString", { clear = true }),
+  callback = function(ev)
+    vim.bo[ev.buf].commentstring = "# %s"
+  end,
+  pattern = { "terraform", "hcl" },
+})
