@@ -10,7 +10,7 @@ return {
     config.setup({
       ensure_installed = { "lua", "javascript", "ruby", "go" },
       auto_install = true,
-      highlight = { enable = true, additional_vim_regex_highlighting = true },
+      highlight = { enable = true, additional_vim_regex_highlighting = false },
       indent = { enabled = true },
       endwise = { enable = true },
     })

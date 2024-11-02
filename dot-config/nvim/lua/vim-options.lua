@@ -29,7 +29,7 @@ vim.cmd("autocmd BufLeave,FocusLost * silent! wall")
 
 -- enable local .nvim.lua config
 vim.opt.exrc = true
---
+
 --fix terraform and hcl comment string
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("FixTerraformCommentString", { clear = true }),
