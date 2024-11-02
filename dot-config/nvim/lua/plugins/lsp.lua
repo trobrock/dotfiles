@@ -37,13 +37,17 @@ return {
       local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
       local timeout = 5000
       require("null-ls").setup({
+        debug = false,
         sources = {
           null_ls.builtins.diagnostics.terraform_validate,
           null_ls.builtins.formatting.terraform_fmt,
           null_ls.builtins.formatting.xmllint,
           null_ls.builtins.formatting.gofmt,
           null_ls.builtins.diagnostics.yamllint,
-          null_ls.builtins.diagnostics.haml_lint,
+          null_ls.builtins.diagnostics.haml_lint.with({
+            command = "bundle",
+            args = { "exec", "haml-lint", "--reporter", "json", "$FILENAME" },
+          }),
           null_ls.builtins.diagnostics.rubocop.with({
             command = "bundle",
             args = { "exec", "rubocop", "--force-exclusion", "--format", "json", "--stdin", "$FILENAME" },
