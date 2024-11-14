@@ -28,7 +28,8 @@ gui:
   authorColors:
     '*': '#b4befe'
 customCommands:
-  - key: "<c-r>"
-    command: "gh pr create --fill --web"
+  - key: "<c-d>"
+    command: "bundle exec kamal deploy"
     context: "global"
-    loadingText: "Creating pull request on GitHub"
+    loadingText: "Deploying with Kamal..."
+    stream: true
