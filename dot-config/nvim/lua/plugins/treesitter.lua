@@ -11,7 +11,7 @@ return {
     config.setup({
       ensure_installed = { "lua", "javascript", "ruby", "go", "yaml", "vim", "markdown", "html", "dockerfile", "gitignore" },
       auto_install = true,
-      highlight = { enable = true, additional_vim_regex_highlighting = false },
+      highlight = { enable = true, additional_vim_regex_highlighting = true },
       indent = { enabled = true },
       endwise = { enable = true },
       incremental_selection = {
