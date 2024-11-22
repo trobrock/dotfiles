@@ -1,3 +1,11 @@
 #!/usr/bin/env zsh
 
 stow --dotfiles --adopt -t ~ .
+
+if [ ! -f ~/.zsh/secrets.zsh ]; then
+  touch ~/.zsh/secrets.zsh
+fi
+
+if [ "$(uname)" = "Darwin" ]; then
+  brew bundle
+fi
