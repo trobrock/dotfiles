@@ -1135,6 +1135,18 @@
         "options": {
           "full_name": "ytmdesktop-youtube-music"
         }
+      },
+      "basecamp": {
+        "version": "3,2.3.16",
+        "options": {
+          "full_name": "basecamp"
+        }
+      },
+      "kitty": {
+        "version": "0.37.0",
+        "options": {
+          "full_name": "kitty"
+        }
       }
     }
   },
