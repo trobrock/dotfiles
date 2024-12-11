@@ -33,4 +33,4 @@ export FZF_DEFAULT_OPTS=" \
 source <(fzf --zsh)
 
 export EDITOR="nvim"
-export PATH="./bin:$PATH"
+export PATH="./bin:$HOME/bin:$PATH"
