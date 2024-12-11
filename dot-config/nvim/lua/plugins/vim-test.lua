@@ -9,6 +9,7 @@ return {
     { "<leader>tl", "<cmd>TestLast<cr>",    desc = "Run last test" },
   },
   config = function()
+    vim.cmd("let g:VimuxHeight = '30%'")
     vim.cmd("let test#strategy = 'vimux'")
   end
 }
