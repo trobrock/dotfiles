@@ -51,3 +51,15 @@ alias b='bundle install'
 alias t='bin/rails test'
 alias ts='bin/rails test:system'
 alias ta='bin/rails test && bin/rails test:system'
+
+# tmux
+function tm() {
+  if ! tmux has-session 2>/dev/null; then
+    tmux new-session -d -s "dev"
+    tmux new-session -d -s "dotfiles"
+    tmux send-keys -t "dotfiles" "cd dotfiles" C-m
+    tmux send-keys -t "dotfiles" C-l
+  fi
+
+  tmux attach-session -t "dev"
+}
