@@ -14,7 +14,7 @@ alias lt='eza -lah -I .git --tree'
 alias cat='bat'
 
 # ssh
-alias ssh='kitten ssh'
+# alias ssh='kitten ssh'
 
 # git
 alias lg='lazygit'
