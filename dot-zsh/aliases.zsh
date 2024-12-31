@@ -1,5 +1,5 @@
 alias reload='exec $SHELL -l'
-alias update='brew update && brew upgrade'
+alias update='pushd ~/Sites/personal/dotfiles && brew bundle && popd'
 alias ip='curl http://ipv4.icanhazip.com'
 
 # vim
