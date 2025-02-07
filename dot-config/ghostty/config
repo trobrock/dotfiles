@@ -1,6 +1,6 @@
 theme = catppuccin-mocha
 font-family = "CaskaydiaCove Nerd Font"
-font-size = 14
+font-size = 15
 font-feature = -calt
 
 macos-titlebar-style = hidden
