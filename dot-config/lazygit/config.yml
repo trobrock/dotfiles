@@ -33,3 +33,7 @@ customCommands:
     context: "global"
     loadingText: "Deploying with Kamal..."
     stream: true
+  - key: "<c-n>"
+    command: "git push --no-verify"
+    context: "global"
+    description: "Push (no verify)"
