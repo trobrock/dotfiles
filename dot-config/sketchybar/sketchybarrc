@@ -23,7 +23,7 @@ BRACKET_LEFT_PADDING=5
 BRACKET_RIGHT_PADDING=5
 BRACKET_SEPERATOR_PADDING=5
 function spacer() {
-  sketchybar --add item spacer_${1} right \
+  sketchybar --add item spacer_${1} $2 \
              --set      spacer_${1} icon.drawing=off \
                                     label.drawing=off \
                                     width=$BRACKET_SPACER_WIDTH
@@ -61,12 +61,14 @@ sketchybar --default "${default[@]}"
 source "$ITEM_DIR/apple.sh"
 source "$ITEM_DIR/coffee.sh"
 source "$ITEM_DIR/aerospace.sh"
+spacer "zero" "left"
+source "$ITEM_DIR/calendar.sh"
 
 # Right Items
 source "$ITEM_DIR/system_info.sh"
-spacer "one"
+spacer "one" "right"
 source "$ITEM_DIR/todoist.sh"
-spacer "two"
+spacer "two" "right"
 source "$ITEM_DIR/github.sh"
 
 ##### Force all scripts to run the first time (never do this in a script) #####
