@@ -37,3 +37,9 @@ customCommands:
     command: "git push --no-verify"
     context: "global"
     description: "Push (no verify)"
+  - key: "<c-c>"
+    command: "bin/ci"
+    context: "global"
+    description: "Run CI"
+    loadingText: "Running CI..."
+    stream: true
