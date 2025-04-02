@@ -61,6 +61,7 @@ sketchybar --default "${default[@]}"
 source "$ITEM_DIR/apple.sh"
 source "$ITEM_DIR/coffee.sh"
 source "$ITEM_DIR/aerospace.sh"
+source "$ITEM_DIR/calendar.sh"
 
 # Right Items
 source "$ITEM_DIR/system_info.sh"
