@@ -28,4 +28,4 @@ data = {
   conference_url: event['conference_uri']
 }
 
-`sketchybar --set $NAME label="#{data[:time]} - #{data[:title]}" click_script="open #{data[:conference_url]}"`
+`sketchybar --set #{ENV['NAME']} label="#{data[:time]} - #{data[:title]}" click_script="open #{data[:conference_url]}"`
