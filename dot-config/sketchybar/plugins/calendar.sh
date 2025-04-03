@@ -4,7 +4,7 @@
 current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # Get agenda from gcalcli
-agenda=$(gcalcli --nocolor agenda "$current_time" --tsv --details conference --calendar "Trae Robrock (personal)" --calendar "trobrock@comfort.ly" --calendar "trobrock@robrockproperties.com" --calendar "trae.robrock@huntresslabs.com")
+agenda=$(gcalcli --nocolor agenda "$current_time" --tsv --details conference --details location --calendar "Trae Robrock (personal)" --calendar "trobrock@comfort.ly" --calendar "trobrock@robrockproperties.com" --calendar "trae.robrock@huntresslabs.com")
 
 # Process agenda to get the next event
 IFS=$'\n' read -d '' -ra lines <<< "$agenda"
@@ -21,8 +21,20 @@ for ((i=1; i<${#lines[@]}; i++)); do
   if [[ "${event_data[1]}" =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
     start_date="${event_data[0]}"
     start_time="${event_data[1]}"
-    title="${event_data[6]}"
-    conference_url="${event_data[5]}"
+
+    if [[ "${event_data[5]}" =~ ^https?:// ]]; then
+      conference_url="${event_data[5]}"
+
+      # if position 6 is empty, use position 4 as title
+      if [[ -z "${event_data[6]}" ]]; then
+        title="${event_data[4]}"
+      else
+        title="${event_data[6]}"
+      fi
+    else
+      title="${event_data[4]}"
+      conference_url=""
+    fi
     event_found=true
     break
   fi
