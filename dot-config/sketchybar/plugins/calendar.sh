@@ -35,8 +35,14 @@ for ((i=1; i<${#lines[@]}; i++)); do
       title="${event_data[4]}"
       conference_url=""
     fi
-    event_found=true
-    break
+
+    # If the start time is more than 15 minutes in the past, skip it
+    fifteen_minutes_ago=$(date -v -15M +%s)
+    start_time_epoch=$(date -j -f "%Y-%m-%d %H:%M" "$start_date $start_time" +%s)
+    if [[ $fifteen_minutes_ago -lt $start_time_epoch ]]; then
+      event_found=true
+      break
+    fi
   fi
 done
 
