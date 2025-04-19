@@ -38,3 +38,6 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
   pattern = { "terraform", "hcl" },
 })
+
+-- copy current file path to clipboard
+vim.keymap.set("n", "cp", ":let @+ = expand('%:p')<CR>", { desc = "Copy current file path to clipboard" })
