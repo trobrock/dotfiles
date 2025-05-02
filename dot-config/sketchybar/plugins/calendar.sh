@@ -54,6 +54,11 @@ if [[ "$event_found" == true ]]; then
   if [[ -z "$formatted_time" ]]; then
     formatted_time=$(date -d "$start_date $start_time" "+%I:%M %p" 2>/dev/null)
   fi
+
+  # truncate title to 15 characters
+  if [[ "${#title}" -gt 25 ]]; then
+    title="${title:0:25}..."
+  fi
   
   # Update sketchybar
   sketchybar --set "$NAME" label="$formatted_time - $title" click_script="open $conference_url"
