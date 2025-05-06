@@ -4,7 +4,7 @@
 current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # Get agenda from gcalcli
-agenda=$(gcalcli --nocolor agenda "$current_time" --tsv --details conference --details location --calendar "Trae Robrock (personal)" --calendar "trobrock@comfort.ly" --calendar "trobrock@robrockproperties.com" --calendar "trae.robrock@huntresslabs.com")
+agenda=$(gcalcli --nocolor agenda "$current_time" --tsv --details conference --details location --details description --calendar "Trae Robrock (personal)" --calendar "trobrock@comfort.ly" --calendar "trobrock@robrockproperties.com" --calendar "trae.robrock@huntresslabs.com")
 
 # Process agenda to get the next event
 IFS=$'\n' read -d '' -ra lines <<< "$agenda"
@@ -22,18 +22,16 @@ for ((i=1; i<${#lines[@]}; i++)); do
     start_date="${event_data[0]}"
     start_time="${event_data[1]}"
 
+    title="${event_data[4]}"
+
     if [[ "${event_data[5]}" =~ ^https?:// ]]; then
       conference_url="${event_data[5]}"
-
-      # if position 6 is empty, use position 4 as title
-      if [[ -z "${event_data[6]}" ]]; then
-        title="${event_data[4]}"
-      else
-        title="${event_data[6]}"
-      fi
     else
-      title="${event_data[4]}"
-      conference_url=""
+      if [[ "${event_data[6]}" =~ https?://.*\.zoom\.us ]]; then # description contains zoom link
+        conference_url=$(echo "${event_data[6]}" | sed -En 's/.*(https:\/\/([a-z0-9]*\.)?zoom\.us\/[\/a-zA-Z0-9]+).*/\1/p')
+      else
+        conference_url=""
+      fi
     fi
 
     # If the start time is more than 15 minutes in the past, skip it
@@ -59,7 +57,7 @@ if [[ "$event_found" == true ]]; then
   if [[ "${#title}" -gt 25 ]]; then
     title="${title:0:25}..."
   fi
-  
+
   # Update sketchybar
   sketchybar --set "$NAME" label="$formatted_time - $title" click_script="open $conference_url"
 else
