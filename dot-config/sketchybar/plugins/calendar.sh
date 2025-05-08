@@ -22,7 +22,11 @@ for ((i=1; i<${#lines[@]}; i++)); do
     start_date="${event_data[0]}"
     start_time="${event_data[1]}"
 
-    title="${event_data[4]}"
+    if [[ "${event_data[4]}" == "video" ]]; then
+      title="${event_data[6]}"
+    else
+      title="${event_data[4]}"
+    fi
 
     if [[ "${event_data[5]}" =~ ^https?:// ]]; then
       conference_url="${event_data[5]}"
