@@ -18,16 +18,19 @@ vim.cmd("set relativenumber")
 -- No wrapping
 vim.opt.wrap = false
 
+-- New lines
 vim.keymap.set("n", "]<Space>", "o<Esc>", { desc = "New line below" })
 vim.keymap.set("n", "[<Space>", "O<Esc>", { desc = "New line above" })
+
+-- Tabs
 vim.keymap.set("n", "<C-t>", ":tabnew<CR>", { desc = "New tab" })
 vim.keymap.set("n", "]t", "gt", { desc = "Next tab" })
 vim.keymap.set("n", "[t", "gT", { desc = "Previous tab" })
 
--- vim autocmd on focus lost
+-- Save the file when it loses focus
 vim.cmd("autocmd BufLeave,FocusLost * silent! wall")
 
--- enable local .nvim.lua config
+-- enable local .nvim.lua config, for project specific settings
 vim.opt.exrc = true
 
 --fix terraform and hcl comment string
