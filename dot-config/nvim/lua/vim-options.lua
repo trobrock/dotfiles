@@ -41,3 +41,12 @@ vim.api.nvim_create_autocmd("FileType", {
 
 -- copy current file path to clipboard
 vim.keymap.set("n", "cp", ":let @+ = expand('%:p')<CR>", { desc = "Copy current file path to clipboard" })
+
+-- configure diagnostic display
+vim.diagnostic.config({
+  virtual_text = true,
+  signs = true,
+  underline = true,
+  update_in_insert = false,
+  severity_sort = false,
+})
