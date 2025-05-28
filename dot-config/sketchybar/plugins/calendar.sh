@@ -4,7 +4,7 @@
 current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # Get agenda from gcalcli
-agenda=$(gcalcli --nocolor agenda "$current_time" --tsv --details conference --details location --details description --calendar "Trae Robrock (personal)" --calendar "trobrock@comfort.ly" --calendar "trobrock@robrockproperties.com" --calendar "trae.robrock@huntresslabs.com")
+agenda=$(gcalcli --nocolor agenda "$current_time" --tsv --details conference --details location --details description --nodeclined --calendar "Trae Robrock (personal)" --calendar "trobrock@comfort.ly" --calendar "trobrock@robrockproperties.com" --calendar "trae.robrock@huntresslabs.com")
 
 # Process agenda to get the next event
 IFS=$'\n' read -d '' -ra lines <<< "$agenda"
