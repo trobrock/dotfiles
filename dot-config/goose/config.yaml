@@ -1,15 +1,14 @@
-GOOSE_MODEL: openai/gpt-4.1
 extensions:
   computercontroller:
-    bundled: null
-    display_name: null
+    bundled: true
+    display_name: Computer Controller
     enabled: true
     name: computercontroller
     timeout: 300
     type: builtin
   developer:
-    bundled: null
-    display_name: null
+    bundled: true
+    display_name: Developer
     enabled: true
     name: developer
     timeout: 300
@@ -31,9 +30,16 @@ extensions:
     name: github
     timeout: 300
     type: stdio
+  jetbrains:
+    bundled: true
+    display_name: Jetbrains
+    enabled: false
+    name: jetbrains
+    timeout: 300
+    type: builtin
   memory:
-    bundled: null
-    display_name: null
+    bundled: true
+    display_name: Memory
     enabled: false
     name: memory
     timeout: 300
@@ -64,8 +70,10 @@ extensions:
     name: todoist
     timeout: 300
     type: stdio
-GOOSE_MODE: auto
-GOOSE_PROVIDER: openrouter
+GOOSE_CLI_MIN_PRIORITY: 0.0
+GOOSE_MODEL: anthropic/claude-sonnet-4
 experiments:
   GOOSE_SMART_APPROVE: true
-GOOSE_CLI_MIN_PRIORITY: 0.0
+GOOSE_PLANNER_MODEL: anthropic/claude-opus-4
+GOOSE_MODE: auto
+GOOSE_PROVIDER: openrouter
