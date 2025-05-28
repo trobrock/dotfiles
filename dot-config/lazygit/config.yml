@@ -24,7 +24,6 @@ gui:
       - '#cdd6f4'
     searchingActiveBorderColor:
       - '#f9e2af'
-
   authorColors:
     '*': '#b4befe'
 customCommands:
@@ -32,7 +31,7 @@ customCommands:
     command: "bundle exec kamal deploy"
     context: "global"
     loadingText: "Deploying with Kamal..."
-    stream: true
+    output: log
   - key: "<c-n>"
     command: "git push --no-verify"
     context: "global"
@@ -42,4 +41,4 @@ customCommands:
     context: "global"
     description: "Run CI"
     loadingText: "Running CI..."
-    stream: true
+    output: log
