@@ -1,5 +1,5 @@
 zstyle ':completion:*' use-cache on
-zstyle ':completion:*' cache-path "~/.zsh/compcache"
+zstyle ':completion:*' cache-path "$HOME/.zsh/compcache"
 zstyle ':completion:*' menu select
 
 # fuzzy matching
