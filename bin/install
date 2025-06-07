@@ -31,6 +31,10 @@ if [ ! -d "$HOME/.config/tmux/plugins" ] ; then
   git clone https://github.com/tmux-plugins/tpm $HOME/.config/tmux/plugins/tpm
 fi
 
+if [ ! -d "$HOME/.config/goose" ] ; then
+  mkdir -p $HOME/.config/goose
+fi
+
 stow --verbose=2 --dotfiles --adopt -t $HOME .
 
 if [ "$(uname)" = "Darwin" ]; then
