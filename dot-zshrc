@@ -19,7 +19,7 @@ source ~/.zsh/prompt.zsh
 source ~/.zsh/history.zsh
 source ~/.zsh/completion.zsh
 source ~/.zsh/aliases.zsh
-source ~/.zsh/secrets.zsh
+source ~/.zsh_secrets
 
 eval "$(zoxide init --cmd cd zsh)"
 
