@@ -1,6 +1,37 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
-stow --dotfiles --adopt -t ~ .
+set -e
+
+if [ "$(uname)" = "Linux" ]; then
+	if [ -z "$(command -v yay)" ]; then
+		echo "yay not found, installing..."
+		sudo pacman -S --noconfirm --needed git base-devel
+		git clone https://aur.archlinux.org/yay.git /tmp/yay
+		pushd /tmp/yay
+		makepkg -si
+		popd
+		rm -rf /tmp/yay
+	fi
+
+	if [ -z "$(command stow)" ]; then
+		echo "stow not found, installing..."
+		yay -S --noconfirm stow
+	fi 
+
+	if [ "$SHELL" != "/usr/bin/zsh" ]; then
+		echo "zsh not found, installing..."
+		yay -S --noconfirm zsh
+		chsh -s /usr/bin/zsh
+		echo "logout and login required to change shell. Please logout and run this again."
+		exit
+	fi
+fi
+
+if [ ! -d "$HOME/.config/tmux/plugins" ] ; then
+  git clone https://github.com/tmux-plugins/tpm $HOME/.config/tmux/plugins/tpm
+fi
+
+stow --verbose=2 --dotfiles --adopt -t $HOME .
 
 if [ ! -f ~/.zsh/secrets.zsh ]; then
   touch ~/.zsh/secrets.zsh
@@ -8,4 +39,20 @@ fi
 
 if [ "$(uname)" = "Darwin" ]; then
   brew bundle
+elif [ "$(uname)" = "Linux" ]; then
+  packages="$(grep -v '^#' Archfile | tr '\n' ' ')"
+  yay -S --needed --noconfirm $packages
+
+  if [ ! -f $HOME/.config/1Password/settings/settings.json ] ; then
+    echo "enabling h/w acceleration for 1password..."
+    mkdir -p $HOME/.config/1Password/settings
+    cat > $HOME/.config/1Password/settings/settings.json <<JSON
+{
+  "version": 1,
+  "app.useHardwareAcceleration": true,
+  "app.theme": "dark",
+  "browsers.extension.enabled": true
+}
+JSON
+  fi
 fi

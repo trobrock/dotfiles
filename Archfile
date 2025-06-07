@@ -1,0 +1,87 @@
+# Display manager
+greetd
+greetd-regreet
+
+# Hyprland
+hypridle
+hyprland
+hyprlock
+hyprpaper
+hyprshot
+
+# Misc UI
+blueman
+cliphist
+libnotify
+pipewire
+swaync
+ttf-cascadia-code-nerd
+waybar
+wireplumber
+wofi
+xdg-desktop-portal-hyprland
+xorg-xhost
+
+# Security
+gnome-keyring
+hyprpolkitagent
+libsecret
+seahorse
+
+# Applications
+1password
+brave-bin
+ghostty
+google-chrome
+iwgtk
+libreoffice
+notion-app-electron
+slack-desktop-wayland
+streamdeck-ui
+todoist-wrapper-bin
+zoom
+
+# CLI
+1password-cli
+base-devel
+bat
+bluez
+bluez-utils
+brightnessctl
+btop
+codename-goose
+diff-so-fancy
+direnv
+docker
+docker-compose
+eza
+fzf
+gcalcli
+github-cli
+go
+imagemagick
+jq
+lazydocker
+lazygit
+less
+magic-wormhole
+mosh
+mtr
+neovim
+nodejs
+npm
+openssh
+rbenv
+restic
+ripgrep
+ruby-build
+stow
+tldr
+tmux
+wget
+yamllint
+zoxide
+
+# Dev
+libvips
+mariadb-clients
