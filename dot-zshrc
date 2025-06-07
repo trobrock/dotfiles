@@ -34,3 +34,6 @@ source <(fzf --zsh)
 
 export EDITOR="nvim"
 export PATH="./bin:$HOME/bin:$PATH"
+
+# Required for 1password CLI to auth in hyprland
+export OP_BIOMETRIC_UNLOCK_ENABLED=true
