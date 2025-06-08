@@ -2,51 +2,105 @@
 
 set -e
 
-if [ "$(uname)" = "Linux" ]; then
-	if [ -z "$(command -v yay)" ]; then
-		echo "yay not found, installing..."
-		sudo pacman -S --noconfirm --needed git base-devel
-		git clone https://aur.archlinux.org/yay.git /tmp/yay
-		pushd /tmp/yay
-		makepkg -si
-		popd
-		rm -rf /tmp/yay
-	fi
+log() {
+  blue='\033[0;34m'
+  green='\033[0;32m'
+  nc='\033[0m'
+  echo -e "${blue}[$(date +'%Y-%m-%d %H:%M:%S')]${nc} ${green}$1${nc}"
+}
 
-	if [ -z "$(command stow)" ]; then
-		echo "stow not found, installing..."
-		yay -S --noconfirm stow
-	fi 
+log_error() {
+  red='\033[0;31m'
+  nc='\033[0m'
+  echo -e "${red}[$(date +'%Y-%m-%d %H:%M:%S')] $1${nc}"
+}
 
-	if [ "$SHELL" != "/usr/bin/zsh" ]; then
-		echo "zsh not found, installing..."
-		yay -S --noconfirm zsh
-		chsh -s /usr/bin/zsh
-		echo "logout and login required to change shell. Please logout and run this again."
-		exit
-	fi
-fi
+install_package_manager() {
+  if [ "$(uname)" = "Darwin" ]; then
+    if [ -z "$(command -v brew)" ]; then
+      log "Homebew not found, installing..."
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+  elif [ "$(uname)" = "Linux" ]; then
+    if [ -z "$(command -v yay)" ]; then
+      log "yay not found, installing..."
+      sudo pacman -S --noconfirm --needed git base-devel
+      git clone https://aur.archlinux.org/yay.git /tmp/yay
+      pushd /tmp/yay
+      makepkg -si
+      popd
+      rm -rf /tmp/yay
+    fi
+  else
+    log_error "Unsupported OS"
+    exit 1
+  fi
+}
 
-if [ ! -d "$HOME/.config/tmux/plugins" ] ; then
-  git clone https://github.com/tmux-plugins/tpm $HOME/.config/tmux/plugins/tpm
-fi
+install_stow() {
+  if [ -z "$(command -v stow)" ]; then
+    log "stow not found, installing..."
+    if [ "$(uname)" = "Darwin" ]; then
+      brew install stow
+    elif [ "$(uname)" = "Linux" ]; then
+      yay -S --noconfirm stow
+    else
+      log_error "Unsupported OS for stow installation"
+      exit 1
+    fi
+  fi
+}
 
-if [ ! -d "$HOME/.config/goose" ] ; then
-  mkdir -p $HOME/.config/goose
-fi
+change_shell_to_zsh() {
+  if [[ "$SHELL" != *"zsh" ]]; then
+    if [ -z "$(command -v zsh)" ]; then
+      log "zsh not found, installing..."
+      if [ "$(uname)" = "Darwin" ]; then
+        brew install zsh
+      elif [ "$(uname)" = "Linux" ]; then
+        yay -S --noconfirm zsh
+      else
+        log_error "Unsupported OS for zsh installation"
+        exit 1
+      fi
+    fi
 
-stow --verbose=2 --dotfiles --adopt -t $HOME .
+    log "Changing default shell to zsh..."
+    chsh -s /usr/bin/zsh
+    log "Default shell changed to zsh. Please logout and login again for changes to take effect."
+    exit
+  fi
+}
 
-if [ "$(uname)" = "Darwin" ]; then
-  brew bundle
-elif [ "$(uname)" = "Linux" ]; then
-  packages="$(grep -v '^#' Archfile | tr '\n' ' ')"
-  yay -S --needed --noconfirm $packages
+init_tpm() {
+  if [ ! -d "$HOME/.config/tmux/plugins" ] ; then
+    log "Initializing Tmux Plugin Manager (TPM)..."
+    git clone https://github.com/tmux-plugins/tpm $HOME/.config/tmux/plugins/tpm
+  fi
+}
 
-  if [ ! -f $HOME/.config/1Password/settings/settings.json ] ; then
-    echo "enabling h/w acceleration for 1password..."
-    mkdir -p $HOME/.config/1Password/settings
-    cat > $HOME/.config/1Password/settings/settings.json <<JSON
+init_goose() {
+  if [ ! -d "$HOME/.config/goose" ] ; then
+    mkdir -p $HOME/.config/goose
+  fi
+}
+
+install_packages() {
+  log "Installing packages..."
+  if [ "$(uname)" = "Darwin" ]; then
+    brew bundle
+  elif [ "$(uname)" = "Linux" ]; then
+    packages="$(grep -v '^#' Archfile | tr '\n' ' ')"
+    yay -S --needed --noconfirm $packages
+  fi
+}
+
+init_1password() {
+  if [ "$(uname)" = "Linux" ]; then
+    if [ ! -f $HOME/.config/1Password/settings/settings.json ] ; then
+      echo "enabling h/w acceleration for 1password..."
+      mkdir -p $HOME/.config/1Password/settings
+      cat > $HOME/.config/1Password/settings/settings.json <<JSON
 {
   "version": 1,
   "app.useHardwareAcceleration": true,
@@ -54,40 +108,63 @@ elif [ "$(uname)" = "Linux" ]; then
   "browsers.extension.enabled": true
 }
 JSON
+    fi
   fi
-fi
+}
 
-echo "Populating secrets.zsh from 1password..."
-if [ -z "$(command -v op)" ]; then
-  echo "1Password CLI not found"
-else
-  if [ -f $HOME/.zsh_secrets ]; then
-    mv $HOME/.zsh_secrets $HOME/.zsh_secrets.bak
-    rm -f $HOME/.zsh_secrets
-  fi
-
+get_machine_name() {
   if [ ! -f .machine_name ]; then
-    # get the list of available sec"tions from the item
-    sections=$(op item get "ZSH Secrets" --format json | jq -r '.sections[].label')
-    # have the user select one
-    echo "Available sections:"
-    select section in $sections; do
-      if [ -n "$section" ]; then
-        echo "Selected section: $section"
+    names=$(op item get "ZSH Secrets" --format json | jq -r '.sections[].label')
+    echo "Available machine names:"
+    select machine_name in $names; do
+      if [ -n "$machine_name" ]; then
+        echo "Selected machine name: $machine_name"
         break
       else
         echo "Invalid selection, please try again."
       fi
     done
-    echo $section > .machine_name
-  else
-    section="$(cat .machine_name)"
+    echo $machine_name > .machine_name
   fi
 
-  # grab all the secrets from that section and write them to the file
-  op item get "ZSH Secrets" --format json | jq -r ".fields[] | select(.section.label == \"$section\") | \"\(.label) \(.value)\"" | while read -r line; do
-    label=$(echo "$line" | cut -d' ' -f1)
-    value=$(echo "$line" | cut -d' ' -f2-)
-    echo "export $label=\"$value\"" >> $HOME/.zsh_secrets
-  done
-fi
+  cat .machine_name
+}
+
+backup_secrets() {
+  if [ -f $HOME/.zsh_secrets ]; then
+    mv $HOME/.zsh_secrets $HOME/.zsh_secrets.bak
+    rm -f $HOME/.zsh_secrets
+  fi
+}
+
+install_secrets() {
+  log "Installing secrets.zsh from 1password..."
+  if [ -z "$(command -v op)" ]; then
+    log_error "1Password CLI (op) is not installed. Please install it first."
+  else
+    backup_secrets
+
+    section=$(get_machine_name)
+
+    # grab all the secrets from that section and write them to the file
+    op item get "ZSH Secrets" --format json | jq -r ".fields[] | select(.section.label == \"$section\") | \"\(.label) \(.value)\"" | while read -r line; do
+      label=$(echo "$line" | cut -d' ' -f1)
+      value=$(echo "$line" | cut -d' ' -f2-)
+      echo "export $label=\"$value\"" >> $HOME/.zsh_secrets
+    done
+  fi
+}
+
+install_package_manager
+install_stow
+change_shell_to_zsh
+init_tpm
+init_goose
+
+log "Installing dotfiles using stow..."
+stow --verbose=2 --dotfiles --adopt -t $HOME .
+
+install_packages
+init_1password
+
+install_secrets
