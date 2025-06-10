@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+# Get current time in ISO format
+current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Get agenda from gcalcli
+agenda=$(gcalcli --nocolor agenda "$current_time" --tsv --nodeclined --calendar "Blocks")
+
+# Process agenda to get the next event
+IFS=$'\n' read -d '' -ra lines <<< "$agenda"
+
+# Skip the header line and find the first event
+event_found=false
+for ((i=1; i<${#lines[@]}; i++)); do
+  line="${lines[i]}"
+  
+  # Split the line by tabs
+  IFS=$'\t' read -ra event_data <<< "$line"
+
+  start_date="${event_data[0]}"
+  start_time="${event_data[1]}"
+  end_time="${event_data[3]}"
+  title="${event_data[4]}"
+  echo "start_date: $start_date"
+  echo "start_time: $start_time"
+  echo "end_time: $end_time"
+  event_found=true
+  break
+done
+
+if [[ "$event_found" == true ]]; then
+  # Get amount of time left in the event
+  end_time_epoch=$(date -j -f "%Y-%m-%d %H:%M" "$start_date $end_time" +%s)
+  echo "End time epoch: $end_time_epoch"
+  current_time_epoch=$(date +%s)
+  time_left_seconds=$((end_time_epoch - current_time_epoch))
+  time_left_minutes=$((time_left_seconds / 60))
+
+  # truncate title to 15 characters
+  if [[ "${#title}" -gt 25 ]]; then
+    title="${title:0:25}..."
+  fi
+
+  # Update sketchybar
+  sketchybar --set "$NAME" label="$title (${time_left_minutes}m remaining)"
+else
+  # No event found
+  sketchybar --set "$NAME" label="Free time"
+fi
+

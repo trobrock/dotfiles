@@ -63,6 +63,8 @@ source "$ITEM_DIR/coffee.sh"
 source "$ITEM_DIR/aerospace.sh"
 spacer "zero" "left"
 source "$ITEM_DIR/calendar.sh"
+spacer "three" "left"
+source "$ITEM_DIR/focus.sh"
 
 # Right Items
 source "$ITEM_DIR/system_info.sh"
