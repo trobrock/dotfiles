@@ -88,3 +88,4 @@ zoxide
 # Dev
 libvips
 mariadb-clients
+stripe-cli
