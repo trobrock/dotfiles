@@ -165,7 +165,7 @@ backup_secrets() {
 
 install_secrets() {
   log "Installing secrets.zsh from 1password..."
-  if [ -z "$(command -v op)" ] || ( ! op vault list 2> /dev/null ); then
+  if [ -z "$(command -v op)" ] || ( ! op vault list > /dev/null 2>&1 ); then
     log_error "1Password CLI (op) is not installed. Please install it first."
   else
     backup_secrets
