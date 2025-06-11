@@ -53,6 +53,7 @@ codename-goose
 diff-so-fancy
 direnv
 docker
+docker-buildx
 docker-compose
 eza
 fzf
