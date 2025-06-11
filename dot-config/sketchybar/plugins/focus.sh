@@ -21,17 +21,17 @@ for ((i=1; i<${#lines[@]}; i++)); do
   start_time="${event_data[1]}"
   end_time="${event_data[3]}"
   title="${event_data[4]}"
-  echo "start_date: $start_date"
-  echo "start_time: $start_time"
-  echo "end_time: $end_time"
-  event_found=true
-  break
+
+  start_time_epoch=$(date -j -f "%Y-%m-%d %H:%M" "$start_date $start_time" +%s 2>/dev/null)
+  current_time_epoch=$(date -u +%s)
+  if [[ $start_time_epoch -ge $current_time_epoch ]]; then
+    event_found=true
+    break
+  fi
 done
 
 if [[ "$event_found" == true ]]; then
   # Get amount of time left in the event
-  end_time_epoch=$(date -j -f "%Y-%m-%d %H:%M" "$start_date $end_time" +%s)
-  echo "End time epoch: $end_time_epoch"
   current_time_epoch=$(date +%s)
   time_left_seconds=$((end_time_epoch - current_time_epoch))
   time_left_minutes=$((time_left_seconds / 60))
