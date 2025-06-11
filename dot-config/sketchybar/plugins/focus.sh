@@ -24,7 +24,7 @@ for ((i=1; i<${#lines[@]}; i++)); do
 
   start_time_epoch=$(date -j -f "%Y-%m-%d %H:%M" "$start_date $start_time" +%s 2>/dev/null)
   current_time_epoch=$(date -u +%s)
-  if [[ $start_time_epoch -ge $current_time_epoch ]]; then
+  if [[ $start_time_epoch -lt $current_time_epoch ]]; then
     event_found=true
     break
   fi
@@ -32,7 +32,8 @@ done
 
 if [[ "$event_found" == true ]]; then
   # Get amount of time left in the event
-  current_time_epoch=$(date +%s)
+  current_time_epoch=$(date -u +%s)
+  end_time_epoch=$(date -j -f "%Y-%m-%d %H:%M" "$start_date $end_time" +%s 2>/dev/null)
   time_left_seconds=$((end_time_epoch - current_time_epoch))
   time_left_minutes=$((time_left_seconds / 60))
 
