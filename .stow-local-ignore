@@ -5,3 +5,4 @@ Archfile
 ^/.config/tmux/plugins
 .machine_name
 .gitignore
+dot-zsh/compcache
