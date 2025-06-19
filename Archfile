@@ -67,6 +67,7 @@ lazygit
 less
 magic-wormhole
 mosh
+mplayer
 mtr
 neovim
 nodejs
@@ -89,3 +90,4 @@ zoxide
 libvips
 mariadb-clients
 stripe-cli
+yarn
