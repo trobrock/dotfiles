@@ -1,0 +1,50 @@
+#!/bin/bash
+
+export AWS_PROFILE=minio
+export AWS_ENDPOINT_URL_S3=http://192.168.1.180:9000
+
+# Check if required arguments were provided
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 <directory_name>"
+  echo "Example: $0 myproject"
+  exit 1
+fi
+
+# Get arguments
+DIRECTORY_NAME=$1
+ARCHIVE_NAME="${DIRECTORY_NAME}.tar.gz"
+DEST_DIR="."
+  
+# Create destination directory if it doesn't exist
+if [ ! -d "$DEST_DIR" ]; then
+  echo "Creating destination directory $DEST_DIR..."
+  mkdir -p "$DEST_DIR"
+fi
+
+# Download from S3
+echo "Downloading s3://code-backups/$ARCHIVE_NAME..."
+aws s3 cp "s3://code-backups/$ARCHIVE_NAME" "./$ARCHIVE_NAME"
+
+# Check if download was successful
+if [ $? -ne 0 ]; then
+  echo "Error: Download from S3 failed"
+  exit 1
+fi
+
+# Extract the archive
+echo "Extracting $ARCHIVE_NAME to $DEST_DIR..."
+tar -xvzf "./$ARCHIVE_NAME" -C "$DEST_DIR"
+
+# Check if extraction was successful
+if [ $? -eq 0 ]; then
+  echo "Success! Archive extracted to $DEST_DIR"
+  
+  # Clean up the downloaded archive
+  echo "Cleaning up downloaded archive file..."
+  rm "./$ARCHIVE_NAME"
+  
+  echo "Done!"
+else
+  echo "Error: Extraction failed"
+  exit 1
+fi
