@@ -13,6 +13,7 @@ hyprshot
 blueman
 cliphist
 libnotify
+noto-fonts-emoji
 pipewire
 swaync
 ttf-cascadia-code-nerd
@@ -40,11 +41,13 @@ slack-desktop-wayland
 streamdeck-ui
 todoist-wrapper-bin
 zoom
+qalculate-gtk
 
 # CLI
 1password-cli
 base-devel
 bat
+bind
 bluez
 bluez-utils
 brightnessctl
@@ -81,9 +84,11 @@ ruby-build
 stow
 tldr
 tmux
+unzip
 wget
 yamllint
 yazi
+zip
 zoxide
 
 # Dev
