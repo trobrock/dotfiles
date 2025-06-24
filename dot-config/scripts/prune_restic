@@ -1,0 +1,10 @@
+#!/usr/bin/env zsh
+
+export AWS_PROFILE=minio
+restic forget \
+  --keep-hourly 6 \
+  --keep-daily 7 \
+  --keep-weekly 4 \
+  --keep-monthly 3 \
+  --keep-yearly 1 \
+  --prune
