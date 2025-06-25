@@ -1,7 +1,8 @@
 #!/bin/bash
 
-AWS_PROFILE=minio
-AWS_ENDPOINT_URL_S3=$MINIO_URL
+export AWS_PROFILE=minio
+export AWS_ENDPOINT_URL_S3=$MINIO_URL
+
 BUCKET_NAME=code-backups
 
 # Check if required arguments were provided

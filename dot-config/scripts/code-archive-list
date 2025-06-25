@@ -1,7 +1,8 @@
 #!/bin/bash
 
-AWS_PROFILE=minio
-AWS_ENDPOINT_URL_S3=$MINIO_URL
+export AWS_PROFILE=minio
+export AWS_ENDPOINT_URL_S3=$MINIO_URL
+
 BUCKET_NAME=code-backups
 
 echo "Listing available backups in s3://$BUCKET_NAME/..."
@@ -17,4 +18,4 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "------------------------------------------------"
-echo "To restore a backup, run: ./restore-from-s3 <directory_name>"
+echo "To restore a backup, run: code-restore <directory_name>"

@@ -1,4 +1,5 @@
 #!/bin/bash
 
-AWS_PROFILE=minio
+export AWS_PROFILE=minio
+
 restic backup $CODE_DIRECTORY
