@@ -170,6 +170,13 @@ install_secrets() {
   else
     backup_secrets
 
+    # grab all the secrets from the "common" section and write them to the file
+    op --account=robrock.1password.com item get "ZSH Secrets" --format json | jq -r ".fields[] | select(.section.label == \"common\") | \"\(.label) \(.value)\"" | while read -r line; do
+      label=$(echo "$line" | cut -d' ' -f1)
+      value=$(echo "$line" | cut -d' ' -f2-)
+      echo "export $label=\"$value\"" >> $HOME/.zsh_secrets
+    done
+
     section=$(get_machine_name)
 
     # grab all the secrets from that section and write them to the file
