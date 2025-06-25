@@ -1,7 +1,8 @@
 #!/bin/bash
 
-export AWS_PROFILE=minio
-export AWS_ENDPOINT_URL_S3=http://192.168.1.180:9000
+AWS_PROFILE=minio
+AWS_ENDPOINT_URL_S3=$MINIO_URL
+BUCKET_NAME=code-backups
 
 # Check if required arguments were provided
 if [ $# -lt 1 ]; then
@@ -22,8 +23,8 @@ if [ ! -d "$DEST_DIR" ]; then
 fi
 
 # Download from S3
-echo "Downloading s3://code-backups/$ARCHIVE_NAME..."
-aws s3 cp "s3://code-backups/$ARCHIVE_NAME" "./$ARCHIVE_NAME"
+echo "Downloading s3://$BUCKET_NAME/$ARCHIVE_NAME..."
+aws s3 cp "s3://$BUCKET_NAME/$ARCHIVE_NAME" "./$ARCHIVE_NAME"
 
 # Check if download was successful
 if [ $? -ne 0 ]; then

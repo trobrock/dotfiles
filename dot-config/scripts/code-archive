@@ -1,7 +1,8 @@
 #!/bin/bash
 
-export AWS_PROFILE=minio
-export AWS_ENDPOINT_URL_S3=http://192.168.1.180:9000
+AWS_PROFILE=minio
+AWS_ENDPOINT_URL_S3=$MINIO_URL
+BUCKET_NAME=code-backups
 
 # Check if a directory name was provided
 if [ $# -lt 1 ]; then
@@ -26,12 +27,12 @@ echo "Creating archive $ARCHIVE_NAME from directory $DIR_NAME..."
 tar -czvf "$ARCHIVE_NAME" "$DIR_NAME"
 
 # Upload to S3
-echo "Uploading $ARCHIVE_NAME to s3://code-backups/"
-aws s3 cp "$ARCHIVE_NAME" "s3://code-backups/$ARCHIVE_NAME"
+echo "Uploading $ARCHIVE_NAME to s3://$BUCKET_NAME/"
+aws s3 cp "$ARCHIVE_NAME" "s3://$BUCKET_NAME/$ARCHIVE_NAME"
 
 # Check if upload was successful
 if [ $? -eq 0 ]; then
-  echo "Success! Archive uploaded to s3://code-backups/$ARCHIVE_NAME"
+  echo "Success! Archive uploaded to s3://$BUCKET_NAME/$ARCHIVE_NAME"
   
   # Clean up the local archive file
   echo "Cleaning up local archive file..."

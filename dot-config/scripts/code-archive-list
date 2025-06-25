@@ -1,0 +1,20 @@
+#!/bin/bash
+
+AWS_PROFILE=minio
+AWS_ENDPOINT_URL_S3=$MINIO_URL
+BUCKET_NAME=code-backups
+
+echo "Listing available backups in s3://$BUCKET_NAME/..."
+echo "------------------------------------------------"
+
+# List all objects in the bucket and format output
+aws s3 ls s3://$BUCKET_NAME/ | grep ".tar.gz" | awk '{print $4}' | sed 's/\.tar\.gz$//' | sort
+
+# Check if the command was successful
+if [ $? -ne 0 ]; then
+  echo "Error: Failed to list backups from S3"
+  exit 1
+fi
+
+echo "------------------------------------------------"
+echo "To restore a backup, run: ./restore-from-s3 <directory_name>"
