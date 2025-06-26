@@ -119,7 +119,7 @@ window {
   padding: 10px;
   border: none;
   border-radius: 0.1em;
-  color: @text;
+#entry  color: @text;
   background-color: @base;
   animation: fadeIn 0.5s ease-in-out both;
 }
@@ -145,16 +145,16 @@ window {
   background-color: @base;
 }
 
+#entry #text {
+  padding-left: 10px;
+}
+
 #entry arrow {
   border: none;
   color: @lavender;
 }
 
 /* Selected Entry */
-#entry:selected {
-  border: 0.11em solid @lavender;
-}
-
 #entry:selected #text {
   color: @mauve;
 }
