@@ -119,7 +119,7 @@ window {
   padding: 10px;
   border: none;
   border-radius: 0.1em;
-#entry  color: @text;
+  color: @text;
   background-color: @base;
   animation: fadeIn 0.5s ease-in-out both;
 }
@@ -130,7 +130,7 @@ window {
 }
 
 #input * {
-  outline: 4px solid @red!important;
+  outline: 4px solid @red;
 }
 
 /* Text */
@@ -160,5 +160,5 @@ window {
 }
 
 #entry:drop(active) {
-  background-color: @lavender!important;
+  background-color: @lavender;
 }
