@@ -109,32 +109,6 @@ init_1password() {
 }
 JSON
     fi
-
-    if [ ! -f /etc/systemd/user/1password.service ]; then
-      log "Setting up 1Password service..."
-      cat > 1password.service <<EOF
-[Unit]
-Description=1password Service
-ConditionEnvironment=WAYLAND_DISPLAY
-	
-[Service]
-ExecStart=/sbin/1password --silent --ozone-platform-hint=x11
-Restart=always
-EOF
-      sudo cp 1password.service /etc/systemd/user/1password.service
-      rm -f 1password.service
-      systemctl daemon-reload --user
-      systemctl start --user 1password.service
-
-      log "Waiting for 1Password to start"
-      while ! systemctl is-active --quiet --user 1password.service; do
-        printf "."
-        sleep 1
-      done
-
-      log "Open 1password and sign in to your account. Then press Enter to continue..."
-      read -r
-    fi
   fi
 }
 
