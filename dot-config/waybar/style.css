@@ -23,10 +23,7 @@ tooltip {
 #idle_inhibitor,
 #custom-calendar,
 #custom-focus,
-#bluetooth,
 #pulseaudio,
-#network,
-#power-profiles-daemon,
 #battery,
 #clock {
     background: rgba(49, 50, 68, 0.6);
@@ -35,6 +32,37 @@ tooltip {
     margin: 4px 2px;
     border-radius: 10px;
     border: 1px solid #45475a;
+}
+
+/* Right group (bluetooth, power profiles) */
+#bluetooth,
+#power-profiles-daemon,
+#network {
+    background: rgba(49, 50, 68, 0.6);
+    color: #cdd6f4;
+    padding: 4px 12px;
+    margin: 4px 0;
+    border: 1px solid #45475a;
+}
+
+#bluetooth {
+    border-radius: 10px 0 0 10px;
+    border-right: none;
+    padding-right: 10px;
+    margin-left: -2px;
+}
+
+#power-profiles-daemon {
+  margin-left: -4px;
+  border-left: none;
+  border-right: none;
+}
+
+#network {
+  margin-left: -4px;
+  border-radius: 0 10px 10px 0;
+  border-left: none;
+  padding-right: 15px;
 }
 
 /* Workspaces */
@@ -134,7 +162,6 @@ tooltip {
 
 #power-profiles-daemon {
     color: #a6e3a1;
-    padding-right: 20px;
 }
 
 #power-profiles-daemon.performance {

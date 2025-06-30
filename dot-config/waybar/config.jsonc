@@ -12,9 +12,9 @@
     ],
     "modules-right": [
         "bluetooth",
-        "pulseaudio",
-        "network",
         "power-profiles-daemon",
+        "network",
+        "pulseaudio",
         "battery",
         "clock"
     ],
@@ -57,7 +57,13 @@
     "clock": {
         // "timezone": "America/New_York",
         "format": "{:%Y-%m-%d %I:%M %p}",
-        "tooltip-format": "<big>{:%Y %B}</big>\n<tt>{calendar}</tt>"
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt>{calendar}</tt>",
+        "calendar": {
+          "format": {
+            "months": "",
+            "today": "<b>{}</b>"
+          }
+        }
     },
     "battery": {
         "states": {
@@ -86,13 +92,17 @@
       }
     },
     "network": {
-        // "interface": "wlp2*", // (Optional) To force the use of this interface
-        "format-wifi": "{essid} ({signalStrength}%) ",
-        "format-ethernet": "{ipaddr}/{cidr} 󰈀",
-        "tooltip-format": "{ifname} via {gwaddr}",
-        "format-linked": "{ifname} (No IP) ",
-        "format-disconnected": "Disconnected ⚠",
-        "on-click": "iwgtk"
+      "format-icons": ["󰤯","󰤟","󰤢","󰤥","󰤨"],
+      "format" : "{icon}",
+      "format-wifi" : "{icon}",
+      "format-ethernet" : "󰀂",
+      "format-disconnected" : "󰖪",
+      "tooltip-format-wifi": "{essid} ({frequency} GHz)\n⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+      "tooltip-format-ethernet": "⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+      "tooltip-format-disconnected": "Disconnected",
+      "interval": 3,
+      "nospacing": 1,
+      "on-click": "iwgtk"
     },
     "pulseaudio": {
         // "scroll-step": 1, // %, can be a float
