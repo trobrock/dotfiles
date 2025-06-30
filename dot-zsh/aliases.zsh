@@ -63,8 +63,3 @@ function tm() {
 
   tmux attach-session -t "dev"
 }
-
-# backups
-function backup() {
-  AWS_PROFILE="minio" restic -r $RESTIC_REPOSITORY backup ~/Sites
-}
