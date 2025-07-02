@@ -5,6 +5,7 @@ return {
   config = function()
     require("catppuccin").setup({
       flavour = "mocha",   -- latte, frappe, macchiato, mocha
+      transparency = true, -- enable transparent background
       dim_inactive = {
         enabled = true,    -- dims the background color of inactive window
         shade = "dark",
