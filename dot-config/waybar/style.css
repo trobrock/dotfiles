@@ -20,7 +20,6 @@ tooltip {
 }
 
 #workspaces,
-#idle_inhibitor,
 #custom-calendar,
 #custom-focus,
 #pulseaudio,
@@ -35,34 +34,35 @@ tooltip {
 }
 
 /* Right group (bluetooth, power profiles) */
-#bluetooth,
-#power-profiles-daemon,
-#network {
-    background: rgba(49, 50, 68, 0.6);
-    color: #cdd6f4;
-    padding: 4px 12px;
-    margin: 4px 0;
-    border: 1px solid #45475a;
+#icons {
+  background: rgba(49, 50, 68, 0.6);
+  border: 1px solid #45475a;
+  color: #cdd6f4;
+  border-radius: 10px;
+  margin: 4px 2px;
+  padding: 0;
 }
 
-#bluetooth {
-    border-radius: 10px 0 0 10px;
-    border-right: none;
-    padding-right: 10px;
-    margin-left: -2px;
+#icons * {
+    margin: 0;
+    padding: 0 10px;
+    background: none;
+}
+
+#idle_inhibitor {
+  border-radius: 10px 0 0 10px;
+  padding-right: 12px;
 }
 
 #power-profiles-daemon {
-  margin-left: -4px;
-  border-left: none;
-  border-right: none;
+  padding-left: 8px;
+  padding-right: 12px;
 }
 
 #network {
-  margin-left: -4px;
   border-radius: 0 10px 10px 0;
-  border-left: none;
-  padding-right: 15px;
+  padding-left: 8px;
+  padding-right: 14px;
 }
 
 /* Workspaces */
@@ -106,7 +106,6 @@ tooltip {
 /* Individual module styling */
 #idle_inhibitor {
     color: #f9e2af;
-    padding-right: 15px;
 }
 
 #idle_inhibitor.activated {
@@ -135,7 +134,7 @@ tooltip {
 
 #pulseaudio {
     color: #f5c2e7;
-    padding-right: 20px;
+    padding-right: 15px;
 }
 
 #pulseaudio.muted {
@@ -148,7 +147,6 @@ tooltip {
 
 #network {
     color: #74c7ec;
-    padding-right: 18px;
 }
 
 #network.disconnected {
@@ -221,6 +219,6 @@ tooltip {
 #power-profiles-daemon:hover,
 #battery:hover,
 #clock:hover {
-    background: #45475a;
-    transition: all 0.3s ease;
+  background: #45475a;
+  transition: all 0.3s ease;
 }
