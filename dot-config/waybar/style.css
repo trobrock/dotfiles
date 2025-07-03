@@ -60,6 +60,11 @@ tooltip {
 }
 
 #network {
+  padding-left: 8px;
+  padding-right: 14px;
+}
+
+#custom-docker {
   border-radius: 0 10px 10px 0;
   padding-left: 8px;
   padding-right: 14px;
@@ -213,6 +218,7 @@ tooltip {
 #idle_inhibitor:hover,
 #custom-calendar:hover,
 #custom-focus:hover,
+#custom-docker:hover,
 #bluetooth:hover,
 #pulseaudio:hover,
 #network:hover,

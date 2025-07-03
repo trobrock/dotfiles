@@ -3,17 +3,17 @@
     "spacing": 4, // Gaps between modules (4px)
     // Choose the order of the modules
     "modules-left": [
-        "hyprland/workspaces",
-        "custom/calendar",
+      "hyprland/workspaces",
+      "custom/calendar",
     ],
     "modules-center": [
       "custom/focus"
     ],
     "modules-right": [
-        "group/icons",
-        "pulseaudio",
-        "battery",
-        "clock"
+      "group/icons",
+      "pulseaudio",
+      "battery",
+      "clock"
     ],
     "group/icons": {
       "orientation": "inherit",
@@ -21,7 +21,8 @@
         "idle_inhibitor",
         "bluetooth",
         "power-profiles-daemon",
-        "network"
+        "network",
+        "custom/docker"
       ]
     },
     // Modules configuration
@@ -52,6 +53,17 @@
         "return-type": "json",
         "interval": 60, // Update every minute
         "format": "󰄬  {}"
+    },
+    "custom/docker": {
+        "exec": "~/.config/waybar/scripts/docker.sh",
+        "return-type": "json",
+        "interval": 60, // Update every minute
+        "format": "{icon}",
+        "format-icons": {
+            "running": "󰆦",
+            "stopped": "󰆧"
+        },
+        "on-click": "ghostty -e lazydocker"
     },
     "idle_inhibitor": {
         "format": "{icon}",
