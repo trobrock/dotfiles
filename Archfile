@@ -10,7 +10,6 @@ hyprpaper
 hyprshot
 
 # Misc UI
-blueman
 cliphist
 libnotify
 noto-fonts-emoji
@@ -35,7 +34,6 @@ brave-bin
 ghostty
 google-chrome
 chromium
-iwgtk
 libreoffice
 notion-app-electron
 slack-desktop-wayland
@@ -46,10 +44,13 @@ zoom
 qalculate-gtk
 
 # CLI
+
+# Dev
 1password-cli
 base-devel
 bat
 bind
+bluetuith
 bluez
 bluez-utils
 brightnessctl
@@ -66,11 +67,14 @@ gcalcli
 github-cli
 go
 imagemagick
+impala
 jq
 lazydocker
 lazygit
 less
+libvips
 magic-wormhole
+mariadb-clients
 mosh
 mplayer
 mtr
@@ -84,17 +88,13 @@ restic
 ripgrep
 ruby-build
 stow
+stripe-cli
 tldr
 tmux
 unzip
 wget
 yamllint
+yarn
 yazi
 zip
 zoxide
-
-# Dev
-libvips
-mariadb-clients
-stripe-cli
-yarn

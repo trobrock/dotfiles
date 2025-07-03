@@ -108,7 +108,7 @@
       "tooltip-format-disconnected": "Disconnected",
       "interval": 3,
       "nospacing": 1,
-      "on-click": "iwgtk"
+      "on-click": "ghostty -e impala"
     },
     "pulseaudio": {
         // "scroll-step": 1, // %, can be a float
@@ -135,6 +135,6 @@
       "tooltip-format": "{controller_alias}\t{controller_address}",
       "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
       "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
-      "on-click": "blueman-manager"
+      "on-click": "ghostty -e bluetuith",
     }
 }
