@@ -1,7 +1,9 @@
 bin
 README.md
-Brewfile*
+Brewfile
+Brewfile.lock.json
 Archfile
+Archfile.lock
 ^/.config/tmux/plugins
 .machine_name
 .gitignore

@@ -85,13 +85,38 @@ init_goose() {
   fi
 }
 
+archfile_packages() {
+  grep -v '^#' Archfile | tr '\n' ' '
+}
+
 install_packages() {
   log "Installing packages..."
   if [ "$(uname)" = "Darwin" ]; then
     brew bundle
   elif [ "$(uname)" = "Linux" ]; then
-    packages="$(grep -v '^#' Archfile | tr '\n' ' ')"
-    yay -S --needed --noconfirm $packages
+    archfile_remove_missing
+    yay -S --needed --noconfirm $(archfile_packages)
+    archfile_write_lock
+  fi
+}
+
+archfile_write_lock() {
+  pacman -Qe $(archfile_packages) | awk '{print $1}' | sort > Archfile.lock
+}
+
+archfile_remove_missing() {
+  if [ -f Archfile.lock ]; then
+    packages=()
+    while read -r package; do
+      if ! grep -q "^$package\$" Archfile; then
+        packages+=("$package")
+      fi
+    done < Archfile.lock
+
+    if [ ${#packages[@]} -gt 0 ]; then
+      echo "Removing packages not in Archfile: ${packages[*]}"
+      yay -Rns --noconfirm "${packages[@]}"
+    fi
   fi
 }
 

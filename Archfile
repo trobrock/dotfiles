@@ -34,7 +34,7 @@ brave-bin
 ghostty
 google-chrome
 chromium
-libreoffice
+libreoffice-fresh
 notion-app-electron
 slack-desktop-wayland
 streamdeck-ui
@@ -89,6 +89,7 @@ ripgrep
 ruby-build
 stow
 stripe-cli
+tailscale
 tldr
 tmux
 unzip
