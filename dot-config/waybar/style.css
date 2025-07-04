@@ -23,7 +23,6 @@ tooltip {
 #custom-calendar,
 #custom-focus,
 #pulseaudio,
-#battery,
 #clock {
     background: rgba(49, 50, 68, 0.6);
     color: #cdd6f4;
@@ -65,9 +64,11 @@ tooltip {
 }
 
 #custom-docker {
-  border-radius: 0 10px 10px 0;
   padding-left: 8px;
-  padding-right: 14px;
+}
+
+#battery {
+  border-radius: 0 10px 10px 0;
 }
 
 /* Workspaces */
