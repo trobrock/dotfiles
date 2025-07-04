@@ -11,7 +11,7 @@ json_output=$(jq -n \
     --arg stopped "$stopped" \
     '{
         "text": "\($count)",
-        "tooltip": "\($count) containers\nRunning: \($running)\nStopped: \($stopped)",
+        "tooltip": "Running: \($running)\nStopped: \($stopped)",
         "alt": if ($running | tonumber) > 0 then "running" else "stopped" end
     }')
 

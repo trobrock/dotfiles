@@ -84,7 +84,6 @@
     },
     "battery": {
         "states": {
-            "good": 95,
             "warning": 30,
             "critical": 15
         },
@@ -92,8 +91,8 @@
         "format-full": "{icon}",
         "format-charging": "󰂄",
         "format-plugged": "",
-        // "format-good": "", // An empty format will hide the module
-        // "format-full": "",
+        "tooltip-format-discharging": "{power:>1.0f}W↓ {capacity}%\n{time} remaining",
+        "tooltip-format-charging": "{power:>1.0f}W↑ {capacity}%\n{time} to full",
         "format-icons": ["", "", "", "", ""]
     },
     "power-profiles-daemon": {
