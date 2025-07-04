@@ -114,7 +114,7 @@ archfile_remove_missing() {
     done < Archfile.lock
 
     if [ ${#packages[@]} -gt 0 ]; then
-      echo "Removing packages not in Archfile: ${packages[*]}"
+      log "Removing packages not in Archfile: ${packages[*]}"
       yay -Rns --noconfirm "${packages[@]}"
     fi
   fi
@@ -123,7 +123,7 @@ archfile_remove_missing() {
 init_1password() {
   if [ "$(uname)" = "Linux" ]; then
     if [ ! -f $HOME/.config/1Password/settings/settings.json ] ; then
-      echo "enabling h/w acceleration for 1password..."
+      log "enabling h/w acceleration for 1password..."
       mkdir -p $HOME/.config/1Password/settings
       cat > $HOME/.config/1Password/settings/settings.json <<JSON
 {
