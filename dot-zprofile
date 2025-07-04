@@ -11,5 +11,9 @@ if [[ "$(uname)" == "Darwin" ]] ; then
   source ~/.orbstack/shell/init.zsh 2>/dev/null || :
 fi
 
-eval "$(rbenv init - --no-rehash zsh)"
+if command -v mise &> /dev/null; then
+  eval "$(mise activate zsh)"
+else
+  eval "$(rbenv init - --no-rehash zsh)"
+fi
 eval "$(direnv hook zsh)"

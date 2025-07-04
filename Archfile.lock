@@ -41,6 +41,7 @@ libreoffice-fresh
 libvips
 magic-wormhole
 mariadb-clients
+mise
 mosh
 mplayer
 mtr
@@ -52,7 +53,6 @@ npm
 pipewire
 power-profiles-daemon
 qalculate-gtk
-rbenv
 restic
 ripgrep
 ruby-build
