@@ -11,6 +11,7 @@ hyprshot
 
 # Misc UI
 cliphist
+fprintd
 libnotify
 noto-fonts-emoji
 pipewire
@@ -56,6 +57,7 @@ bluez-utils
 brightnessctl
 btop
 codename-goose
+curl
 diff-so-fancy
 direnv
 docker
@@ -68,13 +70,16 @@ github-cli
 go
 imagemagick
 impala
+inetutils
 jq
 lazydocker
 lazygit
 less
 libvips
 magic-wormhole
+man-db
 mariadb-clients
+mise
 mosh
 mplayer
 mtr
@@ -83,7 +88,6 @@ nodejs
 npm
 openssh
 power-profiles-daemon
-mise
 restic
 ripgrep
 ruby-build

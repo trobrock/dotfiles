@@ -63,3 +63,6 @@ function tm() {
 
   tmux attach-session -t "dev"
 }
+
+# Find packages without leaving the terminal
+alias yayf="yay -Slq | fzf --multi --preview 'yay -Sii {1}' --preview-window=down:75% | xargs -ro yay -S"
