@@ -1,3 +1,7 @@
+if [[ "$(uname)" == "Linux" ]] && [[ -z "$DISPLAY" && "$(tty)" == "/dev/tty1" ]] ; then
+  exec Hyprland
+fi
+
 if [ -f /opt/homebrew/bin/brew ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
@@ -16,4 +20,5 @@ if command -v mise &> /dev/null; then
 else
   eval "$(rbenv init - --no-rehash zsh)"
 fi
+
 eval "$(direnv hook zsh)"

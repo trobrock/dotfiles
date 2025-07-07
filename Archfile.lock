@@ -6,7 +6,6 @@ bind
 bluetuith
 bluez
 bluez-utils
-brave-bin
 brightnessctl
 btop
 chromium
@@ -22,11 +21,11 @@ fprintd
 fzf
 gcalcli
 ghostty
+git
 github-cli
+git-lfs
 gnome-keyring
 google-chrome
-greetd
-greetd-regreet
 hypridle
 hyprland
 hyprlock

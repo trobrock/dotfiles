@@ -1,5 +1,4 @@
 alias reload='exec $SHELL -l'
-alias update='pushd ~/Sites/personal/dotfiles && brew bundle && popd'
 alias ip='curl http://ipv4.icanhazip.com'
 
 # vim
@@ -12,9 +11,6 @@ alias lt='eza -lah -I .git --tree'
 
 # cat
 alias cat='bat'
-
-# ssh
-# alias ssh='kitten ssh'
 
 # git
 alias lg='lazygit'
