@@ -91,6 +91,7 @@ ruby-build
 stow
 stripe-cli
 tailscale
+terraform
 tldr
 tmux
 unzip
