@@ -8,10 +8,9 @@ hyprshot
 # Misc UI
 cliphist
 fprintd
-libnotify
+mako
 noto-fonts-emoji
 pipewire
-swaync
 ttf-cascadia-code-nerd
 waybar
 wireplumber

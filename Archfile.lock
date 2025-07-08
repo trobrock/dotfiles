@@ -41,6 +41,7 @@ less
 libreoffice-fresh
 libvips
 magic-wormhole
+mako
 man-db
 mariadb-clients
 mise
@@ -63,9 +64,9 @@ slack-desktop-wayland
 stow
 streamdeck-ui
 stripe-cli
-swaync
 tailscale
 telegram-desktop
+terraform
 tldr
 tmux
 todoist-wrapper-bin
