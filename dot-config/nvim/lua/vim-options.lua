@@ -33,6 +33,17 @@ vim.cmd("autocmd BufLeave,FocusLost * silent! wall")
 -- enable local .nvim.lua config, for project specific settings
 vim.opt.exrc = true
 
+-- restore cursor position when reopening files
+vim.api.nvim_create_autocmd("BufReadPost", {
+  group = vim.api.nvim_create_augroup("RestoreCursorPosition", { clear = true }),
+  callback = function(ev)
+    local mark = vim.api.nvim_buf_get_mark(ev.buf, '"')
+    if mark[1] > 0 and mark[1] <= vim.api.nvim_buf_line_count(ev.buf) then
+      vim.api.nvim_win_set_cursor(0, mark)
+    end
+  end,
+})
+
 --fix terraform and hcl comment string
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("FixTerraformCommentString", { clear = true }),
