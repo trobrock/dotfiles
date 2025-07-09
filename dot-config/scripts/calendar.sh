@@ -4,23 +4,35 @@ source "$HOME/.config/scripts/utils.sh"
 
 # Get current time in ISO format
 current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+# Get today's date for filtering
+today=$(date +"%Y-%m-%d")
+# Get end of today
+end_of_today=$(date -d "$today 23:59:59" +"%Y-%m-%dT%H:%M:%SZ")
 
-# Get agenda from gcalcli
-agenda=$(gcalcli --nocolor agenda "$current_time" --tsv --details conference --details location --details description --nodeclined --calendar "Trae Robrock (personal)" --calendar "trobrock@comfort.ly" --calendar "trobrock@robrockproperties.com" --calendar "trae.robrock@huntresslabs.com")
+# Get agenda from gcalcli (only for today)
+agenda=$(gcalcli --nocolor agenda "$current_time" "$end_of_today" --tsv --details conference --details location --details description --nodeclined --calendar "Trae Robrock (personal)" --calendar "trobrock@comfort.ly" --calendar "trobrock@robrockproperties.com" --calendar "trae.robrock@huntresslabs.com")
 
-# Process agenda to get the next event
+# Process agenda to get the next 3 events
 IFS=$'\n' read -d '' -ra lines <<< "$agenda"
 
-# Skip the header line and find the first event
-event_found=false
-for ((i=1; i<${#lines[@]}; i++)); do
+# Arrays to store event information
+declare -a event_titles
+declare -a event_times
+declare -a event_dates
+declare -a event_urls
+
+# Skip the header line and find the first 4 events (1 for title + 3 for tooltip)
+events_found=0
+next_event_url=""
+
+for ((i=1; i<${#lines[@]} && events_found<4; i++)); do
   line="${lines[i]}"
   
   # Split the line by tabs
   IFS=$'\t' read -ra event_data <<< "$line"
 
-  # Check if there's a start time
-  if [[ "${event_data[1]}" =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
+  # Check if there's a start time and the event is today
+  if [[ "${event_data[1]}" =~ ^[0-9]{2}:[0-9]{2}$ ]] && [[ "${event_data[0]}" == "$today" ]]; then
     start_date="${event_data[0]}"
     start_time="${event_data[1]}"
 
@@ -44,18 +56,43 @@ for ((i=1; i<${#lines[@]}; i++)); do
     fifteen_minutes_ago=$(date_from_string "15 minutes ago")
     start_time_epoch=$(date_from_string "$start_date $start_time")
     if [[ $fifteen_minutes_ago -lt $start_time_epoch ]] && [[ "$title" != "busy" ]]; then
-      event_found=true
-      break
+      # Store the first event's URL for the main output
+      if [[ $events_found -eq 0 ]]; then
+        next_event_url="$conference_url"
+      fi
+      
+      # Store event information
+      event_titles[$events_found]="$title"
+      event_times[$events_found]="$start_time"
+      event_dates[$events_found]="$start_date"
+      event_urls[$events_found]="$conference_url"
+      
+      events_found=$((events_found + 1))
     fi
   fi
 done
 
-if [[ "$event_found" == true ]]; then
-  formatted_time=$(date_from_string "$start_date $start_time" "+%I:%M %p")
-  title=$(truncate "$title" 25)
+if [[ $events_found -gt 0 ]]; then
+  # Format the first event for the main title
+  formatted_time=$(date_from_string "${event_dates[0]} ${event_times[0]}" "+%I:%M %p")
+  main_title=$(truncate "${event_titles[0]}" 25)
+  
+  # Build tooltip with the next 3 events after the first one
+  tooltip=""
+  if [[ $events_found -gt 1 ]]; then
+    for ((i=1; i<events_found; i++)); do
+      event_formatted_time=$(date_from_string "${event_dates[i]} ${event_times[i]}" "+%I:%M %p")
+      if [[ $i -gt 1 ]]; then
+        tooltip+="\\n"
+      fi
+      tooltip+="$event_formatted_time - ${event_titles[i]}"
+    done
+  else
+    tooltip="No more events today"
+  fi
 
-  echo '{"title":"'$formatted_time' - '$title'", "conference_url":"'$conference_url'"}'
+  echo '{"title":"'$formatted_time' - '$main_title'", "conference_url":"'$next_event_url'", "tooltip":"'$tooltip'"}'
 else
-  echo '{"title":"No upcoming events", "conference_url":""}'
+  echo '{"title":"No upcoming events", "conference_url":"", "tooltip":"No upcoming events"}'
 fi
 
