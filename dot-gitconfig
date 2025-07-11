@@ -7,6 +7,8 @@
 [alias]
   ls = log --color --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
   lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+[diff]
+  tool = diff-so-fancy
 [diff-so-fancy]
   stripLeadingSymbols = false
 [filter "lfs"]
