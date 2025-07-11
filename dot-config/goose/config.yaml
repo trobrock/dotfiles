@@ -51,7 +51,7 @@ extensions:
     bundled: null
     cmd: npx
     description: null
-    enabled: true
+    enabled: false
     env_keys: []
     envs: {}
     name: puppeteer
