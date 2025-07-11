@@ -205,6 +205,28 @@ setup_fingerprint() {
   fi
 }
 
+allow_fingerprint_usage() {
+  setup_fingerprint
+
+  # Add fingerprint authentication as an option for sudo
+  if ! grep -q pam_fprintd.so /etc/pam.d/sudo; then
+    sudo sed -i '1i auth    sufficient pam_fprintd.so' /etc/pam.d/sudo
+  fi
+
+  # Add fingerprint authentication as an option for hyprpolkitagent
+  if [ ! -f /etc/pam.d/polkit-1 ] || ! grep -q pam_fprintd.so /etc/pam.d/polkit-1; then
+    sudo tee /etc/pam.d/polkit-1 >/dev/null <<'EOF'
+auth      sufficient pam_fprintd.so
+auth      sufficient pam_unix.so
+auth      required   pam_deny.so
+
+account   required pam_unix.so
+password  required pam_unix.so
+session   required pam_unix.so
+EOF
+  fi
+}
+
 setup_auto_login() {
   if [ ! -f /etc/systemd/system/getty@tty1.service.d/override.conf ]; then
     log "Setting up auto-login..."
@@ -232,6 +254,6 @@ init_1password
 install_secrets
 
 if [ "$(uname)" = "Linux" ]; then
-  setup_fingerprint
+  allow_fingerprint_usage
   setup_auto_login
 fi

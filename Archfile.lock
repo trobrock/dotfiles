@@ -30,7 +30,6 @@ hypridle
 hyprland
 hyprlock
 hyprpaper
-hyprpolkitagent
 hyprshot
 imagemagick
 impala
@@ -54,6 +53,7 @@ notion-app-electron
 noto-fonts-emoji
 npm
 pipewire
+polkit-gnome
 power-profiles-daemon
 qalculate-gtk
 restic

@@ -8,6 +8,7 @@ hyprshot
 # Misc UI
 cliphist
 fprintd
+lsusb
 mako
 noto-fonts-emoji
 pipewire
@@ -20,7 +21,7 @@ xorg-xhost
 
 # Security
 gnome-keyring
-hyprpolkitagent
+polkit-gnome
 libsecret
 seahorse
 
