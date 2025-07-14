@@ -12,6 +12,7 @@
     "modules-right": [
       "group/icons",
       "pulseaudio",
+      "custom/weather",
       "clock"
     ],
     "group/icons": {
@@ -71,6 +72,12 @@
             "activated": "󰅶",
             "deactivated": "󰛊"
         }
+    },
+    "custom/weather": {
+        "exec": "~/.config/waybar/scripts/weather.sh",
+        "return-type": "json",
+        "interval": 600, // Update every 10 minutes
+        "on-click": "ghostty -e 'curl -s https://wttr.in/; read'",
     },
     "clock": {
         "format": "{:%Y-%m-%d %I:%M %p}",

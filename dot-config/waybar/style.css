@@ -23,6 +23,7 @@ tooltip {
 #custom-calendar,
 #custom-focus,
 #pulseaudio,
+#custom-weather,
 #clock {
     background: rgba(49, 50, 68, 0.6);
     color: #cdd6f4;
@@ -222,6 +223,7 @@ tooltip {
 #custom-docker:hover,
 #bluetooth:hover,
 #pulseaudio:hover,
+#custom-weather:hover,
 #network:hover,
 #power-profiles-daemon:hover,
 #battery:hover,
