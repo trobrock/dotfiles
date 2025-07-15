@@ -8,7 +8,6 @@ hyprshot
 # Misc UI
 cliphist
 fprintd
-lsusb
 mako
 noto-fonts-emoji
 pipewire
@@ -35,7 +34,6 @@ notion-app-electron
 slack-desktop-wayland
 streamdeck-ui
 telegram-desktop
-todoist-wrapper-bin
 zoom
 qalculate-gtk
 
