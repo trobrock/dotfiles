@@ -80,7 +80,7 @@
         "on-click": "ghostty -e 'curl -s https://wttr.in/; read'",
     },
     "clock": {
-        "format": "{:%Y-%m-%d %I:%M %p}",
+        "format": "{:%m-%d %I:%M %p}",
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt>{calendar}</tt>",
         "calendar": {
           "format": {
