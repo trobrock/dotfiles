@@ -70,6 +70,8 @@ terraform
 tldr
 tmux
 ttf-cascadia-code-nerd
+ufw
+ufw-docker
 unzip
 waybar
 wget

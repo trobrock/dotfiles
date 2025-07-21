@@ -38,8 +38,6 @@ zoom
 qalculate-gtk
 
 # CLI
-
-# Dev
 1password-cli
 base-devel
 bat
@@ -70,10 +68,8 @@ jq
 lazydocker
 lazygit
 less
-libvips
 magic-wormhole
 man-db
-mariadb-clients
 mise
 mosh
 mplayer
@@ -87,11 +83,12 @@ restic
 ripgrep
 ruby-build
 stow
-stripe-cli
 tailscale
 terraform
 tldr
 tmux
+ufw
+ufw-docker
 unzip
 wget
 yamllint
@@ -99,3 +96,8 @@ yarn
 yazi
 zip
 zoxide
+
+# Dev
+libvips
+mariadb-clients
+stripe-cli

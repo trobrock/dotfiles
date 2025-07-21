@@ -239,6 +239,28 @@ EOF
   fi
 }
 
+setup_firewall() {
+  log "Setting up firewall rules..."
+
+  sudo ufw default deny incoming
+  sudo ufw default allow outgoing
+
+  sudo ufw allow 22/tcp
+
+  # Allow Docker containers to use DNS on host
+  sudo ufw allow in on docker0 to any port 53
+
+  # Turn on the firewall
+  sudo ufw enable
+
+  # If ufw-docker is not installed
+  if [ ! -f /etc/ufw/after.rules ] || ! grep -q "BEGIN UFW AND DOCKER" /etc/ufw/after.rules; then
+    log "Installing ufw-docker..."
+    sudo ufw-docker install
+    sudo ufw reload
+  fi
+}
+
 install_package_manager
 install_stow
 change_shell_to_zsh
@@ -256,4 +278,5 @@ install_secrets
 if [ "$(uname)" = "Linux" ]; then
   allow_fingerprint_usage
   setup_auto_login
+  setup_firewall
 fi
