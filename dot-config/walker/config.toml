@@ -3,12 +3,16 @@ terminal_title_flag = ""
 locale = ""
 close_when_open = true
 theme = "catppuccin-mocha"
+base_theme = []
 monitor = ""
 hotreload_theme = false
 as_window = false
 timeout = 0
 disable_click_to_close = false
 force_keyboard_focus = true
+theme_location = []
+plugin_location = []
+js_runtime = "node"
 
 [keys]
 accept_typeahead = ["tab"]
@@ -28,7 +32,7 @@ alternate = "alt"
 clear_session = ["ctrl x"]
 copy_last_response = ["ctrl c"]
 resume_session = ["ctrl r"]
-run_last_responstruee = ["ctrl e"]
+run_last_response = ["ctrl e"]
 
 [events]
 on_activate = ""
@@ -57,7 +61,6 @@ labels = "jkl;asdf"
 
 [builtins.hyprland_keybinds]
 show_sub_when_single = true
-path = "~/.config/hypr/hyprland.conf"
 weight = 5
 name = "hyprland_keybinds"
 placeholder = "Hyprland Keybinds"
@@ -76,18 +79,18 @@ show_sub_when_single = false
 show_icon_when_single = true
 show_generic = true
 history = false
-icon = ""
+icon = "applications-other"
 hidden = true
 
 [builtins.applications.actions]
-enabled = false
-hide_category = true
+enabled = true
+hide_category = false
 hide_without_query = true
 
 [builtins.bookmarks]
 weight = 5
 placeholder = "Bookmarks"
-name = "Bookmarks"
+name = "bookmarks"
 icon = "bookmark"
 switcher_only = true
 
@@ -97,12 +100,11 @@ url = "https://github.com/abenz1267/walker"
 keywords = ["walker", "github"]
 
 [[builtins.bookmarks.entries]]
-label = "Omarchy - Github"
+label = "Omarchy"
 url = "https://github.com/basecamp/omarchy"
 keywords = ["omarchy", "github"]
 
 [builtins.xdph_picker]
-hidden = true
 weight = 5
 placeholder = "Screen/Window Picker"
 show_sub_when_single = true
@@ -128,7 +130,7 @@ prompt = "You are a helpful general assistant. Keep your answers short and preci
 [builtins.calc]
 require_number = true
 weight = 5
-name = "Calculator"
+name = "calc"
 icon = "accessories-calculator"
 placeholder = "Calculator"
 min_chars = 3
@@ -152,7 +154,6 @@ placeholder = "Clipboard"
 image_height = 300
 max_entries = 10
 switcher_only = true
-hidden = true
 
 [builtins.commands]
 weight = 5
@@ -160,7 +161,6 @@ icon = "utilities-terminal"
 switcher_only = true
 name = "commands"
 placeholder = "Commands"
-hidden = true
 
 [builtins.custom_commands]
 weight = 5
@@ -172,7 +172,7 @@ hidden = true
 [builtins.emojis]
 exec = "wl-copy"
 weight = 5
-name = "Emojis"
+name = "emojis"
 placeholder = "Emojis"
 switcher_only = true
 history = true
@@ -181,7 +181,7 @@ show_unqualified = false
 prefix = ":"
 
 [builtins.symbols]
-after_copy = ""
+exec = "wl-copy '%RESULT%'"
 weight = 5
 name = "symbols"
 placeholder = "Symbols"
@@ -214,11 +214,9 @@ name = "runner"
 placeholder = "Runner"
 typeahead = true
 history = true
-generic_entry = false       # Generic command runner
-shell_config = ""           # Path to shell to parse for aliases
+generic_entry = false
 refresh = true
 use_fd = false
-switcher_only = true
 hidden = true
 
 [builtins.ssh]
@@ -236,6 +234,8 @@ weight = 5
 name = "switcher"
 placeholder = "Switcher"
 prefix = "/"
+switcher_only = true
+hidden = true
 
 [builtins.websearch]
 keep_selection = true
@@ -243,27 +243,10 @@ weight = 5
 icon = "applications-internet"
 name = "websearch"
 placeholder = "Websearch"
-switcher_only = true
-hidden = true
 
 [[builtins.websearch.entries]]
 name = "Google"
 url = "https://www.google.com/search?q=%TERM%"
-
-[[builtins.websearch.entries]]
-name = "DuckDuckGo"
-url = "https://duckduckgo.com/?q=%TERM%"
-switcher_only = true
-
-[[builtins.websearch.entries]]
-name = "Ecosia"
-url = "https://www.ecosia.org/search?q=%TERM%"
-switcher_only = true
-
-[[builtins.websearch.entries]]
-name = "Yandex"
-url = "https://yandex.com/search/?text=%TERM%"
-switcher_only = true
 
 [builtins.dmenu]
 hidden = true
@@ -281,4 +264,3 @@ icon = "accessories-dictionary"
 placeholder = "Translation"
 switcher_only = true
 provider = "googlefree"
-hidden = true
