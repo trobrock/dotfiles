@@ -4,6 +4,7 @@ hyprland
 hyprlock
 hyprpaper
 hyprshot
+uwsm
 
 # Misc UI
 cliphist
@@ -14,7 +15,7 @@ pipewire
 ttf-cascadia-code-nerd
 waybar
 wireplumber
-wofi
+walker-bin
 xdg-desktop-portal-hyprland
 xorg-xhost
 
@@ -47,7 +48,7 @@ bluez
 bluez-utils
 brightnessctl
 btop
-codename-goose
+codename-goose-bin
 curl
 diff-so-fancy
 direnv

@@ -1,5 +1,7 @@
-if [[ "$(uname)" == "Linux" ]] && [[ -z "$DISPLAY" && "$(tty)" == "/dev/tty1" ]] ; then
-  exec Hyprland
+if [[ "$(uname)" == "Linux" ]]; then
+  if uwsm check may-start > /dev/null; then
+    exec uwsm start hyprland-uwsm.desktop
+  fi
 fi
 
 if [ -f /opt/homebrew/bin/brew ]; then
