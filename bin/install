@@ -252,6 +252,7 @@ setup_firewall() {
 
   # Turn on the firewall
   sudo ufw enable
+  sudo systemctl enable ufw.service
 
   # If ufw-docker is not installed
   if [ ! -f /etc/ufw/after.rules ] || ! grep -q "BEGIN UFW AND DOCKER" /etc/ufw/after.rules; then
