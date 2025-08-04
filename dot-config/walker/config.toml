@@ -248,6 +248,10 @@ placeholder = "Websearch"
 name = "Google"
 url = "https://www.google.com/search?q=%TERM%"
 
+[[builtins.websearch.entries]]
+name = "Giphy"
+url = "https://giphy.com/search/%TERM%"
+
 [builtins.dmenu]
 hidden = true
 weight = 5
