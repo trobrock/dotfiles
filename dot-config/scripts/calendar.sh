@@ -7,7 +7,7 @@ current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # Get today's date for filtering
 today=$(date +"%Y-%m-%d")
 # Get end of today
-end_of_today=$(date -d "$today 23:59:59" +"%Y-%m-%dT%H:%M:%SZ")
+end_of_today=$(get_end_of_day "$today")
 
 # Get agenda from gcalcli (only for today)
 agenda=$(gcalcli --nocolor agenda "$current_time" "$end_of_today" --tsv --details conference --details location --details description --nodeclined --calendar "Trae Robrock (personal)" --calendar "trobrock@comfort.ly" --calendar "trobrock@robrockproperties.com" --calendar "trae.robrock@huntresslabs.com")
