@@ -15,6 +15,7 @@ direnv
 docker
 docker-buildx
 docker-compose
+dosfstools
 eza
 fprintd
 fzf
@@ -51,6 +52,7 @@ nodejs
 notion-app-electron
 noto-fonts-emoji
 npm
+ollama-rocm
 pipewire
 polkit-gnome
 power-profiles-daemon
@@ -75,6 +77,7 @@ unzip
 uwsm
 walker-bin
 waybar
+wemux
 wget
 wireplumber
 xdg-desktop-portal-hyprland

@@ -48,12 +48,14 @@ bluez-utils
 brightnessctl
 btop
 codename-goose-bin
+crush-bin
 curl
 diff-so-fancy
 direnv
 docker
 docker-buildx
 docker-compose
+dosfstools
 eza
 fzf
 gcalcli
@@ -77,6 +79,7 @@ mtr
 neovim
 nodejs
 npm
+ollama-rocm
 openssh
 power-profiles-daemon
 restic
@@ -90,6 +93,7 @@ tmux
 ufw
 ufw-docker
 unzip
+wemux
 wget
 yamllint
 yarn
