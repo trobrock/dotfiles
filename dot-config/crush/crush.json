@@ -1,0 +1,12 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "mcp": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "$(echo Bearer $GITHUB_PERSONAL_ACCESS_TOKEN)"
+      }
+    }
+  }
+}
