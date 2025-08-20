@@ -67,7 +67,7 @@ imagemagick
 impala
 inetutils
 jq
-lazydocker
+lazydocker-bin
 lazygit
 less
 magic-wormhole
@@ -154,5 +154,5 @@ samba
 v4l-utils
 vulkan-icd-loader
 vulkan-radeon
-wine
+wine-staging
 winetricks

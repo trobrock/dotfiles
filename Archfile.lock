@@ -38,7 +38,7 @@ hyprshot
 imagemagick
 impala
 inetutils
-lazydocker
+lazydocker-bin
 lazygit
 less
 lib32-alsa-lib
@@ -108,7 +108,7 @@ walker-bin
 waybar
 wemux
 wget
-wine
+wine-staging
 winetricks
 wireplumber
 xdg-desktop-portal-hyprland
