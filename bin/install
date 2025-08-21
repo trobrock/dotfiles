@@ -2,18 +2,8 @@
 
 set -e
 
-log() {
-  blue='\033[0;34m'
-  green='\033[0;32m'
-  nc='\033[0m'
-  echo -e "${blue}[$(date +'%Y-%m-%d %H:%M:%S')]${nc} ${green}$1${nc}"
-}
-
-log_error() {
-  red='\033[0;31m'
-  nc='\033[0m'
-  echo -e "${red}[$(date +'%Y-%m-%d %H:%M:%S')] $1${nc}"
-}
+source "$(dirname "$0")/lib/logging.sh"
+source "$(dirname "$0")/clean-broken-symlinks"
 
 install_package_manager() {
   if [ "$(uname)" = "Darwin" ]; then
@@ -270,6 +260,7 @@ init_goose
 
 log "Installing dotfiles using stow..."
 stow --verbose=2 --dotfiles --adopt -t $HOME .
+clean_broken_symlinks
 
 install_packages
 init_1password
