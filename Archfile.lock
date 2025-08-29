@@ -20,6 +20,7 @@ docker-compose
 dosbox
 dosfstools
 eza
+firewalld
 fprintd
 fzf
 gcalcli
@@ -99,8 +100,6 @@ terraform
 tldr
 tmux
 ttf-cascadia-code-nerd
-ufw
-ufw-docker
 unzip
 uwsm
 vulkan-radeon

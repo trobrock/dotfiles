@@ -105,7 +105,7 @@ archfile_remove_missing() {
 
     if [ ${#packages[@]} -gt 0 ]; then
       log "Removing packages not in Archfile: ${packages[*]}"
-      yay -Rns --noconfirm "${packages[@]}"
+      yay -Rns --noconfirm "${packages[@]}" || true
     fi
   fi
 }
@@ -232,24 +232,30 @@ EOF
 setup_firewall() {
   log "Setting up firewall rules..."
 
-  sudo ufw default deny incoming
-  sudo ufw default allow outgoing
+  # Start and enable firewalld service
+  sudo systemctl start firewalld
+  sudo systemctl enable firewalld
 
-  sudo ufw allow 22/tcp
-
-  # Allow Docker containers to use DNS on host
-  sudo ufw allow in on docker0 to any port 53
-
-  # Turn on the firewall
-  sudo ufw enable
-  sudo systemctl enable ufw.service
-
-  # If ufw-docker is not installed
-  if [ ! -f /etc/ufw/after.rules ] || ! grep -q "BEGIN UFW AND DOCKER" /etc/ufw/after.rules; then
-    log "Installing ufw-docker..."
-    sudo ufw-docker install
-    sudo ufw reload
+  # Set default zone to public (equivalent to UFW's default deny incoming)
+  if [ "$(sudo firewall-cmd --get-default-zone)" != "public" ]; then
+    log "Setting default firewall zone to public..."
+    sudo firewall-cmd --set-default-zone=public
   fi
+
+  # Remove any existing SSH rules and add SSH (port 22)
+  if sudo firewall-cmd --zone=public --list-all | grep -q 'services:.*ssh'; then
+    log "Removing existing SSH rules from firewall..."
+    sudo firewall-cmd --zone=public --remove-service=ssh --permanent 2>/dev/null || true
+  fi
+  if ! sudo firewall-cmd --zone=public --list-ports | grep -q '22/tcp'; then
+    log "Adding SSH (port 22) to firewall rules..."
+    sudo firewall-cmd --zone=public --add-port=22/tcp --permanent
+  fi
+
+  # Apply all permanent rules
+  sudo firewall-cmd --reload
+
+  log "Firewall setup complete. Default zone: public, SSH allowed on port 22, Docker networking configured."
 }
 
 install_package_manager

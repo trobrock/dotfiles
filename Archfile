@@ -89,8 +89,7 @@ tailscale
 terraform
 tldr
 tmux
-ufw
-ufw-docker
+firewalld
 unzip
 wemux
 wget
