@@ -1,6 +1,7 @@
 1password-beta
 1password-cli
 alsa-plugins
+asciinema
 base-devel
 bat
 bind
@@ -30,6 +31,7 @@ github-cli
 git-lfs
 gnome-keyring
 google-chrome
+gum
 hypridle
 hyprland
 hyprlock
@@ -71,6 +73,7 @@ magic-wormhole
 mako
 man-db
 mariadb-clients
+minio-client
 mise
 mosh
 mplayer

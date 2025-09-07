@@ -39,6 +39,7 @@ qalculate-gtk
 
 # CLI
 1password-cli
+asciinema
 base-devel
 bat
 bind
@@ -62,6 +63,7 @@ git
 git-lfs
 github-cli
 go
+gum
 imagemagick
 impala
 inetutils
@@ -71,6 +73,7 @@ lazygit
 less
 magic-wormhole
 man-db
+minio-client
 mise
 mosh
 mplayer

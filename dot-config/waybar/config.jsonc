@@ -10,6 +10,7 @@
       "custom/focus"
     ],
     "modules-right": [
+      "custom/tailscale",
       "group/icons",
       "pulseaudio",
       "custom/weather",
@@ -41,6 +42,13 @@
           "active": "",
             "default": ""
         }
+    },
+    "custom/tailscale": {
+        "exec": "~/.config/waybar/scripts/tailscale.sh",
+        "return-type": "json",
+        "interval": 60, // Update every minute
+        "format": "  {}",
+        "on-click": "ghostty -e tailscale-switch"
     },
     "custom/calendar": {
         "exec": "~/.config/waybar/scripts/calendar.sh",
