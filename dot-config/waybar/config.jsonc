@@ -4,21 +4,22 @@
     // Choose the order of the modules
     "modules-left": [
       "hyprland/workspaces",
-      "custom/calendar",
+      "custom/calendar"
     ],
     "modules-center": [
       "custom/focus"
     ],
     "modules-right": [
-      "custom/tailscale",
       "group/icons",
       "pulseaudio",
+      "custom/project_time",
       "custom/weather",
       "clock"
     ],
     "group/icons": {
       "orientation": "inherit",
       "modules": [
+        "custom/tailscale",
         "idle_inhibitor",
         "bluetooth",
         "power-profiles-daemon",
@@ -47,15 +48,22 @@
         "exec": "~/.config/waybar/scripts/tailscale.sh",
         "return-type": "json",
         "interval": 60, // Update every minute
-        "format": "  {}",
+        "format": " ",
+        "tooltip-format": "{}",
         "on-click": "ghostty -e tailscale-switch"
+    },
+    "custom/project_time": {
+        "exec": "~/.config/waybar/scripts/project_time.sh",
+        "return-type": "json",
+        "interval": 300, // Update every 5 minutes
+        "format": "󰃰  {}"
     },
     "custom/calendar": {
         "exec": "~/.config/waybar/scripts/calendar.sh",
         "return-type": "json",
         "interval": 300, // Update every 5 minutes
         "format": "  {}",
-        "on-click": "~/.config/scripts/open_calendar_event.sh",
+        "on-click": "~/.config/scripts/open_calendar_event.sh"
     },
     "custom/focus": {
         "exec": "~/.config/waybar/scripts/focus.sh",
@@ -85,7 +93,7 @@
         "exec": "~/.config/waybar/scripts/weather.sh",
         "return-type": "json",
         "interval": 600, // Update every 10 minutes
-        "on-click": "ghostty -e 'curl -s https://wttr.in/; read'",
+        "on-click": "ghostty -e 'curl -s https://wttr.in/; read'"
     },
     "clock": {
         "format": "{:%m-%d %I:%M %p}",
@@ -159,6 +167,6 @@
       "tooltip-format": "{controller_alias}\t{controller_address}",
       "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
       "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
-      "on-click": "ghostty -e bluetuith",
+      "on-click": "ghostty -e bluetuith"
     }
 }

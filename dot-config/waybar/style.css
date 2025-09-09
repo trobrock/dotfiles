@@ -24,7 +24,7 @@ tooltip {
 #custom-focus,
 #pulseaudio,
 #custom-weather,
-#custom-tailscale,
+#custom-project_time,
 #clock {
     background: rgba(49, 50, 68, 0.6);
     color: #cdd6f4;
@@ -48,6 +48,11 @@ tooltip {
     margin: 0;
     padding: 0 10px;
     background: none;
+}
+
+#custom-tailscale {
+  border-radius: 10px 0 0 10px;
+  padding-right: 6px;
 }
 
 #idle_inhibitor {
