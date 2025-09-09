@@ -48,6 +48,21 @@ get_end_of_day() {
   fi
 }
 
+get_beginning_of_week() {
+  local date_input="$1"
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    local epoch=$(date -j -f "%Y-%m-%d" "$date_input" "+%s")
+    local day_of_week=$(date -j -f "%Y-%m-%d" "$date_input" "+%u")
+    local days_to_subtract=$((day_of_week % 7))
+    local adjusted_epoch=$((epoch - days_to_subtract*24*3600))
+    date -r "$adjusted_epoch" "+%Y-%m-%dT00:00:00Z"
+  else
+    local day_of_week=$(date -d "$date_input" +%u)
+    local days_to_subtract=$((day_of_week % 7))
+    date -d "$date_input -${days_to_subtract} days" +"%Y-%m-%dT00:00:00Z"
+  fi
+}
+
 truncate() {
   input="$1"
   length="$2"

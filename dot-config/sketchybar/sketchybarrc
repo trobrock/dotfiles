@@ -68,6 +68,8 @@ source "$ITEM_DIR/focus.sh"
 
 # Right Items
 source "$ITEM_DIR/system_info.sh"
+spacer "four" "right"
+source "$ITEM_DIR/project_time.sh"
 
 ##### Force all scripts to run the first time (never do this in a script) #####
 sketchybar --update
