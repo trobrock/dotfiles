@@ -68,10 +68,6 @@ source "$ITEM_DIR/focus.sh"
 
 # Right Items
 source "$ITEM_DIR/system_info.sh"
-spacer "one" "right"
-source "$ITEM_DIR/todoist.sh"
-spacer "two" "right"
-source "$ITEM_DIR/github.sh"
 
 ##### Force all scripts to run the first time (never do this in a script) #####
 sketchybar --update
