@@ -4,16 +4,19 @@ source "$HOME/.config/scripts/utils.sh"
 
 beginning_of_week=$(get_beginning_of_week "$(date +"%Y-%m-%d")")
 current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+current_time_epoch=$(date +"%s")
 
 # Get agenda from gcalcli
 agenda=$(gcalcli --nocolor agenda "$beginning_of_week" "$current_time" --tsv --nodeclined --calendar "Blocks")
 
 # Function to calculate time difference in minutes
+# Uses the earlier of current time or event end time to avoid counting future time
 time_diff_minutes() {
   local start_date="$1"
   local start_time="$2"
   local end_date="$3"
   local end_time="$4"
+  local current_time_epoch="$5"
   
   # Convert to epoch seconds
   local start_datetime="${start_date}T${start_time}:00"
@@ -27,8 +30,18 @@ time_diff_minutes() {
     local end_epoch=$(date -d "$end_datetime" "+%s")
   fi
   
-  # Calculate difference in minutes
-  echo $(( (end_epoch - start_epoch) / 60 ))
+  # Use the earlier of current time or event end time
+  if [[ $end_epoch -gt $current_time_epoch ]]; then
+    end_epoch=$current_time_epoch
+  fi
+  
+  # Only count time if the event has started
+  if [[ $start_epoch -gt $current_time_epoch ]]; then
+    echo 0
+  else
+    # Calculate difference in minutes
+    echo $(( (end_epoch - start_epoch) / 60 ))
+  fi
 }
 
 # Function to format minutes as "XhYm"
@@ -52,7 +65,7 @@ declare -A project_times
 # Skip the header line and process each event using process substitution to preserve variables
 while IFS=$'\t' read -r start_date start_time end_date end_time title; do
   if [[ -n "$title" && -n "$start_date" && -n "$start_time" && -n "$end_date" && -n "$end_time" ]]; then
-    duration=$(time_diff_minutes "$start_date" "$start_time" "$end_date" "$end_time")
+    duration=$(time_diff_minutes "$start_date" "$start_time" "$end_date" "$end_time" "$current_time_epoch")
     if [[ -n "${project_times[$title]}" ]]; then
       project_times["$title"]=$((project_times["$title"] + duration))
     else
