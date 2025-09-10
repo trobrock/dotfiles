@@ -15,9 +15,9 @@ for sid in "${sids[@]}"; do
   else
     # linear, quadratic, tanh, sin, exp, circ
     if [ "$FOCUSED_WORKSPACE" = "$sid" ]; then
-      commands+=(--set "space.$sid" drawing=on background.color=0x66c3e88d)
+      commands+=(--set "space.$sid" drawing=on background.color=0xFF89B4FA label.color=0xFF1E1E2E)
     else
-      commands+=(--set "space.$sid" drawing=on background.color=0x00000000)
+      commands+=(--set "space.$sid" drawing=on background.color=0x00000000 label.color=0x99cdd6f4)
     fi
   fi
 done

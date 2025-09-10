@@ -8,13 +8,15 @@ PLUGIN_DIR="$CONFIG_DIR/plugins"
 SCRIPT_DIR="$CONFIG_DIR/scripts"
 FONT_FAMILY="CaskaydiaCove Nerd Font"
 
-BACKGROUND_COLOR=0x44000000
-BACKGROUND_CORNER_RADIUS=3
+BACKGROUND_COLOR=0x99313244
+BACKGROUND_CORNER_RADIUS=10
 BACKGROUND_HEIGHT=25
 BACKGROUND_OPTIONS=(
   background.color="$BACKGROUND_COLOR"
   background.corner_radius="$BACKGROUND_CORNER_RADIUS"
   background.height="$BACKGROUND_HEIGHT"
+  background.border_width=1
+  background.border_color=0xFF45475a
 )
 
 
@@ -36,7 +38,7 @@ function spacer() {
 # If you are looking for other colors, see the color picker:
 # https://felixkratz.github.io/SketchyBar/config/tricks#color-picker
 
-sketchybar --bar position=top height=33 blur_radius=30 color=0x40000000
+sketchybar --bar position=top height=35 blur_radius=30 color=0x00000000
 
 ##### Changing Defaults #####
 # We now change some default values, which are applied to all further items.
@@ -49,7 +51,7 @@ default=(
   icon.font="$FONT_FAMILY:Bold:17.0"
   label.font="$FONT_FAMILY:Bold:14.0"
   icon.color=0xffffffff
-  label.color=0xffffffff
+  label.color=0xffcdd6f4
   icon.padding_left=4
   icon.padding_right=4
   label.padding_left=4
