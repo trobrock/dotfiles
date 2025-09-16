@@ -87,6 +87,7 @@ power-profiles-daemon
 restic
 ripgrep
 ruby-build
+sd
 stow
 tailscale
 terraform
