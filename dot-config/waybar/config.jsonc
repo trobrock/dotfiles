@@ -24,7 +24,6 @@
         "bluetooth",
         "power-profiles-daemon",
         "network",
-        "custom/docker",
         "battery"
       ]
     },
