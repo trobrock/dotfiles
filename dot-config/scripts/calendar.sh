@@ -3,7 +3,7 @@
 source "$HOME/.config/scripts/utils.sh"
 
 # Get current time in ISO format
-current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+current_time=$(date +"%Y-%m-%d %H:%M")
 # Get today's date for filtering
 today=$(date +"%Y-%m-%d")
 # Get end of today
@@ -27,7 +27,7 @@ next_event_url=""
 
 for ((i=1; i<${#lines[@]} && events_found<4; i++)); do
   line="${lines[i]}"
-  
+
   # Split the line by tabs
   IFS=$'\t' read -ra event_data <<< "$line"
 
@@ -60,13 +60,13 @@ for ((i=1; i<${#lines[@]} && events_found<4; i++)); do
       if [[ $events_found -eq 0 ]]; then
         next_event_url="$conference_url"
       fi
-      
+
       # Store event information
       event_titles[$events_found]="$title"
       event_times[$events_found]="$start_time"
       event_dates[$events_found]="$start_date"
       event_urls[$events_found]="$conference_url"
-      
+
       events_found=$((events_found + 1))
     fi
   fi
@@ -76,7 +76,7 @@ if [[ $events_found -gt 0 ]]; then
   # Format the first event for the main title
   formatted_time=$(date_from_string "${event_dates[0]} ${event_times[0]}" "+%I:%M %p")
   main_title=$(truncate "${event_titles[0]}" 25)
-  
+
   # Build tooltip with the next 3 events after the first one
   tooltip=""
   if [[ $events_found -gt 1 ]]; then
