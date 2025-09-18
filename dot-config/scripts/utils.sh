@@ -1,12 +1,12 @@
 date_from_string() {
   date_string="$1"
   format="${2:-+%s}"
-  
+
   # Try GNU date first (Linux)
   if date -d "$date_string" "$format" 2> /dev/null; then
     return 0
   fi
-  
+
   # For macOS, handle different date string types
   if [[ "$OSTYPE" == "darwin"* ]]; then
     # Try relative time strings (like "15 minutes ago", "1 hour ago", etc.)
@@ -44,7 +44,7 @@ get_end_of_day() {
   if [[ "$OSTYPE" == "darwin"* ]]; then
     date -j -f "%Y-%m-%d" "$date_input" "+%Y-%m-%dT23:59:59Z"
   else
-    date -d "$date_input 23:59:59" +"%Y-%m-%dT%H:%M:%SZ"
+    date -d "$date_input 23:59:59" +"%Y-%m-%d %H:%M"
   fi
 }
 
