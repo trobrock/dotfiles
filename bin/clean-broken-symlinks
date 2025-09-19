@@ -12,7 +12,8 @@ remove_broken_links() {
       target=$(readlink "$link")
       case "$target" in
         $pattern)
-          log "Removing broken symlink: $link -> $target"
+          link_name="${link/#$HOME\//}"
+          echo -e "\033[31m[x]\033[0m $link_name"
           rm "$link"
           ;;
       esac
@@ -21,8 +22,8 @@ remove_broken_links() {
 }
 
 clean_broken_symlinks() {
-  remove_broken_links ~/.config "*dotfiles*" ""
-  remove_broken_links ~ "*dotfiles/dot-config*" "-maxdepth 1"
+  remove_broken_links ~/.config "*dotfiles/dot-config*" ""
+  remove_broken_links ~ "*dotfiles*" "-maxdepth 1"
 }
 
 # If script is run directly (not sourced), execute the main function
