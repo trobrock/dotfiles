@@ -1,5 +1,4 @@
 #!/bin/bash
 
-export AWS_PROFILE=minio
-
-restic backup $CODE_DIRECTORY
+IFS=' ' read -ra PATHS <<< "$RESTIC_BACKUP_PATHS"
+restic backup ${PATHS[@]}

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export AWS_PROFILE=minio
-
 restic forget \
   --keep-hourly 6 \
   --keep-daily 7 \
