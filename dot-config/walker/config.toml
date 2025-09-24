@@ -3,16 +3,9 @@ terminal_title_flag = ""
 locale = ""
 close_when_open = true
 theme = "catppuccin-mocha"
-base_theme = []
-monitor = ""
-hotreload_theme = false
-as_window = false
-timeout = 0
-disable_click_to_close = false
-force_keyboard_focus = true
-theme_location = []
-plugin_location = []
-js_runtime = "node"
+theme_base = []
+theme_location = ["~/.config/walker/themes/"]
+hotreload_themes = true
 
 [keys]
 accept_typeahead = ["tab"]
