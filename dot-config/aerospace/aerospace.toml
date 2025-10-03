@@ -88,7 +88,7 @@ outer.right =      15
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#exec-and-forget
 # You can uncomment the following lines to open up terminal with alt + enter shortcut (like in i3)
-alt-enter = "exec-and-forget open -n -a 'Brave Browser'"
+alt-enter = "exec-and-forget open -n -a 'Google Chrome'"
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#layout
 alt-slash = 'layout tiles horizontal vertical'

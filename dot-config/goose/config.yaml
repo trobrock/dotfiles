@@ -1,3 +1,5 @@
+GOOSE_CLI_MIN_PRIORITY: 0.0
+GOOSE_MODE: auto
 extensions:
   computercontroller:
     bundled: true
@@ -70,10 +72,8 @@ extensions:
     name: todoist
     timeout: 300
     type: stdio
-GOOSE_CLI_MIN_PRIORITY: 0.0
-GOOSE_MODEL: anthropic/claude-sonnet-4
+GOOSE_MODEL: anthropic/claude-sonnet-4.5
+GOOSE_PROVIDER: openrouter
+ANTHROPIC_HOST: https://api.anthropic.com
 experiments:
   GOOSE_SMART_APPROVE: true
-GOOSE_PLANNER_MODEL: anthropic/claude-opus-4
-GOOSE_MODE: auto
-GOOSE_PROVIDER: openrouter
