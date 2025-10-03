@@ -12,19 +12,7 @@ return {
   {
     "neovim/nvim-lspconfig",
     config = function()
-      local lspconfig = require("lspconfig")
-
       vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, {})
-
-      lspconfig.lua_ls.setup({
-        on_attach = require("lsp-format").on_attach,
-      })
-      lspconfig.ts_ls.setup({
-        on_attach = require("lsp-format").on_attach,
-      })
-      lspconfig.eslint.setup({
-        on_attach = require("lsp-format").on_attach,
-      })
     end,
   },
   {
@@ -77,6 +65,15 @@ return {
   },
   {
     "lukas-reineke/lsp-format.nvim",
-    opts = {},
+    config = function()
+      require("lsp-format").setup({})
+
+      vim.api.nvim_create_autocmd('LspAttach', {
+        callback = function(args)
+          local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
+          require("lsp-format").on_attach(client, args.buf)
+        end,
+      })
+    end,
   },
 }
