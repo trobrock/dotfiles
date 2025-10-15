@@ -26,6 +26,12 @@ polkit-gnome
 libsecret
 seahorse
 
+# Printing
+cups
+cups-pdf
+system-config-printer
+epson-inkjet-printer-escpr
+
 # Applications
 1password-beta
 ghostty
@@ -59,6 +65,7 @@ docker-buildx
 docker-compose
 dosfstools
 eza
+firewalld
 fzf
 gcalcli
 git
@@ -95,7 +102,6 @@ tailscale
 terraform
 tldr
 tmux
-firewalld
 unzip
 wemux
 wget

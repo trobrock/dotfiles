@@ -13,6 +13,8 @@ btop
 chromium
 codename-goose-bin
 cups
+cups
+cups-pdf
 diff-so-fancy
 direnv
 docker
@@ -22,6 +24,7 @@ dosbox
 dosfstools
 elephant
 elephant-calc
+epson-inkjet-printer-escpr
 eza
 firewalld
 fprintd
@@ -100,6 +103,7 @@ slack-desktop-wayland
 stow
 streamdeck-ui
 stripe-cli
+system-config-printer
 tailscale
 telegram-desktop
 terraform
