@@ -60,6 +60,7 @@ codename-goose-bin
 curl
 diff-so-fancy
 direnv
+dive
 docker
 docker-buildx
 docker-compose

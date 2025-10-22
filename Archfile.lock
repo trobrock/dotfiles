@@ -17,6 +17,7 @@ cups
 cups-pdf
 diff-so-fancy
 direnv
+dive
 docker
 docker-buildx
 docker-compose
