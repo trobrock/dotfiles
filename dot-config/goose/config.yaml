@@ -32,6 +32,13 @@ extensions:
     name: github
     timeout: 300
     type: stdio
+  chrome:
+    type: stdio
+    name: chrome
+    cmd: npx
+    args:
+      - chrome-devtools-mcp@latest
+    timeout: 300
   jetbrains:
     bundled: true
     display_name: Jetbrains
@@ -46,32 +53,6 @@ extensions:
     name: memory
     timeout: 300
     type: builtin
-  puppeteer:
-    args:
-    - -y
-    - '@modelcontextprotocol/server-puppeteer'
-    bundled: null
-    cmd: npx
-    description: null
-    enabled: false
-    env_keys: []
-    envs: {}
-    name: puppeteer
-    timeout: 300
-    type: stdio
-  todoist:
-    args:
-    - -y
-    - '@abhiz123/todoist-mcp-server'
-    bundled: null
-    cmd: npx
-    description: null
-    enabled: false
-    env_keys: []
-    envs: {}
-    name: todoist
-    timeout: 300
-    type: stdio
 GOOSE_MODEL: anthropic/claude-sonnet-4.5
 GOOSE_PROVIDER: openrouter
 ANTHROPIC_HOST: https://api.anthropic.com
