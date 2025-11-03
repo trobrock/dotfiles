@@ -90,6 +90,7 @@ notion-app-electron
 noto-fonts-emoji
 npm
 ollama-rocm
+openslide
 pipewire
 polkit-gnome
 power-profiles-daemon

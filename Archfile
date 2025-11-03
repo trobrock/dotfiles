@@ -115,6 +115,7 @@ zoxide
 # Dev
 libvips
 mariadb-clients
+openslide
 stripe-cli
 
 # Gaming
