@@ -1,15 +1,30 @@
-GOOSE_CLI_MIN_PRIORITY: 0.0
-GOOSE_MODE: auto
 extensions:
+  chrome:
+    args:
+    - chrome-devtools-mcp@latest
+    available_tools: []
+    bundled: null
+    cmd: npx
+    description: ''
+    enabled: true
+    env_keys: []
+    envs: {}
+    name: chrome
+    timeout: 300
+    type: stdio
   computercontroller:
+    available_tools: []
     bundled: true
+    description: ''
     display_name: Computer Controller
     enabled: true
     name: computercontroller
     timeout: 300
     type: builtin
   developer:
+    available_tools: []
     bundled: true
+    description: ''
     display_name: Developer
     enabled: true
     name: developer
@@ -23,38 +38,45 @@ extensions:
     - -e
     - GITHUB_PERSONAL_ACCESS_TOKEN
     - ghcr.io/github/github-mcp-server
+    available_tools: []
     bundled: null
     cmd: docker
-    description: null
+    description: ''
     enabled: true
     env_keys: []
     envs: {}
     name: github
     timeout: 300
     type: stdio
-  chrome:
-    type: stdio
-    name: chrome
-    cmd: npx
-    args:
-      - chrome-devtools-mcp@latest
-    timeout: 300
   jetbrains:
+    available_tools: []
     bundled: true
+    description: ''
     display_name: Jetbrains
     enabled: false
     name: jetbrains
     timeout: 300
     type: builtin
   memory:
+    available_tools: []
     bundled: true
+    description: ''
     display_name: Memory
     enabled: false
     name: memory
     timeout: 300
     type: builtin
-GOOSE_MODEL: anthropic/claude-sonnet-4.5
-GOOSE_PROVIDER: openrouter
+  todo:
+    available_tools: []
+    bundled: true
+    description: Enable a todo list for Goose so it can keep track of what it is doing
+    enabled: true
+    name: todo
+    type: platform
+GOOSE_MODE: auto
 ANTHROPIC_HOST: https://api.anthropic.com
 experiments:
   GOOSE_SMART_APPROVE: true
+GOOSE_PROVIDER: openrouter
+GOOSE_CLI_MIN_PRIORITY: 0.0
+GOOSE_MODEL: anthropic/claude-sonnet-4.5
