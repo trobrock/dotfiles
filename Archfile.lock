@@ -24,7 +24,16 @@ docker-compose
 dosbox
 dosfstools
 elephant
+elephant-bluetooth
 elephant-calc
+elephant-clipboard
+elephant-files
+elephant-menus
+elephant-runner
+elephant-symbols
+elephant-todo
+elephant-unicode
+elephant-websearch
 epson-inkjet-printer-escpr
 eza
 firewalld
