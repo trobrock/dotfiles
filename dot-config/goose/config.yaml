@@ -6,7 +6,7 @@ extensions:
     bundled: null
     cmd: npx
     description: ''
-    enabled: true
+    enabled: false
     env_keys: []
     envs: {}
     name: chrome
