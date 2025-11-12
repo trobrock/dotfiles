@@ -30,6 +30,7 @@ elephant-unicode
 elephant-websearch
 xdg-desktop-portal-hyprland
 xorg-xhost
+xournalpp
 
 # Security
 gnome-keyring
