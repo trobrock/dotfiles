@@ -56,7 +56,7 @@ tooltip {
 }
 
 #idle_inhibitor {
-  border-radius: 10px 0 0 10px;
+  border-radius: 0;
   padding-right: 12px;
 }
 
@@ -223,6 +223,7 @@ tooltip {
 }
 
 /* Hover effects */
+#custom-tailscale:hover,
 #idle_inhibitor:hover,
 #custom-calendar:hover,
 #custom-focus:hover,
@@ -236,4 +237,12 @@ tooltip {
 #clock:hover {
   background: #45475a;
   transition: all 0.3s ease;
+}
+
+#custom-tailscale:hover {
+  border-radius: 10px 0 0 10px;
+}
+
+#idle_inhibitor:hover {
+  border-radius: 0;
 }
