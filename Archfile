@@ -16,9 +16,21 @@ waybar
 wireplumber
 walker
 elephant
+elephant-bluetooth
 elephant-calc
+elephant-clipboard
+elephant-desktopapplications
+elephant-files
+elephant-menus
+elephant-providerlist
+elephant-runner
+elephant-symbols
+elephant-todo
+elephant-unicode
+elephant-websearch
 xdg-desktop-portal-hyprland
 xorg-xhost
+xournalpp
 
 # Security
 gnome-keyring
@@ -60,6 +72,7 @@ codename-goose-bin
 curl
 diff-so-fancy
 direnv
+dive
 docker
 docker-buildx
 docker-compose
@@ -114,6 +127,7 @@ zoxide
 # Dev
 libvips
 mariadb-clients
+openslide
 stripe-cli
 
 # Gaming
