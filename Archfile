@@ -46,16 +46,17 @@ epson-inkjet-printer-escpr
 
 # Applications
 1password-beta
+chromium
+discord
+firefox
 ghostty
 google-chrome
-chromium
 libreoffice-fresh
-notion-app-electron
+qalculate-gtk
 slack-desktop-wayland
 streamdeck-ui
 telegram-desktop
 zoom
-qalculate-gtk
 
 # CLI
 1password-cli
@@ -79,6 +80,7 @@ docker-compose
 dosfstools
 eza
 firewalld
+fwupd
 fzf
 gcalcli
 git
@@ -90,7 +92,7 @@ imagemagick
 impala
 inetutils
 jq
-lazydocker-bin
+lazydocker
 lazygit
 less
 magic-wormhole
@@ -115,6 +117,7 @@ tailscale
 terraform
 tldr
 tmux
+udisks2
 unzip
 wemux
 wget

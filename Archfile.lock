@@ -17,6 +17,7 @@ cups
 cups-pdf
 diff-so-fancy
 direnv
+discord
 dive
 docker
 docker-buildx
@@ -36,8 +37,10 @@ elephant-unicode
 elephant-websearch
 epson-inkjet-printer-escpr
 eza
+firefox
 firewalld
 fprintd
+fwupd
 fzf
 gcalcli
 ghostty
@@ -55,7 +58,7 @@ hyprshot
 imagemagick
 impala
 inetutils
-lazydocker-bin
+lazydocker
 lazygit
 less
 lib32-alsa-lib
@@ -95,7 +98,6 @@ mplayer
 mtr
 neovim
 nodejs
-notion-app-electron
 noto-fonts-emoji
 npm
 ollama-rocm
@@ -121,6 +123,7 @@ terraform
 tldr
 tmux
 ttf-cascadia-code-nerd
+udisks2
 unzip
 uwsm
 vulkan-radeon
