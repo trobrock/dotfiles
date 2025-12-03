@@ -1,4 +1,4 @@
-sketchybar --add item focus.today center \
+sketchybar --add item focus.today e \
            --set      focus.today icon= \
                                   label="" \
                                   icon.padding_left=$BRACKET_LEFT_PADDING \

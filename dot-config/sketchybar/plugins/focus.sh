@@ -43,7 +43,7 @@ if [[ "$event_found" == true ]]; then
   fi
 
   # Update sketchybar
-  sketchybar --set "$NAME" label="$title (${time_left_minutes}m remaining)"
+  sketchybar --set "$NAME" label="$title (${time_left_minutes}m)"
 else
   # No event found
   sketchybar --set "$NAME" label="Free time"

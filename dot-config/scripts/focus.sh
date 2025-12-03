@@ -39,7 +39,7 @@ if [[ "$event_found" == true ]]; then
   time_left_minutes=$((time_left_seconds / 60))
   title=$(truncate "$title" 25)
 
-  echo '{"title": "'$title' ('$time_left_minutes'm remaining)"}'
+  echo '{"title": "'$title' ('$time_left_minutes'm)"}'
 else
   echo '{"title": "Free time"}'
 fi
