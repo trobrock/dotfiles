@@ -50,7 +50,7 @@
         "interval": 60, // Update every minute
         "format": " ",
         "tooltip-format": "{}",
-        "on-click": "ghostty -e tailscale-switch"
+        "on-click": "ghostty -e ~/.config/scripts/tailscale-switch"
     },
     "custom/project_time": {
         "exec": "~/.config/waybar/scripts/project_time.sh",
