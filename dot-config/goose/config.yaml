@@ -79,4 +79,4 @@ experiments:
   GOOSE_SMART_APPROVE: true
 GOOSE_PROVIDER: openrouter
 GOOSE_CLI_MIN_PRIORITY: 0.0
-GOOSE_MODEL: anthropic/claude-sonnet-4.5
+GOOSE_MODEL: anthropic/claude-opus-4.5
