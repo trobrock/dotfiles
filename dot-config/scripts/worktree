@@ -1,0 +1,466 @@
+#!/usr/bin/env bash
+set -e
+
+# Git Worktrees Manager
+# Simple numbered worktree system for parallel development
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Find git root
+find_git_root() {
+    git rev-parse --show-toplevel 2>/dev/null
+}
+
+# Get current worktree number based on directory
+get_current_worktree() {
+    local current_dir=$(pwd)
+    local git_root=$(find_git_root)
+    local base_name=$(basename "$git_root")
+    
+    if [[ "$current_dir" == "$git_root" ]]; then
+        echo "0"
+    elif [[ "$current_dir" =~ ${base_name}_([0-9]+) ]]; then
+        echo "${BASH_REMATCH[1]}"
+    else
+        echo "0"
+    fi
+}
+
+# Get port configuration for worktree number
+get_ports() {
+    local num=$1
+    local base_port=3000
+    local base_db_port=3306
+    local base_mailhog_http_port=8025
+    local base_mailhog_smtp_port=1025
+    
+    PORT=$((base_port + num))
+    DB_PORT=$((base_db_port + num))
+    MAILHOG_HTTP_PORT=$((base_mailhog_http_port + num))
+    MAILHOG_SMTP_PORT=$((base_mailhog_smtp_port + num))
+    
+    if [ "$num" -eq 0 ]; then
+        SUFFIX=""
+        SUFFIX_DISPLAY="(none)"
+    else
+        SUFFIX="_${num}"
+        SUFFIX_DISPLAY="_${num}"
+    fi
+}
+
+# Get worktree path
+get_worktree_path() {
+    local num=$1
+    local git_root=$(find_git_root)
+    local base_name=$(basename "$git_root")
+    local parent_dir=$(dirname "$git_root")
+    
+    if [ "$num" -eq 0 ]; then
+        echo "$git_root"
+    else
+        echo "${parent_dir}/${base_name}_${num}"
+    fi
+}
+
+# Check if services are running for a worktree
+check_services_running() {
+    local num=$1
+    get_ports "$num"
+    
+    # Check if port is listening using ss (more reliable for Docker ports)
+    if ss -tln 2>/dev/null | grep -q ":$DB_PORT "; then
+        return 0
+    # Fallback to netstat if ss is not available
+    elif netstat -tln 2>/dev/null | grep -q ":$DB_PORT "; then
+        return 0
+    # Last resort: try lsof
+    elif lsof -Pi :$DB_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+usage() {
+    echo "Usage: worktree <command> [args]"
+    echo ""
+    echo "Commands:"
+    echo "  new <branch>     Create new numbered worktree with branch"
+    echo "  list             List all worktrees with status"
+    echo "  switch <num>     Switch to worktree number"
+    echo "  remove <num>     Remove worktree completely"
+    echo "  start <num>      Start services for worktree"
+    echo "  stop <num>       Stop services for worktree"
+    echo ""
+    echo "Examples:"
+    echo "  worktree new feature/booking-improvements"
+    echo "  worktree list"
+    echo "  worktree switch 1"
+    echo "  worktree remove 1"
+    exit 1
+}
+
+cmd_new() {
+    local branch=$1
+    
+    if [ -z "$branch" ]; then
+        echo -e "${RED}Error: Branch name required${NC}"
+        echo "Usage: worktree new <branch>"
+        exit 1
+    fi
+    
+    local git_root=$(find_git_root)
+    if [ -z "$git_root" ]; then
+        echo -e "${RED}Error: Not in a git repository${NC}"
+        exit 1
+    fi
+    
+    # Find next available worktree number
+    local next_num=""
+    for num in 1 2 3; do
+        local wt_path=$(get_worktree_path "$num")
+        if [ ! -d "$wt_path" ]; then
+            next_num=$num
+            break
+        fi
+    done
+    
+    if [ -z "$next_num" ]; then
+        echo -e "${RED}Error: All worktree slots (1-3) are in use${NC}"
+        echo "Remove one with: worktree remove <num>"
+        exit 1
+    fi
+    
+    local wt_path=$(get_worktree_path "$next_num")
+    get_ports "$next_num"
+    
+    echo -e "${GREEN}Creating worktree $next_num for branch '$branch'...${NC}"
+    
+    # Create worktree
+    cd "$git_root"
+    if git show-ref --verify --quiet refs/heads/"$branch"; then
+        echo "Branch '$branch' exists locally, checking it out..."
+        git worktree add "$wt_path" "$branch"
+    elif git show-ref --verify --quiet refs/remotes/origin/"$branch"; then
+        echo "Branch '$branch' exists remotely, checking it out..."
+        git worktree add "$wt_path" "$branch"
+    else
+        echo "Creating new branch '$branch'..."
+        git worktree add -b "$branch" "$wt_path"
+    fi
+    
+    # Create mise.local.toml
+    cd "$wt_path"
+    cat > mise.local.toml <<EOF
+# Auto-generated for worktree: $next_num
+[env]
+PORT = $PORT
+DATABASE_PORT = $DB_PORT
+DATABASE_SUFFIX = "$SUFFIX"
+MAILHOG_SMTP_PORT = $MAILHOG_SMTP_PORT
+MAILHOG_HTTP_PORT = $MAILHOG_HTTP_PORT
+EOF
+    
+    mise trust
+    echo -e "${GREEN}✓ Generated mise.local.toml${NC}"
+
+    cp $git_root/config/credentials/*.key config/credentials/ 2>/dev/null || true
+    echo -e "${GREEN}✓ Copied credentials keys${NC}"
+    
+    # Start Docker services with mise environment
+    echo "Starting Docker services..."
+    mise exec -- docker-compose up -d
+    
+    # Wait for MySQL
+    echo "Waiting for MySQL to be ready..."
+    sleep 3
+    
+    # Setup database with mise environment
+    echo "Setting up application..."
+    mise exec -- bin/setup
+    
+    echo ""
+    echo -e "${GREEN}✓ Worktree $next_num created successfully!${NC}"
+    echo ""
+    echo "Location: $wt_path"
+    echo "Branch:   $branch"
+    echo ""
+    echo "Access your app:"
+    echo "  Rails:   http://localhost:$PORT"
+    echo "  Mailhog: http://localhost:$MAILHOG_HTTP_PORT"
+    echo ""
+    echo "Database names:"
+    echo "  Development: inn_development$SUFFIX"
+    echo "  Test:        inn_test$SUFFIX"
+    echo ""
+    echo "To switch:          worktree switch $next_num"
+    echo "To start dev server: cd $wt_path && bin/dev"
+    
+    # Change to the new worktree
+    cd "$wt_path"
+}
+
+cmd_list() {
+    local git_root=$(find_git_root)
+    if [ -z "$git_root" ]; then
+        echo -e "${RED}Error: Not in a git repository${NC}"
+        exit 1
+    fi
+    
+    local current=$(get_current_worktree)
+    
+    echo -e "${GREEN}Active Worktrees:${NC}"
+    echo ""
+    
+    # List worktree 0 (main)
+    local wt0_path=$(get_worktree_path 0)
+    get_ports 0
+    local branch=$(cd "$wt0_path" && git branch --show-current)
+    local running=""
+    if check_services_running 0; then
+        running="✓"
+    fi
+    
+    local current_marker=" "
+    if [ "$current" -eq 0 ]; then
+        current_marker="→"
+    fi
+    
+    printf "%b  %b%d%b  %-30s  %-55s  [%d/%d] %b%s%b\n" "$BLUE$current_marker$NC" "$YELLOW" 0 "$NC" "$branch" "$wt0_path" "$PORT" "$DB_PORT" "$GREEN" "$running" "$NC"
+    
+    # List numbered worktrees
+    for num in 1 2 3; do
+        local wt_path=$(get_worktree_path "$num")
+        get_ports "$num"
+        
+        current_marker=" "
+        if [ "$current" -eq "$num" ]; then
+            current_marker="→"
+        fi
+        
+        if [ -d "$wt_path" ]; then
+            branch=$(cd "$wt_path" && git branch --show-current)
+            running=""
+            if check_services_running "$num"; then
+                running="✓"
+            fi
+            printf "%b  %b%d%b  %-30s  %-55s  [%d/%d] %b%s%b\n" "$BLUE$current_marker$NC" "$YELLOW" "$num" "$NC" "$branch" "$wt_path" "$PORT" "$DB_PORT" "$GREEN" "$running" "$NC"
+        else
+            printf "%b  %b%d%b  %-30s  %-55s  [%d/%d]\n" "$BLUE$current_marker$NC" "$YELLOW" "$num" "$NC" "(available)" "-" "$PORT" "$DB_PORT"
+        fi
+    done
+    
+    echo ""
+    echo "Legend: [Rails Port/MySQL Port]  ✓ = Services running  → = Current"
+}
+
+cmd_switch() {
+    local num=$1
+    
+    if [ -z "$num" ]; then
+        echo -e "${RED}Error: Worktree number required${NC}"
+        echo "Usage: worktree switch <num>"
+        exit 1
+    fi
+    
+    if ! [[ "$num" =~ ^[0-3]$ ]]; then
+        echo -e "${RED}Error: Invalid worktree number. Use 0-3.${NC}"
+        exit 1
+    fi
+    
+    local wt_path=$(get_worktree_path "$num")
+    
+    if [ ! -d "$wt_path" ]; then
+        echo -e "${RED}Error: Worktree $num does not exist${NC}"
+        echo "Create it with: worktree new <branch>"
+        exit 1
+    fi
+    
+    get_ports "$num"
+    
+    # Change directory
+    cd "$wt_path"
+    
+    local branch=$(git branch --show-current)
+    
+    echo -e "${GREEN}Switched to worktree $num${NC}"
+    echo "Path:   $wt_path"
+    echo "Branch: $branch"
+    echo "Rails:  http://localhost:$PORT"
+    echo ""
+    
+    if ! check_services_running "$num"; then
+        echo -e "${YELLOW}Services not running. Start with: worktree start $num${NC}"
+    else
+        echo "Run 'bin/dev' to start the dev server"
+    fi
+    
+    # Export for subshell
+    export WORKTREE_PATH="$wt_path"
+    
+    # Start a new shell in the worktree directory
+    exec $SHELL
+}
+
+cmd_remove() {
+    local num=$1
+    
+    if [ -z "$num" ]; then
+        echo -e "${RED}Error: Worktree number required${NC}"
+        echo "Usage: worktree remove <num>"
+        exit 1
+    fi
+    
+    if [ "$num" -eq 0 ]; then
+        echo -e "${RED}Error: Cannot remove main worktree (0)${NC}"
+        exit 1
+    fi
+    
+    if ! [[ "$num" =~ ^[1-3]$ ]]; then
+        echo -e "${RED}Error: Invalid worktree number. Use 1-3.${NC}"
+        exit 1
+    fi
+    
+    local wt_path=$(get_worktree_path "$num")
+    
+    if [ ! -d "$wt_path" ]; then
+        echo -e "${YELLOW}Worktree $num does not exist${NC}"
+        exit 0
+    fi
+    
+    echo -e "${YELLOW}Removing worktree $num...${NC}"
+    
+    # Stop services with mise environment
+    cd "$wt_path"
+    mise exec -- docker-compose down 2>/dev/null || true
+    
+    get_ports "$num"
+    pkill -f "rails server -p $PORT" 2>/dev/null || true
+    
+    # Remove worktree
+    local git_root=$(find_git_root)
+    cd "$git_root"
+    git worktree remove "$wt_path" --force 2>/dev/null || true
+    
+    # Clean up directory if still exists
+    if [ -d "$wt_path" ]; then
+        rm -rf "$wt_path"
+    fi
+    
+    echo -e "${GREEN}✓ Worktree $num removed${NC}"
+}
+
+cmd_start() {
+    local num=$1
+    
+    if [ -z "$num" ]; then
+        echo -e "${RED}Error: Worktree number required${NC}"
+        echo "Usage: worktree start <num>"
+        exit 1
+    fi
+    
+    if ! [[ "$num" =~ ^[0-3]$ ]]; then
+        echo -e "${RED}Error: Invalid worktree number. Use 0-3.${NC}"
+        exit 1
+    fi
+    
+    local wt_path=$(get_worktree_path "$num")
+    
+    if [ ! -d "$wt_path" ]; then
+        echo -e "${RED}Error: Worktree $num does not exist${NC}"
+        exit 1
+    fi
+    
+    cd "$wt_path"
+    get_ports "$num"
+    
+    echo -e "${GREEN}Starting services for worktree $num...${NC}"
+    
+    # Trust mise config
+    mise trust --quiet 2>/dev/null || true
+    
+    # Start Docker services with mise environment
+    mise exec -- docker-compose up -d
+    
+    # Wait for MySQL
+    echo "Waiting for MySQL to be ready..."
+    sleep 3
+    
+    # Setup database if needed with mise environment
+    if ! mise exec -- bin/rails db:version 2>/dev/null; then
+        echo "Setting up database..."
+        mise exec -- bin/rails db:prepare
+    fi
+    
+    echo -e "${GREEN}✓ Services started${NC}"
+    echo ""
+    echo "Rails:   http://localhost:$PORT"
+    echo "Mailhog: http://localhost:$MAILHOG_HTTP_PORT"
+    echo ""
+    echo "To start dev server: cd $wt_path && bin/dev"
+}
+
+cmd_stop() {
+    local num=$1
+    
+    if [ -z "$num" ]; then
+        echo -e "${RED}Error: Worktree number required${NC}"
+        echo "Usage: worktree stop <num>"
+        exit 1
+    fi
+    
+    if ! [[ "$num" =~ ^[0-3]$ ]]; then
+        echo -e "${RED}Error: Invalid worktree number. Use 0-3.${NC}"
+        exit 1
+    fi
+    
+    local wt_path=$(get_worktree_path "$num")
+    
+    if [ ! -d "$wt_path" ]; then
+        echo -e "${RED}Error: Worktree $num does not exist${NC}"
+        exit 1
+    fi
+    
+    cd "$wt_path"
+    get_ports "$num"
+    
+    echo -e "${YELLOW}Stopping services for worktree $num...${NC}"
+    
+    # Stop Docker with mise environment
+    mise exec -- docker-compose down
+    
+    # Kill dev server
+    pkill -f "rails server -p $PORT" 2>/dev/null || true
+    
+    echo -e "${GREEN}✓ Services stopped${NC}"
+}
+
+# Main command handler
+case "$1" in
+    new)
+        cmd_new "$2"
+        ;;
+    list)
+        cmd_list
+        ;;
+    switch)
+        cmd_switch "$2"
+        ;;
+    remove)
+        cmd_remove "$2"
+        ;;
+    start)
+        cmd_start "$2"
+        ;;
+    stop)
+        cmd_stop "$2"
+        ;;
+    *)
+        usage
+        ;;
+esac
