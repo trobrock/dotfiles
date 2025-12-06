@@ -11,9 +11,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Find git root
+# Find the main git worktree root (not the current worktree)
 find_git_root() {
-    git rev-parse --show-toplevel 2>/dev/null
+    # Get the main worktree path from git worktree list (first line)
+    git worktree list --porcelain 2>/dev/null | grep -m1 "^worktree" | cut -d' ' -f2
 }
 
 # Get current worktree number based on directory
@@ -303,8 +304,9 @@ cmd_switch() {
     # Export for subshell
     export WORKTREE_PATH="$wt_path"
     
-    # Start a new shell in the worktree directory
-    exec $SHELL
+    # Start a new login shell in the worktree directory
+    # This ensures .zprofile is sourced and mise is activated
+    exec $SHELL -l
 }
 
 cmd_remove() {
