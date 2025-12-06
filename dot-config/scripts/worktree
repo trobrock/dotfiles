@@ -144,6 +144,8 @@ cmd_new() {
     
     # Create worktree
     cd "$git_root"
+    # fetch latest from origin
+    git fetch origin
     if git show-ref --verify --quiet refs/heads/"$branch"; then
         echo "Branch '$branch' exists locally, checking it out..."
         git worktree add "$wt_path" "$branch"
@@ -198,12 +200,9 @@ EOF
     echo "Database names:"
     echo "  Development: inn_development$SUFFIX"
     echo "  Test:        inn_test$SUFFIX"
-    echo ""
-    echo "To switch:          worktree switch $next_num"
-    echo "To start dev server: cd $wt_path && bin/dev"
     
     # Change to the new worktree
-    cd "$wt_path"
+    cmd_switch "$next_num"
 }
 
 cmd_list() {
