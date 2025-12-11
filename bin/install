@@ -269,6 +269,14 @@ source "$(dirname "$0")/lib/stow.sh"
 stow --verbose=2 --dotfiles --adopt -t $HOME . 2>&1 | clean_stow_output
 clean_broken_symlinks
 
+log "Installing platform-specific dotfiles..."
+if [ "$(uname)" = "Darwin" ]; then
+  stow --verbose=2 --dotfiles --adopt -t $HOME -d . darwin 2>&1 | clean_stow_output
+elif [ "$(uname)" = "Linux" ]; then
+  stow --verbose=2 --dotfiles --adopt -t $HOME -d . linux 2>&1 | clean_stow_output
+fi
+clean_broken_symlinks
+
 install_packages
 init_1password
 
