@@ -87,6 +87,18 @@ extensions:
     description: Search past conversations and load session summaries for contextual memory
     bundled: true
     available_tools: []
+  channex:
+    enabled: false
+    type: streamable_http
+    name: channex
+    description: Channex API Docs
+    uri: https://docs.channex.io/~gitbook/mcp
+    envs: {}
+    env_keys: []
+    headers: {}
+    timeout: 300
+    bundled: null
+    available_tools: []
 GOOSE_MODE: auto
 ANTHROPIC_HOST: https://api.anthropic.com
 experiments:
