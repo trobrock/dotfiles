@@ -91,18 +91,22 @@ usage() {
     echo "Usage: worktree <command> [args]"
     echo ""
     echo "Commands:"
-    echo "  new <branch>     Create new numbered worktree with branch"
-    echo "  list             List all worktrees with status"
-    echo "  switch <num>     Switch to worktree number"
-    echo "  remove <num>     Remove worktree completely"
-    echo "  start <num>      Start services for worktree"
-    echo "  stop <num>       Stop services for worktree"
+    echo "  new | n <branch>     Create new numbered worktree with branch"
+    echo "  list | l             List all worktrees with status"
+    echo "  switch | s <num>     Switch to worktree number"
+    echo "  remove | rm <num>    Remove worktree completely"
+    echo "  start | up <num>     Start services for worktree"
+    echo "  stop | down <num>    Stop services for worktree"
     echo ""
     echo "Examples:"
     echo "  worktree new feature/booking-improvements"
+    echo "  worktree n feature/booking-improvements"
     echo "  worktree list"
+    echo "  worktree l"
     echo "  worktree switch 1"
+    echo "  worktree s 1"
     echo "  worktree remove 1"
+    echo "  worktree rm 1"
     exit 1
 }
 
@@ -443,22 +447,22 @@ cmd_stop() {
 
 # Main command handler
 case "$1" in
-    new)
+    new|n)
         cmd_new "$2"
         ;;
-    list)
+    list|l)
         cmd_list
         ;;
-    switch)
+    switch|s)
         cmd_switch "$2"
         ;;
-    remove)
+    remove|rm)
         cmd_remove "$2"
         ;;
-    start)
+    start|up)
         cmd_start "$2"
         ;;
-    stop)
+    stop|down)
         cmd_stop "$2"
         ;;
     *)

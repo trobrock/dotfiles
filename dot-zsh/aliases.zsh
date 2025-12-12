@@ -1,6 +1,9 @@
 alias reload='exec $SHELL -l'
 alias ip='curl http://ipv4.icanhazip.com'
 
+# worktree
+alias wt='worktree'
+
 # vim
 alias vim="nvim"
 
