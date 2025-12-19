@@ -258,6 +258,19 @@ setup_firewall() {
   log "Firewall setup complete. Default zone: public, SSH allowed on port 22, Docker networking configured."
 }
 
+setup_hyprshot_cleanup_cron() {
+  local cron_job="0 2 * * * $HOME/.config/scripts/cleanup-hyprshot 30"
+  
+  # Check if the cron job already exists
+  if crontab -l 2>/dev/null | grep -qF "cleanup-hyprshot"; then
+    log "Hyprshot cleanup cron job already exists, skipping..."
+    return
+  fi
+  
+  log "Adding hyprshot cleanup cron job (daily at 2 AM, keeps 30 days)..."
+  (crontab -l 2>/dev/null; echo "$cron_job") | crontab -
+}
+
 install_package_manager
 install_stow
 change_shell_to_zsh
@@ -286,4 +299,5 @@ if [ "$(uname)" = "Linux" ]; then
   allow_fingerprint_usage
   setup_auto_login
   setup_firewall
+  setup_hyprshot_cleanup_cron
 fi
