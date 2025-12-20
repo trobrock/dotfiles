@@ -7,14 +7,6 @@ hyprshot
 uwsm
 
 # Misc UI
-fprintd
-mako
-noto-fonts-emoji
-pipewire
-ttf-cascadia-code-nerd
-waybar
-wireplumber
-walker
 elephant
 elephant-bluetooth
 elephant-calc
@@ -28,6 +20,15 @@ elephant-symbols
 elephant-todo
 elephant-unicode
 elephant-websearch
+fprintd
+hyprvoice-bin
+mako
+noto-fonts-emoji
+pipewire
+ttf-cascadia-code-nerd
+walker
+waybar
+wireplumber
 xdg-desktop-portal-hyprland
 xorg-xhost
 xournalpp
