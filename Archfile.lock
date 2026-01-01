@@ -101,6 +101,7 @@ neovim
 nodejs
 noto-fonts-emoji
 npm
+obsidian
 ollama-rocm
 openslide
 pipewire
@@ -117,6 +118,7 @@ slack-desktop-wayland
 stow
 streamdeck-ui
 stripe-cli
+syncthing
 system-config-printer
 tailscale
 telegram-desktop

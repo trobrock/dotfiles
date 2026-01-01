@@ -24,6 +24,7 @@ fprintd
 hyprvoice-bin
 mako
 noto-fonts-emoji
+obsidian
 pipewire
 ttf-cascadia-code-nerd
 walker
@@ -114,6 +115,7 @@ ripgrep
 ruby-build
 sd
 stow
+syncthing
 tailscale
 terraform
 tldr
