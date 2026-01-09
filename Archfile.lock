@@ -55,7 +55,6 @@ hyprland
 hyprlock
 hyprpaper
 hyprshot
-hyprvoice-bin
 imagemagick
 impala
 inetutils
@@ -129,6 +128,7 @@ ttf-cascadia-code-nerd
 udisks2
 unzip
 uwsm
+voxtype
 vulkan-radeon
 walker
 waybar
@@ -137,6 +137,7 @@ wget
 wine-staging
 winetricks
 wireplumber
+wtype
 xdg-desktop-portal-hyprland
 xorg-xhost
 xournalpp

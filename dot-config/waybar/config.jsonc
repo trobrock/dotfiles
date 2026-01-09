@@ -24,7 +24,8 @@
         "bluetooth",
         "power-profiles-daemon",
         "network",
-        "battery"
+        "battery",
+        "custom/voxtype"
       ]
     },
     // Modules configuration
@@ -43,6 +44,13 @@
           "active": "",
             "default": ""
         }
+    },
+    "custom/voxtype": {
+      "exec": "voxtype status --follow --format json",
+      "return-type": "json",
+      "format": "{}",
+      "tooltip": true,
+      "on-click": "systemctl --user restart voxtype"
     },
     "custom/tailscale": {
         "exec": "~/.config/waybar/scripts/tailscale.sh",

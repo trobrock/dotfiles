@@ -50,6 +50,10 @@ tooltip {
     background: none;
 }
 
+#custom-voxtype {
+  padding-left: 0px;
+}
+
 #custom-tailscale {
   border-radius: 10px 0 0 10px;
   padding-right: 6px;
