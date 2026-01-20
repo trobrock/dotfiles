@@ -137,6 +137,7 @@ wget
 wine-staging
 winetricks
 wireplumber
+worktrunk-bin
 wtype
 xdg-desktop-portal-hyprland
 xorg-xhost

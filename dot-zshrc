@@ -37,3 +37,5 @@ export PATH="./bin:$HOME/bin:$HOME/.config/scripts/:$PATH"
 
 # Required for 1password CLI to auth in hyprland
 export OP_BIOMETRIC_UNLOCK_ENABLED=true
+
+if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
