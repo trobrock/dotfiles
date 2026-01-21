@@ -124,7 +124,7 @@ on_transcription = false
 spoken_punctuation = true
 #
 # Custom word replacements (case-insensitive)
-# replacements = { "vox type" = "voxtype" }
+replacements = { "ChanX" = "Channex" }
 
 [status]
 # Status display icons for Waybar/tray integrations
