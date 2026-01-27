@@ -39,6 +39,11 @@ brew "worktrunk"
 brew "yamllint"
 brew "yarn"
 brew "zoxide"
+brew "azure-cli"
+brew "kubectl"
+
+tap "azure/kubelogin"
+brew "kubelogin"
 
 tap "trobrock/trobrock"
 brew "hush", restart_service: "always"
@@ -48,8 +53,6 @@ tap "FelixKratz/formulae"
 brew "sketchybar"
 cask "nikitabobko/tap/aerospace"
 brew "borders"
-tap "sachaos/todoist"
-brew "todoist"
 cask "font-caskaydia-cove-nerd-font"
 
 # Casks
