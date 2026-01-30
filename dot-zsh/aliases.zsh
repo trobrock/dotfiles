@@ -116,3 +116,6 @@ function web2app-remove() {
   rm "$DESKTOP_FILE"
   rm "$ICON_PATH"
 }
+
+# worktrunk
+alias wtc='wt switch --create'
