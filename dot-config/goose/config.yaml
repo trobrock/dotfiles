@@ -133,7 +133,7 @@ extensions:
     bundled: null
     available_tools: []
   apps:
-    enabled: true
+    enabled: false
     type: platform
     name: apps
     description: Create and manage custom Goose apps through chat. Apps are HTML/CSS/JavaScript and run in sandboxed windows.
@@ -150,6 +150,6 @@ GOOSE_CLI_NEWLINE_KEY: n
 GOOSE_CLI_SHOW_COST: true
 GOOSE_HOOK_STATUS: /tmp/test_hook.sh
 GOOSE_MODE: auto
-GOOSE_MODEL: anthropic/claude-opus-4.5
+GOOSE_MODEL: anthropic/claude-opus-4.6
 GOOSE_PROVIDER: openrouter
 GOOSE_TELEMETRY_ENABLED: true
