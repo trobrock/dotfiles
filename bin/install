@@ -275,7 +275,7 @@ install_package_manager
 install_stow
 change_shell_to_zsh
 init_tpm
-init_goose
+# init_goose
 
 log "Installing dotfiles using stow..."
 source "$(dirname "$0")/lib/stow.sh"

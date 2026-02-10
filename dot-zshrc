@@ -34,6 +34,7 @@ source <(fzf --zsh)
 
 export EDITOR="nvim"
 export PATH="./bin:$HOME/bin:$HOME/.config/scripts/:$PATH"
+export GOOSE_STATUS_HOOK="$HOME/.config/scripts/goose-hook"
 
 # Required for 1password CLI to auth in hyprland
 export OP_BIOMETRIC_UNLOCK_ENABLED=true

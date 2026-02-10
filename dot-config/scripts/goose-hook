@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# goose-hook - Update tmux window title with a spinner icon based on goose state
+# Usage: goose-hook <waiting|thinking>
+
+set -euo pipefail
+
+STATE="${1:-}"
+
+if [[ -z "$STATE" ]]; then
+  echo "Usage: goose-hook <waiting|thinking>" >&2
+  exit 1
+fi
+
+# Only proceed if we're inside a tmux session
+if [[ -z "${TMUX:-}" ]]; then
+  exit 0
+fi
+
+# Use TMUX_PANE to target the correct window, even when it's not focused
+PANE="${TMUX_PANE:-}"
+if [[ -z "$PANE" ]]; then
+  exit 0
+fi
+
+ICON="⏳"
+CURRENT_TITLE=$(tmux display-message -t "$PANE" -p '#W')
+
+case "$STATE" in
+  waiting)
+    # Remove the spinner icon if present
+    NEW_TITLE="${CURRENT_TITLE% ${ICON}}"
+    tmux rename-window -t "$PANE" "$NEW_TITLE"
+    # Re-enable automatic renaming
+    tmux set-window-option -t "$PANE" automatic-rename on
+    ;;
+  thinking)
+    # Disable automatic renaming so tmux doesn't overwrite our title
+    tmux set-window-option -t "$PANE" automatic-rename off
+    # Add the spinner icon if not already present
+    if [[ "$CURRENT_TITLE" != *"${ICON}"* ]]; then
+      tmux rename-window -t "$PANE" "${CURRENT_TITLE} ${ICON}"
+    fi
+    ;;
+  *)
+    echo "Unknown state: $STATE (expected 'waiting' or 'thinking')" >&2
+    exit 1
+    ;;
+esac
