@@ -32,6 +32,21 @@ case "$STATE" in
     tmux rename-window -t "$PANE" "$NEW_TITLE"
     # Re-enable automatic renaming
     tmux set-window-option -t "$PANE" automatic-rename on
+
+    # Only play a sound if this pane is not the active one
+    ACTIVE_PANE=$(tmux display-message -p '#{pane_id}')
+    if [[ "$PANE" != "$ACTIVE_PANE" ]]; then
+      # Play a notification sound (cross-platform)
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        afplay /System/Library/Sounds/Hero.aiff &
+      elif command -v paplay &>/dev/null; then
+        paplay /usr/share/sounds/freedesktop/stereo/complete.oga &
+      elif command -v aplay &>/dev/null; then
+        aplay -q /usr/share/sounds/freedesktop/stereo/complete.oga &
+      elif command -v printf &>/dev/null; then
+        printf '\a'
+      fi
+    fi
     ;;
   thinking)
     # Disable automatic renaming so tmux doesn't overwrite our title
