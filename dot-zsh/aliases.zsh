@@ -119,3 +119,8 @@ function web2app-remove() {
 
 # worktrunk
 alias wtc='wt switch --create'
+function wtm() {
+   gh pr merge --admin -m &&
+     wt remove -D &&
+     git pull
+}
