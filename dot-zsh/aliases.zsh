@@ -118,7 +118,25 @@ function web2app-remove() {
 }
 
 # worktrunk
-alias wtc='wt switch --create'
+# wtc <branch_name> <goose prompt>
+function wtc() {
+  branch_name="$1"
+
+  # check if branch exists locally or in remote
+  branch_exists=$(git branch --list "$branch_name" || git ls-remote --heads origin "$branch_name")
+  create_flag=""
+  if [ -z "$branch_exists" ]; then
+    create_flag="--create"
+  fi
+
+  text_flag=""
+  if [ ! -z "$2" ]; then
+    text_flag="--text \"$2\""
+  fi
+
+  wt switch $create_flag "$branch_name" --execute "goose" -- run --name $branch_name --interactive $text_flag
+}
+# wtm - merge current branch, delete it, pull latest changes
 function wtm() {
    gh pr merge --admin -m &&
      wt remove -D &&
