@@ -129,12 +129,12 @@ function wtc() {
     create_flag="--create"
   fi
 
-  text_flag=""
+  text_flag=()
   if [ ! -z "$2" ]; then
-    text_flag="--text \"$2\""
+    text_flag=(--text "$2")
   fi
 
-  wt switch $create_flag "$branch_name" --execute "goose" -- run --name $branch_name --interactive $text_flag
+  wt switch $create_flag "$branch_name" --execute "goose" -- run --name $branch_name --interactive "${text_flag[@]}"
 }
 # wtm - merge current branch, delete it, pull latest changes
 function wtm() {
