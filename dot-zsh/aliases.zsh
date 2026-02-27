@@ -138,7 +138,7 @@ function wtc() {
 }
 # wtm - merge current branch, delete it, pull latest changes
 function wtm() {
-   gh pr merge --admin -m &&
+   gh pr merge --admin &&
      wt remove -D &&
      git pull
 }
