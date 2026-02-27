@@ -41,17 +41,17 @@ device = "default"
 sample_rate = 16000
 
 # Maximum recording duration in seconds (safety limit)
-max_duration_secs = 60
+max_duration_secs = 600
 
-# [audio.feedback]
+[audio.feedback]
 # Enable audio feedback sounds (beeps when recording starts/stops)
-# enabled = true
+enabled = true
 #
 # Sound theme: "default", "subtle", "mechanical", or path to custom theme directory
-# theme = "default"
+theme = "default"
 #
 # Volume level (0.0 to 1.0)
-# volume = 0.7
+volume = 0.7
 
 [whisper]
 # Model to use for transcription
@@ -69,6 +69,9 @@ language = "en"
 # Translate non-English speech to English
 translate = false
 
+# https://github.com/peteonrails/voxtype/blob/main/docs/CONFIGURATION.md#gpu_isolation
+gpu_isolation = true
+
 # Number of CPU threads for inference (omit for auto-detection)
 # threads = 4
 
@@ -77,13 +80,14 @@ translate = false
 # - type: Simulates keyboard input at cursor position (requires ydotool)
 # - clipboard: Copies text to clipboard (requires wl-copy)
 mode = "type"
+pre_type_delay_ms = 100  # Delay before typing starts (ms), useful for chat apps
 
 # Fall back to clipboard if typing fails
 fallback_to_clipboard = true
 
 # Delay between typed characters in milliseconds
 # 0 = fastest possible, increase if characters are dropped
-type_delay_ms = 0
+type_delay_ms = 10
 
 # Automatically submit (send Enter key) after outputting transcribed text
 # Useful for chat applications, command lines, or forms where you want
