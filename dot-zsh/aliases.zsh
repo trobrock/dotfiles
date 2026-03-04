@@ -151,6 +151,8 @@ function wtm() {
      git pull
 }
 
+alias wtd='wt remove -D'
+
 # tunnel - create an SSH local port forward
 # Usage: tunnel localhost:1234 trobrock-home:1234
 function tunnel() {
