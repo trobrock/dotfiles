@@ -121,12 +121,20 @@ function web2app-remove() {
 # wtc <branch_name> <goose prompt>
 function wtc() {
   branch_name="$1"
-
-  # check if branch exists locally or in remote
-  branch_exists=$(git branch --list "$branch_name" || git ls-remote --heads origin "$branch_name")
+  is_pr=false
   create_flag=""
-  if [ -z "$branch_exists" ]; then
-    create_flag="--create"
+
+  # if branch name is in form of pr:123
+  if [[ "$branch_name" =~ ^pr:([0-9]+)$ ]]; then
+    is_pr=true
+  fi
+
+  if [ "$is_pr" = false ]; then
+    # check if branch exists locally or in remote
+    branch_exists=$(git branch --list "$branch_name" || git ls-remote --heads origin "$branch_name")
+    if [ -z "$branch_exists" ]; then
+      create_flag="--create"
+    fi
   fi
 
   if [ ! -z "$2" ]; then
