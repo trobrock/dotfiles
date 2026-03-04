@@ -60,8 +60,9 @@ default=(
 sketchybar --default "${default[@]}"
 
 # Left Items
-source "$ITEM_DIR/apple.sh"
 source "$ITEM_DIR/coffee.sh"
+source "$ITEM_DIR/project_time.sh"
+spacer "one" "left"
 source "$ITEM_DIR/aerospace.sh"
 spacer "zero" "left"
 source "$ITEM_DIR/calendar.sh"
@@ -71,7 +72,7 @@ source "$ITEM_DIR/focus.sh"
 # Right Items
 source "$ITEM_DIR/system_info.sh"
 spacer "four" "right"
-source "$ITEM_DIR/project_time.sh"
+source "$ITEM_DIR/openrouter_costs.sh"
 
 ##### Force all scripts to run the first time (never do this in a script) #####
 sketchybar --update

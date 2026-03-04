@@ -1,4 +1,4 @@
-sketchybar --add item project_time.today right \
+sketchybar --add item project_time.today left \
            --set      project_time.today icon=󰃰 \
                                          label="0h0m" \
                                          icon.padding_left=$BRACKET_LEFT_PADDING \
