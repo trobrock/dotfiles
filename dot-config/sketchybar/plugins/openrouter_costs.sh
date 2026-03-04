@@ -10,8 +10,8 @@ if [[ "$ERROR" == "missing_api_key" ]]; then
   exit 0
 fi
 
-if [[ "$MODEL_COUNT" -eq 0 ]]; then
-  sketchybar --set "$NAME" label="\$0.00"
+if [[ "$KEY_COUNT" -eq 0 ]]; then
+  sketchybar --set "$NAME" label="\$0"
   exit 0
 fi
 
@@ -24,36 +24,34 @@ for item in $existing_items; do
   sketchybar --remove "$item" 2>/dev/null || true
 done
 
-# Find the longest model name for alignment
-max_model_length=0
-for ((i=0; i<MODEL_COUNT; i++)); do
-  model_name_var="MODEL_${i}_NAME"
-  model_name="${!model_name_var}"
-  if [[ ${#model_name} -gt $max_model_length ]]; then
-    max_model_length=${#model_name}
+# Find the longest key name for alignment
+max_name_length=0
+for ((i=0; i<KEY_COUNT; i++)); do
+  key_name_var="KEY_${i}_NAME"
+  key_name="${!key_name_var}"
+  if [[ ${#key_name} -gt $max_name_length ]]; then
+    max_name_length=${#key_name}
   fi
 done
 
-# Add popup items for each model — single line per model
-for ((i=0; i<MODEL_COUNT; i++)); do
-  model_name_var="MODEL_${i}_NAME"
-  model_cost_var="MODEL_${i}_COST"
-  model_delta_var="MODEL_${i}_DELTA"
+# Add popup items for each key
+for ((i=0; i<KEY_COUNT; i++)); do
+  key_name_var="KEY_${i}_NAME"
+  key_cost_var="KEY_${i}_COST"
 
-  model_name="${!model_name_var}"
-  model_cost="${!model_cost_var}"
-  model_delta="${!model_delta_var}"
+  key_name="${!key_name_var}"
+  key_cost="${!key_cost_var}"
 
-  padding_needed=$((max_model_length - ${#model_name}))
+  padding_needed=$((max_name_length - ${#key_name}))
   padding=$(printf "%*s" "$padding_needed" "")
 
-  aligned_label="${model_name}${padding}  \$${model_cost}  (${model_delta})"
+  aligned_label="${key_name}${padding}  \$${key_cost}"
 
   item_name="openrouter_costs.popup.$i"
 
   sketchybar --add item "$item_name" popup.openrouter_costs.item \
              --set "$item_name" label="$aligned_label" \
-                                icon="󰘚" \
+                                icon="󰌌" \
                                 icon.color=0xffffffff \
                                 label.color=0xffffffff \
                                 label.font="$FONT_FAMILY:Mono:13.0" \
