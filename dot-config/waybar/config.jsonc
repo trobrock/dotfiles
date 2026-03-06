@@ -12,6 +12,7 @@
     "modules-right": [
       "group/icons",
       "pulseaudio",
+      "custom/openrouter_costs",
       "custom/project_time",
       "clock"
     ],
@@ -58,6 +59,12 @@
         "format": " ",
         "tooltip-format": "{}",
         "on-click": "ghostty -e ~/.config/scripts/tailscale-switch"
+    },
+    "custom/openrouter_costs": {
+        "exec": "~/.config/waybar/scripts/openrouter_costs.sh",
+        "return-type": "json",
+        "interval": 300, // Update every 5 minutes
+        "format": "󰘚  {}"
     },
     "custom/project_time": {
         "exec": "~/.config/waybar/scripts/project_time.sh",

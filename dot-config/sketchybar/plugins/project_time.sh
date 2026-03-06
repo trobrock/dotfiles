@@ -13,12 +13,8 @@ fi
 # Update main bar item
 sketchybar --set "$NAME" label="$TOTAL_FORMATTED"
 
-# Remove existing popup header/total items if they exist
-sketchybar --remove project_time.popup.title 2>/dev/null || true
-sketchybar --remove project_time.popup.total 2>/dev/null || true
-
 # Remove existing popup project items
-existing_items=$(sketchybar --query bar | jq -r '.items[]' | grep "project_time.popup.project" || true)
+existing_items=$(sketchybar --query bar | jq -r '.items[]' | grep "project_time.popup" || true)
 for item in $existing_items; do
   sketchybar --remove "$item" 2>/dev/null || true
 done

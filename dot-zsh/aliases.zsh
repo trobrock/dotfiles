@@ -121,12 +121,20 @@ function web2app-remove() {
 # wtc <branch_name> <goose prompt>
 function wtc() {
   branch_name="$1"
-
-  # check if branch exists locally or in remote
-  branch_exists=$(git branch --list "$branch_name" || git ls-remote --heads origin "$branch_name")
+  is_pr=false
   create_flag=""
-  if [ -z "$branch_exists" ]; then
-    create_flag="--create"
+
+  # if branch name is in form of pr:123
+  if [[ "$branch_name" =~ ^pr:([0-9]+)$ ]]; then
+    is_pr=true
+  fi
+
+  if [ "$is_pr" = false ]; then
+    # check if branch exists locally or in remote
+    branch_exists=$(git branch --list "$branch_name" || git ls-remote --heads origin "$branch_name")
+    if [ -z "$branch_exists" ]; then
+      create_flag="--create"
+    fi
   fi
 
   if [ ! -z "$2" ]; then
@@ -138,10 +146,12 @@ function wtc() {
 }
 # wtm - merge current branch, delete it, pull latest changes
 function wtm() {
-   gh pr merge --admin -m &&
+   gh pr merge --admin &&
      wt remove -D &&
      git pull
 }
+
+alias wtd='wt remove -D'
 
 # tunnel - create an SSH local port forward
 # Usage: tunnel localhost:1234 trobrock-home:1234
