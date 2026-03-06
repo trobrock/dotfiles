@@ -164,6 +164,7 @@ GOOSE_CLI_NEWLINE_KEY: n
 GOOSE_CLI_SHOW_COST: true
 GOOSE_HOOK_STATUS: /tmp/test_hook.sh
 GOOSE_MODE: auto
-GOOSE_MODEL: anthropic/claude-opus-4.6
+GOOSE_MODEL: anthropic/claude-sonnet-4.6
+GOOSE_LEAD_MODEL: anthropic/claude-opus-4.6
 GOOSE_PROVIDER: openrouter
 GOOSE_TELEMETRY_ENABLED: true
