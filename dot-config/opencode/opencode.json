@@ -7,4 +7,9 @@
       "command": ["npx", "-y", "firecrawl-mcp"]
     }
   },
+  "permission": {
+    "external_directory": {
+      "~/.local/share/mise/**": "allow"
+    }
+  }
 }
