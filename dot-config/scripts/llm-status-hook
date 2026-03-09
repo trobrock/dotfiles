@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# goose-hook - Update tmux window title with a spinner icon based on goose state
-# Usage: goose-hook <waiting|thinking>
+# llm-status-hook - Update tmux window title with a spinner icon based on LLM agent state
+# Usage: llm-status-hook <waiting|thinking>
 
 set -euo pipefail
 
 STATE="${1:-}"
 
 if [[ -z "$STATE" ]]; then
-  echo "Usage: goose-hook <waiting|thinking>" >&2
+  echo "Usage: llm-status-hook <waiting|thinking>" >&2
   exit 1
 fi
 
