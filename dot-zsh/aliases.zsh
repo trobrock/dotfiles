@@ -118,8 +118,15 @@ function web2app-remove() {
 }
 
 # worktrunk
-# wtc <branch_name> <goose prompt>
+# wtc [--goose] <branch_name> [prompt]
 function wtc() {
+  local use_goose=false
+
+  if [[ "$1" == "--goose" ]]; then
+    use_goose=true
+    shift
+  fi
+
   branch_name="$1"
   is_pr=false
   create_flag=""
@@ -137,10 +144,18 @@ function wtc() {
     fi
   fi
 
-  if [ ! -z "$2" ]; then
-    wt switch $create_flag "$branch_name" --execute "goose" -- run --name $branch_name --interactive --text "$2"
+  if [ "$use_goose" = true ]; then
+    if [ ! -z "$2" ]; then
+      wt switch $create_flag "$branch_name" --execute "goose" -- run --name $branch_name --interactive --text "$2"
+    else
+      wt switch $create_flag "$branch_name" --execute "goose" -- session --name $branch_name
+    fi
   else
-    wt switch $create_flag "$branch_name" --execute "goose" -- session --name $branch_name
+    if [ ! -z "$2" ]; then
+      wt switch $create_flag "$branch_name" --execute "opencode" -- --prompt "$2"
+    else
+      wt switch $create_flag "$branch_name" --execute "opencode"
+    fi
   fi
 
 }
