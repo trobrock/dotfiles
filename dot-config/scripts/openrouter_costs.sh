@@ -36,14 +36,14 @@ key_count=$(echo "$keys_data" | jq 'length')
 
 total_cost_fmt=$(printf "%.0f" "$total_cost")
 
-echo "TOTAL_COST=$total_cost_fmt"
-echo "KEY_COUNT=$key_count"
+echo "TOTAL_COST='$total_cost_fmt'"
+echo "KEY_COUNT='$key_count'"
 
 for i in $(seq 0 $((key_count - 1))); do
   key_name=$(echo "$keys_data" | jq -r ".[$i].name")
   key_cost=$(echo "$keys_data" | jq -r ".[$i].usage_monthly")
   key_cost_fmt=$(printf "%.0f" "$key_cost")
 
-  echo "KEY_${i}_NAME=$key_name"
-  echo "KEY_${i}_COST=$key_cost_fmt"
+  echo "KEY_${i}_NAME='$key_name'"
+  echo "KEY_${i}_COST='$key_cost_fmt'"
 done
