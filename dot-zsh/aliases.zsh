@@ -118,46 +118,86 @@ function web2app-remove() {
 }
 
 # worktrunk
-# wtc [--goose] <branch_name> [prompt]
+# wtc [--plan] [--tmux [--name <win>]] [-f <file>] <branch_name> [prompt]
 function wtc() {
-  local use_goose=false
+  local use_plan=false
+  local use_tmux=false
+  local win_name=""
+  local prompt_file=""
+  local args=()
 
-  if [[ "$1" == "--goose" ]]; then
-    use_goose=true
-    shift
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --plan)  use_plan=true; shift ;;
+      --tmux)  use_tmux=true; shift ;;
+      --name)  win_name="$2"; shift 2 ;;
+      -f)      prompt_file="$2"; shift 2 ;;
+      *)       args+=("$1"); shift ;;
+    esac
+  done
+
+  local branch_name="${args[1]}"
+  if [ -z "$branch_name" ]; then
+    echo "Usage: wtc [--plan] [--tmux [--name <win>]] [-f <file>] <branch> [prompt]"
+    return 1
   fi
 
-  branch_name="$1"
-  is_pr=false
-  create_flag=""
+  # Resolve prompt: positional arg > -f file > stdin
+  local prompt="${args[2]}"
+  if [ -z "$prompt" ] && [ -n "$prompt_file" ]; then
+    prompt=$(<"$prompt_file")
+  elif [ -z "$prompt" ] && [ ! -t 0 ]; then
+    prompt=$(cat)
+  fi
 
-  # if branch name is in form of pr:123
+  # Branch existence check
+  local is_pr=false
+  local create_flag=""
   if [[ "$branch_name" =~ ^pr:([0-9]+)$ ]]; then
     is_pr=true
   fi
-
   if [ "$is_pr" = false ]; then
-    # check if branch exists locally or in remote
-    branch_exists=$(git branch --list "$branch_name" || git ls-remote --heads origin "$branch_name")
+    local branch_exists=$(git branch --list "$branch_name" || \
+      git ls-remote --heads origin "$branch_name")
     if [ -z "$branch_exists" ]; then
       create_flag="--create"
     fi
   fi
 
-  if [ "$use_goose" = true ]; then
-    if [ ! -z "$2" ]; then
-      wt switch $create_flag "$branch_name" --execute "goose" -- run --name $branch_name --interactive --text "$2"
-    else
-      wt switch $create_flag "$branch_name" --execute "goose" -- session --name $branch_name
-    fi
-  else
-    if [ ! -z "$2" ]; then
-      wt switch $create_flag "$branch_name" --execute "opencode" -- --prompt "$2"
-    else
-      wt switch $create_flag "$branch_name" --execute "opencode"
-    fi
+  local agent_flag=()
+  if [ "$use_plan" = true ]; then
+    agent_flag=(--agent plan)
   fi
 
+  if [ "$use_tmux" = true ]; then
+    # --- tmux mode: spawn in a detached window ---
+    if [ -z "$win_name" ]; then
+      win_name="${branch_name##*-}"
+    fi
+
+    local tmpfile=$(mktemp /tmp/wtc-XXXXXX.txt)
+    printf '%s' "$prompt" > "$tmpfile"
+
+    tmux new-window -dn "$win_name"
+
+    local prompt_arg=""
+    if [ -n "$prompt" ]; then
+      prompt_arg="--prompt \"\$PROMPT\""
+    fi
+
+    tmux send-keys -t ":$win_name" \
+      "PROMPT=\$(cat $tmpfile) && rm $tmpfile && wt switch $create_flag \"$branch_name\" -x opencode -- ${agent_flag[*]} $prompt_arg" Enter
+
+    echo "Spawned in tmux window '$win_name' on branch '$branch_name'"
+    echo "Connect: tmux select-window -t \":$win_name\""
+  else
+    # --- normal mode: run in current shell ---
+    if [ -n "$prompt" ]; then
+      wt switch $create_flag "$branch_name" -x opencode -- "${agent_flag[@]}" --prompt "$prompt"
+    else
+      wt switch $create_flag "$branch_name" -x opencode -- "${agent_flag[@]}"
+    fi
+  fi
 }
 # wtm - merge current branch, delete it, pull latest changes
 function wtm() {

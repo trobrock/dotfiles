@@ -22,16 +22,22 @@ if [[ -z "$PANE" ]]; then
   exit 0
 fi
 
-ICON="⏳"
+THINKING_ICON="⏳"
+INPUT_ICON="❓"
+ALL_ICONS="${THINKING_ICON}|${INPUT_ICON}"
 CURRENT_TITLE=$(tmux display-message -t "$PANE" -p '#W')
+
+# Strip any status icon from the current title
+BASE_TITLE=$(echo "$CURRENT_TITLE" | sed -E "s/ (${ALL_ICONS})$//")
 
 case "$STATE" in
   waiting)
-    # Remove the spinner icon if present
-    NEW_TITLE="${CURRENT_TITLE% ${ICON}}"
-    tmux rename-window -t "$PANE" "$NEW_TITLE"
-    # Re-enable automatic renaming
-    tmux set-window-option -t "$PANE" automatic-rename on
+    # Restore the base title without any icons
+    tmux rename-window -t "$PANE" "$BASE_TITLE"
+    # Restore previous automatic-rename state (preserved by the thinking handler)
+    PREV_AUTO_RENAME=$(tmux show-window-options -t "$PANE" -v @prev-auto-rename 2>/dev/null || echo "on")
+    tmux set-window-option -t "$PANE" automatic-rename "$PREV_AUTO_RENAME"
+    tmux set-window-option -t "$PANE" -u @prev-auto-rename 2>/dev/null
 
     # Only play a sound if this pane is not the active one
     ACTIVE_PANE=$(tmux display-message -p '#{pane_id}')
@@ -49,15 +55,39 @@ case "$STATE" in
     fi
     ;;
   thinking)
+    # Save current automatic-rename state before disabling (only on first transition)
+    if ! tmux show-window-options -t "$PANE" -v @prev-auto-rename &>/dev/null; then
+      PREV_AUTO_RENAME=$(tmux show-window-options -t "$PANE" -v automatic-rename 2>/dev/null || echo "on")
+      tmux set-window-option -t "$PANE" @prev-auto-rename "$PREV_AUTO_RENAME"
+    fi
     # Disable automatic renaming so tmux doesn't overwrite our title
     tmux set-window-option -t "$PANE" automatic-rename off
-    # Add the spinner icon if not already present
-    if [[ "$CURRENT_TITLE" != *"${ICON}"* ]]; then
-      tmux rename-window -t "$PANE" "${CURRENT_TITLE} ${ICON}"
+    tmux rename-window -t "$PANE" "${BASE_TITLE} ${THINKING_ICON}"
+    ;;
+  input)
+    # Save current automatic-rename state before disabling (only on first transition)
+    if ! tmux show-window-options -t "$PANE" -v @prev-auto-rename &>/dev/null; then
+      PREV_AUTO_RENAME=$(tmux show-window-options -t "$PANE" -v automatic-rename 2>/dev/null || echo "on")
+      tmux set-window-option -t "$PANE" @prev-auto-rename "$PREV_AUTO_RENAME"
+    fi
+    # Disable automatic renaming so tmux doesn't overwrite our title
+    tmux set-window-option -t "$PANE" automatic-rename off
+    tmux rename-window -t "$PANE" "${BASE_TITLE} ${INPUT_ICON}"
+
+    # Play a sound to alert the user if this pane is not active
+    ACTIVE_PANE=$(tmux display-message -p '#{pane_id}')
+    if [[ "$PANE" != "$ACTIVE_PANE" ]]; then
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        afplay /System/Library/Sounds/Blow.aiff &
+      elif command -v paplay &>/dev/null; then
+        paplay /usr/share/sounds/freedesktop/stereo/dialog-information.oga &
+      elif command -v printf &>/dev/null; then
+        printf '\a'
+      fi
     fi
     ;;
   *)
-    echo "Unknown state: $STATE (expected 'waiting' or 'thinking')" >&2
+    echo "Unknown state: $STATE (expected 'waiting', 'thinking', or 'input')" >&2
     exit 1
     ;;
 esac

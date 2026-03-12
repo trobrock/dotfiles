@@ -14,6 +14,12 @@ export const NotificationsPlugin: Plugin = async ({ $ }) => {
       if (event.type === "session.idle") {
         await $`${hook} waiting`.quiet()
       }
+      if (event.type === "permission.asked") {
+        await $`${hook} input`.quiet()
+      }
+      if (event.type === "permission.replied") {
+        await $`${hook} thinking`.quiet()
+      }
     },
   }
 }
