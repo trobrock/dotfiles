@@ -51,7 +51,7 @@ tooltip {
 }
 
 #custom-voxtype {
-  padding-left: 0px;
+  border-radius: 0 10px 10px 0;
   padding-right: 14px;
 }
 
@@ -80,7 +80,7 @@ tooltip {
 }
 
 #battery {
-  border-radius: 0 10px 10px 0;
+  border-radius: 0;
 }
 
 /* Workspaces */
@@ -194,7 +194,6 @@ tooltip {
 
 #battery {
     color: #a6e3a1;
-    padding-right: 18px;
 }
 
 #battery.charging {
@@ -239,6 +238,7 @@ tooltip {
 #network:hover,
 #power-profiles-daemon:hover,
 #battery:hover,
+#custom-voxtype:hover,
 #clock:hover {
   background: #45475a;
   transition: all 0.3s ease;
@@ -250,4 +250,12 @@ tooltip {
 
 #idle_inhibitor:hover {
   border-radius: 0;
+}
+
+#battery:hover {
+  border-radius: 0;
+}
+
+#custom-voxtype:hover {
+  border-radius: 0 10px 10px 0;
 }
