@@ -8,5 +8,6 @@ Archfile.lock
 .machine_name
 .gitignore
 dot-zsh/compcache
+hooks
 darwin
 linux

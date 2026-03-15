@@ -247,7 +247,14 @@ init_1password
 
 install_secrets
 
+install_pacman_hooks() {
+  log "Installing pacman hooks..."
+  sudo mkdir -p /etc/pacman.d/hooks
+  sudo cp "$(dirname "$0")/../hooks/"*.hook /etc/pacman.d/hooks/
+}
+
 if [ "$(uname)" = "Linux" ]; then
+  install_pacman_hooks
   allow_fingerprint_usage
   setup_auto_login
   setup_firewall
