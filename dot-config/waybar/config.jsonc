@@ -12,7 +12,6 @@
     "modules-right": [
       "group/icons",
       "pulseaudio",
-      "custom/openrouter_costs",
       "custom/project_time",
       "clock"
     ],
