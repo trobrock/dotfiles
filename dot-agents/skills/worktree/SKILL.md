@@ -159,6 +159,7 @@ wtc --tmux --name auth fix-auth-bug "Fix the auth bug in the login controller"
 #### Options
 
 - `--tmux` — spawn in a detached tmux window (required for parallel agents)
+- `--plan` — start claude in plan permission mode (uses `--permission-mode plan` instead of full `--dangerously-skip-permissions`)
 - `--name <win>` — custom tmux window name. **Always provide this** when spawning multiple agents — the default (last segment of branch name) causes collisions for branches with shared suffixes
 - `-f <file>` — read prompt from a file **(preferred for detailed prompts)**
 
@@ -180,7 +181,7 @@ EOF
 wtc --tmux --name sort sc-new-story-esql-sort-command -f /tmp/esql-sort-prompt.txt
 ```
 
-> **Note:** Plan mode is not available via CLI flag. To use plan mode, start an interactive claude session and run `/plan` inside it.
+> **Note:** Use `wtc --plan` to start the agent in plan permission mode. This uses `--permission-mode plan` so the agent can read and explore but must ask before making changes.
 
 After spawning, `wtc` prints the tmux window name and how to connect:
 

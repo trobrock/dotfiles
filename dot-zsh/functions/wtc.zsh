@@ -1,5 +1,6 @@
 function wtc() {
   local use_tmux=false
+  local use_plan=false
   local win_name=""
   local prompt_file=""
   local args=()
@@ -7,6 +8,7 @@ function wtc() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --tmux)  use_tmux=true; shift ;;
+      --plan)  use_plan=true; shift ;;
       --name)  win_name="$2"; shift 2 ;;
       -f)      prompt_file="$2"; shift 2 ;;
       *)       args+=("$1"); shift ;;
@@ -15,7 +17,7 @@ function wtc() {
 
   local branch_name="${args[1]}"
   if [ -z "$branch_name" ]; then
-    echo "Usage: wtc [--tmux [--name <win>]] [-f <file>] <branch> [prompt]"
+    echo "Usage: wtc [--tmux [--name <win>]] [--plan] [-f <file>] <branch> [prompt]"
     return 1
   fi
 
@@ -41,6 +43,13 @@ function wtc() {
     fi
   fi
 
+  local claude_flags
+  if [ "$use_plan" = true ]; then
+    claude_flags="--allow-dangerously-skip-permissions --permission-mode plan"
+  else
+    claude_flags="--dangerously-skip-permissions"
+  fi
+
   if [ "$use_tmux" = true ]; then
     # --- tmux mode: spawn in a detached window ---
     if [ -z "$win_name" ]; then
@@ -58,20 +67,20 @@ function wtc() {
 
     local prompt_arg=""
     if [ -n "$prompt" ]; then
-      prompt_arg="-p \"\$WTC_PROMPT\""
+      prompt_arg="\"\$WTC_PROMPT\""
     fi
 
     tmux send-keys -t ":$win_name" \
-      "WTC_PROMPT=\$(cat $tmpfile) && rm $tmpfile && wt switch $create_flag \"$branch_name\" -x claude -- --dangerously-skip-permissions $prompt_arg" Enter
+      "WTC_PROMPT=\$(cat $tmpfile) && rm $tmpfile && wt switch $create_flag \"$branch_name\" -x claude -- $claude_flags $prompt_arg" Enter
 
     echo "Spawned in tmux window '$win_name' on branch '$branch_name'"
     echo "Connect: tmux select-window -t \":$win_name\""
   else
     # --- normal mode: run in current shell ---
     if [ -n "$prompt" ]; then
-      wt switch $create_flag "$branch_name" -x claude -- --dangerously-skip-permissions -p "$prompt"
+      wt switch $create_flag "$branch_name" -x claude -- $claude_flags "$prompt"
     else
-      wt switch $create_flag "$branch_name" -x claude -- --dangerously-skip-permissions
+      wt switch $create_flag "$branch_name" -x claude -- $claude_flags
     fi
   fi
 }
