@@ -1,27 +1,48 @@
 {
-  "skipDangerousModePermissionPrompt": true,
   "model": "claude-opus-4-6",
-  "mcpServers": {
-    "firecrawl": {
-      "command": "npx",
-      "args": ["-y", "firecrawl-mcp"]
-    }
-  },
   "hooks": {
     "PreToolUse": [
       {
-        "hooks": [{"type": "command", "command": "~/.config/scripts/llm-status-hook thinking"}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.config/scripts/llm-status-hook thinking"
+          }
+        ]
       }
     ],
     "Stop": [
       {
-        "hooks": [{"type": "command", "command": "~/.config/scripts/llm-status-hook waiting"}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.config/scripts/llm-status-hook waiting"
+          }
+        ]
       }
     ],
     "Notification": [
       {
-        "hooks": [{"type": "command", "command": "~/.config/scripts/llm-status-hook input"}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.config/scripts/llm-status-hook input"
+          }
+        ]
       }
     ]
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "mcpServers": {
+    "firecrawl": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "firecrawl-mcp"
+      ]
+    }
+  },
+  "enabledPlugins": {
+    "ruby-lsp@claude-plugins-official": true
   }
 }
