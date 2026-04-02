@@ -1,5 +1,6 @@
+skip-commit-generation-prompt = true
 [commit.generation]
 command = ""
 
-[post-switch]
-tmux = '[ -n "$TMUX" ] && [ -n "$TMUX_PANE" ] && tmux rename-window -t "$TMUX_PANE" {{ branch | sanitize }} && tmux set-window-option -t "$TMUX_PANE" automatic-rename off'
+[merge]
+squash = false
