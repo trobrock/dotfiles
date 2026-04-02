@@ -7,6 +7,12 @@
       "bindings": {
         "ctrl+n": "chat:newline"
       }
+    },
+    {
+      "context": "Global",
+      "bindings": {
+        "ctrl+o": null
+      }
     }
   ]
 }
