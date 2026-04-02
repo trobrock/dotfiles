@@ -86,6 +86,13 @@ case "$STATE" in
       fi
     fi
     ;;
+  end)
+    # Clean up any icons and restore automatic-rename state
+    tmux rename-window -t "$PANE" "$BASE_TITLE"
+    PREV_AUTO_RENAME=$(tmux show-window-options -t "$PANE" -v @prev-auto-rename 2>/dev/null || echo "on")
+    tmux set-window-option -t "$PANE" automatic-rename "$PREV_AUTO_RENAME"
+    tmux set-window-option -t "$PANE" -u @prev-auto-rename 2>/dev/null
+      ;;
   *)
     echo "Unknown state: $STATE (expected 'waiting', 'thinking', or 'input')" >&2
     exit 1
