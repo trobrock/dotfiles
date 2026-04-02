@@ -32,17 +32,17 @@
       }
     ]
   },
-  "skipDangerousModePermissionPrompt": true,
-  "mcpServers": {
-    "firecrawl": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "firecrawl-mcp"
-      ]
-    }
+  "permissions": {
+    "allow": [],
+    "deny": [],
+    "additionalDirectories": [
+      "~/.local/share/mise",
+      "~/.cache"
+    ]
   },
   "enabledPlugins": {
+    "stripe@claude-plugins-official": true,
     "ruby-lsp@claude-plugins-official": true
-  }
+  },
+  "skipDangerousModePermissionPrompt": true
 }
