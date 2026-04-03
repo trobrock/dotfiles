@@ -119,6 +119,7 @@ function web2app-remove() {
 
 # claude code
 alias c="claude --dangerously-skip-permissions"
+alias cx="claude --allow-dangerously-skip-permissions --permission-mode plan"
 
 # Source function files
 for f in ~/.zsh/functions/*.zsh(N); do source "$f"; done
