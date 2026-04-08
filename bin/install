@@ -231,6 +231,7 @@ init_tpm
 
 log "Installing dotfiles using stow..."
 source "$(dirname "$0")/lib/stow.sh"
+clean_absolute_symlinks
 stow --verbose=2 --dotfiles --adopt -t $HOME . 2>&1 | clean_stow_output
 clean_broken_symlinks
 
