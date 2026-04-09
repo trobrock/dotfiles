@@ -73,8 +73,8 @@ function wtc() {
     tmux send-keys -t ":$win_name" \
       "WTC_PROMPT=\$(cat $tmpfile) && rm $tmpfile && wt switch $create_flag \"$branch_name\" -x claude -- ${claude_flags[*]} $prompt_arg" Enter
 
+    tmux select-window -t ":$win_name"
     echo "Spawned in tmux window '$win_name' on branch '$branch_name'"
-    echo "Connect: tmux select-window -t \":$win_name\""
   else
     # --- normal mode: run in current shell ---
     if [ -n "$prompt" ]; then
