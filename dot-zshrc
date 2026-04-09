@@ -31,6 +31,7 @@ export FZF_DEFAULT_OPTS=" \
 --color=selected-bg:#45475a \
 --multi"
 source <(fzf --zsh)
+bindkey -r '^R'
 
 export EDITOR="nvim"
 export PATH="./bin:$HOME/bin:$HOME/.config/scripts/:$PATH"

@@ -11,7 +11,8 @@
     {
       "context": "Global",
       "bindings": {
-        "ctrl+o": null
+        "ctrl+o": null,
+        "ctrl+r": null
       }
     }
   ]
