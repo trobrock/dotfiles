@@ -16,7 +16,7 @@ function wtc-popup() {
   if [[ -n "$prompt" ]] && command -v ollama >/dev/null 2>&1; then
     local git_user
     git_user=$(git config github.user)
-    local meta_prompt="Generate a short git branch name in kebab-case (max 4 words, lowercase, hyphens only, no quotes, no explanation) for this task. Prefix the branch name with '$git_user/'.
+    local meta_prompt="Generate a short git branch name in kebab-case (max 4 words, lowercase, hyphens only, no quotes, no explanation) for this task. Do NOT include any prefix or username.
 
 $prompt
 
@@ -29,7 +29,10 @@ Reply with ONLY the branch name."
     suggestion=$(awk 'NF' "$suggest_file" | tail -n 1 \
       | tr -d '\r"'"'" \
       | tr '[:upper:]' '[:lower:]' \
-      | sed -E 's/[^a-z0-9/-]+/-/g; s/^-+//; s/-+$//')
+      | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$//')
+    if [[ -n "$suggestion" && -n "$git_user" ]]; then
+      suggestion="$git_user/$suggestion"
+    fi
     rm -f "$suggest_file"
   fi
 
