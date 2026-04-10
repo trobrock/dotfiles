@@ -37,7 +37,6 @@ Reply with ONLY the branch name."
     --prompt.foreground "#cba6f7" --prompt.bold \
     --cursor.foreground "#cba6f7" \
     --placeholder.foreground "#bac2de" \
-    --text.foreground "#f5e0dc" \
     --value "$suggestion") || return 1
   [[ -z "$branch" ]] && { echo "aborted: no branch"; return 1; }
 
