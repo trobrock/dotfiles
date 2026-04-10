@@ -223,6 +223,13 @@ setup_hyprshot_cleanup_cron() {
   (crontab -l 2>/dev/null; echo "$cron_job") | crontab -
 }
 
+setup_github_user() {
+  if [ -z "$(git config --global github.user)" ] && command -v gh >/dev/null 2>&1; then
+    log "Setting github.user in git config..."
+    git config --global github.user "$(gh api user --jq '.login')"
+  fi
+}
+
 install_package_manager
 install_stow
 change_shell_to_zsh
@@ -244,6 +251,7 @@ fi
 clean_broken_symlinks
 
 install_packages
+setup_github_user
 init_1password
 
 install_secrets

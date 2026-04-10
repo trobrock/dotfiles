@@ -52,3 +52,5 @@
 
 [include]
   path = ~/.config/local/gitconfig
+[github]
+	user = trobrock

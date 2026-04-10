@@ -53,7 +53,8 @@ function wtc() {
   if [ "$use_tmux" = true ]; then
     # --- tmux mode: spawn in a detached window ---
     if [ -z "$win_name" ]; then
-      win_name="${branch_name##*-}"
+      win_name="${branch_name#*/}"
+      win_name="${win_name:0:20}"
     fi
 
     local tmpfile=$(mktemp "${TMPDIR:-/tmp}/wtc.XXXXXX")

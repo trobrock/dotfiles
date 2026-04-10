@@ -14,7 +14,9 @@ function wtc-popup() {
     --width 80 --height 10) || return 1
 
   if [[ -n "$prompt" ]] && command -v ollama >/dev/null 2>&1; then
-    local meta_prompt="Generate a short git branch name in kebab-case (max 4 words, lowercase, hyphens only, no quotes, no explanation) for this task:
+    local git_user
+    git_user=$(git config github.user)
+    local meta_prompt="Generate a short git branch name in kebab-case (max 4 words, lowercase, hyphens only, no quotes, no explanation) for this task. Prefix the branch name with '$git_user/'.
 
 $prompt
 
