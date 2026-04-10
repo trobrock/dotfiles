@@ -1,7 +1,16 @@
 {
   "model": "claude-opus-4-6",
-  "effortLevel": "max",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.config/scripts/llm-status-hook end"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
@@ -48,6 +57,17 @@
           {
             "type": "command",
             "command": "~/.config/scripts/llm-status-hook end"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.config/scripts/llm-status-hook thinking"
           }
         ]
       }
