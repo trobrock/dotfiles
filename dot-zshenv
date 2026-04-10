@@ -1,0 +1,13 @@
+# Homebrew (must be early so brew-installed tools are found)
+if [ -f /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
+export XDG_CONFIG_HOME="$HOME/.config"
+export EDITOR="nvim"
+export GOOSE_STATUS_HOOK="$HOME/.config/scripts/goose-hook"
+export OP_BIOMETRIC_UNLOCK_ENABLED=true
+export CLAUDE_CODE_EFFORT_LEVEL=max
+
+export PATH="./bin:$HOME/.local/bin:$HOME/bin:$HOME/.config/scripts/:$PATH"
+typeset -U PATH

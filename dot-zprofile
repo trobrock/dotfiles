@@ -1,26 +1,11 @@
+# Auto-start Hyprland on Linux login
 if [[ "$(uname)" == "Linux" ]]; then
   if uwsm check may-start -g 120 > /dev/null; then
     exec uwsm start hyprland-uwsm.desktop
   fi
 fi
 
-if [ -f /opt/homebrew/bin/brew ]; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-fi
-
-export XDG_CONFIG_HOME="$HOME/.config"
-export PATH="./bin:$HOME/.local/bin:$PATH"
-
-typeset -U PATH # Clean up dupes
-
+# OrbStack (macOS only, login shell)
 if [[ "$(uname)" == "Darwin" ]] ; then
   source ~/.orbstack/shell/init.zsh 2>/dev/null || :
 fi
-
-if command -v mise &> /dev/null; then
-  eval "$(mise activate zsh)"
-else
-  eval "$(rbenv init - --no-rehash zsh)"
-fi
-
-eval "$(direnv hook zsh)"

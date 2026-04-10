@@ -33,11 +33,12 @@ export FZF_DEFAULT_OPTS=" \
 source <(fzf --zsh)
 bindkey -r '^R'
 
-export EDITOR="nvim"
-export PATH="./bin:$HOME/bin:$HOME/.config/scripts/:$PATH"
-export GOOSE_STATUS_HOOK="$HOME/.config/scripts/goose-hook"
+if command -v mise &> /dev/null; then
+  eval "$(mise activate zsh)"
+else
+  eval "$(rbenv init - --no-rehash zsh)"
+fi
 
-# Required for 1password CLI to auth in hyprland
-export OP_BIOMETRIC_UNLOCK_ENABLED=true
+eval "$(direnv hook zsh)"
 
 if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
