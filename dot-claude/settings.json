@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "allow": [],
+    "deny": [],
+    "additionalDirectories": [
+      "~/.local/share/mise",
+      "~/.cache"
+    ]
+  },
   "model": "claude-opus-4-6",
   "hooks": {
     "SessionStart": [
@@ -93,17 +101,18 @@
       }
     ]
   },
-  "permissions": {
-    "allow": [],
-    "deny": [],
-    "additionalDirectories": [
-      "~/.local/share/mise",
-      "~/.cache"
-    ]
-  },
   "enabledPlugins": {
     "stripe@claude-plugins-official": true,
-    "ruby-lsp@claude-plugins-official": true
+    "ruby-lsp@claude-plugins-official": true,
+    "comfortly@comfortly": true
+  },
+  "extraKnownMarketplaces": {
+    "comfortly": {
+      "source": {
+        "source": "github",
+        "repo": "getcomfortly/claude"
+      }
+    }
   },
   "skipDangerousModePermissionPrompt": true
 }
