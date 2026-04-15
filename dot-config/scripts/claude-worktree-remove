@@ -24,4 +24,4 @@ if [ -z "$BRANCH" ]; then
 fi
 
 # Remove via wt: -f for untracked files, -D for unmerged branches, --foreground to block
-/opt/homebrew/bin/wt remove "$BRANCH" -f -D -y --no-verify --foreground -C "$CWD" 2>&1 || true
+/opt/homebrew/bin/wt remove "$BRANCH" -f -D -y --foreground -C "$CWD" 2>&1 || true
