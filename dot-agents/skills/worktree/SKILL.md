@@ -21,7 +21,7 @@ Manage git worktrees using [Worktrunk](https://worktrunk.dev/) (`wt`) with tmux 
 
 2. **Must be on the root worktree.** Run `wt list --format=json | jq '.[] | select(.is_main == true and .is_current == true)'` to confirm you are on the main/root worktree. If you are inside a child worktree, do NOT spawn new worktrees from there.
 
-3. **ONLY use `wtc --tmux` to spawn agents.** Never manually run `wt switch`, `tmux new-window`, `tmux send-keys`, or any other combination of commands to create worktrees or tmux panes. The `wtc` tool handles ALL of this — branch creation, worktree setup, tmux window creation, and claude session launch. Using anything else will break the workflow.
+3. **ONLY use `wcc --tmux` to spawn agents.** Never manually run `wt switch`, `tmux new-window`, `tmux send-keys`, or any other combination of commands to create worktrees or tmux panes. The `wcc` tool handles ALL of this — branch creation, worktree setup, tmux window creation, and claude session launch. Using anything else will break the workflow.
 
 ## Key Concepts
 
@@ -36,17 +36,17 @@ Manage git worktrees using [Worktrunk](https://worktrunk.dev/) (`wt`) with tmux 
 
 Create a new worktree and open a dedicated tmux window for it. Worktrunk hooks handle all environment setup (copy-ignored files, mise.local.toml generation, bundle/yarn install, bin/setup).
 
-**Preferred: Use `wtc --tmux`** to create a worktree with a claude session in a detached tmux window without affecting your current shell:
+**Preferred: Use `wcc --tmux`** to create a worktree with a claude session in a detached tmux window without affecting your current shell:
 
 ```bash
-wtc --tmux "<branch>"
+wcc --tmux "<branch>"
 ```
 
 This handles branch existence checks, `--create` flag, tmux window creation, and opencode launch automatically. See [Spawn Parallel AI Agent](#4-spawn-parallel-ai-agent-in-a-worktree) for full usage.
 
 **Manual alternative** (ONLY when you need a worktree without claude, e.g., for the user to work in directly — never use this to spawn AI agents):
 
-> **WARNING:** Do NOT use `wt switch` to create worktrees for AI agents. It changes the current shell's working directory and renames the tmux window, contaminating your session. Always use `wtc --tmux` for agent spawning.
+> **WARNING:** Do NOT use `wt switch` to create worktrees for AI agents. It changes the current shell's working directory and renames the tmux window, contaminating your session. Always use `wcc --tmux` for agent spawning.
 
 ```bash
 # Check if the branch already exists (local or remote)
@@ -82,7 +82,7 @@ wt remove "<branch>" -D
 
 The `-D` flag force-deletes the local branch even if it has unmerged changes.
 
-#### Merge a PR and clean up (the `wtm` pattern)
+#### Merge a PR and clean up (the `wmm` pattern)
 
 For a branch with an open PR that's ready to merge:
 
@@ -118,14 +118,14 @@ The URL pattern for Portal projects is `http://huntress.localhost:<hash_port>`. 
 
 ### 4. Spawn Parallel AI Agent in a Worktree
 
-Use the `wtc --tmux` command to create a worktree with a dedicated tmux window and launch an independent claude session in it. This lets you delegate a task to a parallel agent while continuing your own work.
+Use the `wcc --tmux` command to create a worktree with a dedicated tmux window and launch an independent claude session in it. This lets you delegate a task to a parallel agent while continuing your own work.
 
-**IMPORTANT — `wtc --tmux` is the ONLY way to spawn agents:**
+**IMPORTANT — `wcc --tmux` is the ONLY way to spawn agents:**
 
 - **NEVER** run `wt switch` to create agent worktrees — it contaminates your current shell
-- **NEVER** manually run `tmux new-window` or `tmux send-keys` — `wtc` handles all tmux operations
-- **NEVER** try to piece together worktree creation + tmux + claude yourself — `wtc --tmux` does it all in one atomic operation
-- **ALWAYS** verify you are in build mode and on the root worktree before calling `wtc --tmux`
+- **NEVER** manually run `tmux new-window` or `tmux send-keys` — `wcc` handles all tmux operations
+- **NEVER** try to piece together worktree creation + tmux + claude yourself — `wcc --tmux` does it all in one atomic operation
+- **ALWAYS** verify you are in build mode and on the root worktree before calling `wcc --tmux`
 
 #### Writing the prompt
 
@@ -139,21 +139,21 @@ Any "quotes", $variables, `backticks`, and special chars are safe.
 EOF
 
 # 2. Spawn with -f
-wtc --tmux --name <window-name> <branch> -f /tmp/<branch>-prompt.txt
+wcc --tmux --name <window-name> <branch> -f /tmp/<branch>-prompt.txt
 ```
 
 For very short prompts (one sentence), a positional argument is fine:
 
 ```bash
-wtc --tmux --name auth fix-auth-bug "Fix the auth bug in the login controller"
+wcc --tmux --name auth fix-auth-bug "Fix the auth bug in the login controller"
 ```
 
 #### Prompt sources
 
-`wtc` accepts prompts from three sources (in priority order):
+`wcc` accepts prompts from three sources (in priority order):
 
-1. **Positional argument** (short prompts only): `wtc --tmux <branch> "Fix the auth bug"`
-2. **File** (`-f`) **(preferred for anything detailed)**: `wtc --tmux <branch> -f /path/to/prompt.txt`
+1. **Positional argument** (short prompts only): `wcc --tmux <branch> "Fix the auth bug"`
+2. **File** (`-f`) **(preferred for anything detailed)**: `wcc --tmux <branch> -f /path/to/prompt.txt`
 3. **Stdin / heredoc** (avoid — can crash on long prompts due to shell quoting)
 
 #### Options
@@ -167,7 +167,7 @@ wtc --tmux --name auth fix-auth-bug "Fix the auth bug in the login controller"
 
 ```bash
 # Short prompt — positional argument is fine
-wtc --tmux --name auth fix-auth-bug "Fix the auth bug in the login controller"
+wcc --tmux --name auth fix-auth-bug "Fix the auth bug in the login controller"
 
 # Detailed prompt — write to file first, then use -f
 cat > /tmp/esql-sort-prompt.txt <<'EOF'
@@ -178,12 +178,12 @@ Key files:
 - lib/esql/parser.rb
 - lib/esql/ast.rb
 EOF
-wtc --tmux --name sort sc-new-story-esql-sort-command -f /tmp/esql-sort-prompt.txt
+wcc --tmux --name sort sc-new-story-esql-sort-command -f /tmp/esql-sort-prompt.txt
 ```
 
-> **Note:** Use `wtc --plan` to start the agent in plan permission mode. This uses `--permission-mode plan` so the agent can read and explore but must ask before making changes.
+> **Note:** Use `wcc --plan` to start the agent in plan permission mode. This uses `--permission-mode plan` so the agent can read and explore but must ask before making changes.
 
-After spawning, `wtc` prints the tmux window name and how to connect:
+After spawning, `wcc` prints the tmux window name and how to connect:
 
 ```
 Spawned in tmux window 'auth' on branch 'feature-branch'
@@ -194,7 +194,7 @@ The agent runs independently. You do not need to wait for it to finish.
 
 #### Spawning multiple parallel agents
 
-Call `wtc --tmux` once per agent. Each call is independent and does not affect your current shell. **Always use `-f` and `--name`** when spawning multiple agents:
+Call `wcc --tmux` once per agent. Each call is independent and does not affect your current shell. **Always use `-f` and `--name`** when spawning multiple agents:
 
 ```bash
 # Write each prompt to its own temp file
@@ -211,9 +211,9 @@ Add TIME_RANGE extraction to NaturalLanguageQuery...
 EOF
 
 # Spawn each agent with a unique --name and -f
-wtc --tmux --name sort sc-new-story-esql-sort-command -f /tmp/sort-prompt.txt
-wtc --tmux --name bypass sc-new-story-ai-search-esql-bypass -f /tmp/bypass-prompt.txt
-wtc --tmux --name timerange sc-new-story-nlq-time-range -f /tmp/timerange-prompt.txt
+wcc --tmux --name sort sc-new-story-esql-sort-command -f /tmp/sort-prompt.txt
+wcc --tmux --name bypass sc-new-story-ai-search-esql-bypass -f /tmp/bypass-prompt.txt
+wcc --tmux --name timerange sc-new-story-nlq-time-range -f /tmp/timerange-prompt.txt
 ```
 
 ## Querying Worktree Status
@@ -238,7 +238,7 @@ Use `wt list --format=json` to get structured data about all worktrees. Each ent
 
 ### Window name collision (second agent errors out)
 
-Branch names with shared suffixes (e.g., `fix-foo-errors` and `fix-bar-errors`) both default to window name `errors`. `wtc` will now error if the window already exists. Always pass `--name` explicitly with a unique name per agent.
+Branch names with shared suffixes (e.g., `fix-foo-errors` and `fix-bar-errors`) both default to window name `errors`. `wcc` will now error if the window already exists. Always pass `--name` explicitly with a unique name per agent.
 
 ## When to Use This Skill
 

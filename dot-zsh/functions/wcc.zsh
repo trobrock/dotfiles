@@ -1,4 +1,4 @@
-function wtc() {
+function wcc() {
   local use_tmux=false
   local use_plan=false
   local win_name=""
@@ -17,7 +17,7 @@ function wtc() {
 
   local branch_name="${args[1]}"
   if [ -z "$branch_name" ]; then
-    echo "Usage: wtc [--tmux [--name <win>]] [--plan] [-f <file>] <branch> [prompt]"
+    echo "Usage: wcc [--tmux [--name <win>]] [--plan] [-f <file>] <branch> [prompt]"
     return 1
   fi
 
@@ -57,7 +57,7 @@ function wtc() {
       win_name="${win_name:0:20}"
     fi
 
-    local tmpfile=$(mktemp "${TMPDIR:-/tmp}/wtc.XXXXXX")
+    local tmpfile=$(mktemp "${TMPDIR:-/tmp}/wcc.XXXXXX")
     printf '%s' "$prompt" > "$tmpfile"
 
     if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx "$win_name"; then
@@ -68,11 +68,11 @@ function wtc() {
 
     local prompt_arg=""
     if [ -n "$prompt" ]; then
-      prompt_arg="\"\$WTC_PROMPT\""
+      prompt_arg="\"\$WCC_PROMPT\""
     fi
 
     tmux send-keys -t ":$win_name" \
-      "WTC_PROMPT=\$(cat $tmpfile) && rm $tmpfile && wt switch $create_flag \"$branch_name\" -x claude -- ${claude_flags[*]} $prompt_arg" Enter
+      "WCC_PROMPT=\$(cat $tmpfile) && rm $tmpfile && wt switch $create_flag \"$branch_name\" -x claude -- ${claude_flags[*]} $prompt_arg" Enter
 
     tmux select-window -t ":$win_name"
     echo "Spawned in tmux window '$win_name' on branch '$branch_name'"

@@ -1,6 +1,6 @@
-function wtc-popup() {
+function wcc-popup() {
   local branch prompt tmpfile plan_flag="" suggestion=""
-  local ollama_model="${WTC_OLLAMA_MODEL:-llama3.2:1b}"
+  local ollama_model="${WCC_OLLAMA_MODEL:-llama3.2:1b}"
 
   prompt=$(gum write \
     --placeholder "initial prompt for claude (ctrl-d to finish, empty to skip)" \
@@ -22,7 +22,7 @@ $prompt
 
 Reply with ONLY the branch name."
     local suggest_file
-    suggest_file=$(mktemp "${TMPDIR:-/tmp}/wtc-suggest.XXXXXX")
+    suggest_file=$(mktemp "${TMPDIR:-/tmp}/wcc-suggest.XXXXXX")
     OLLAMA_META_PROMPT="$meta_prompt" gum spin --spinner dot --title "suggesting branch name..." \
       --spinner.foreground "#cba6f7" --title.foreground "#f5e0dc" --title.bold -- \
       sh -c "ollama run '$ollama_model' \"\$OLLAMA_META_PROMPT\" > '$suggest_file' 2>/dev/null"
@@ -52,9 +52,9 @@ Reply with ONLY the branch name."
     plan_flag="--plan"
   fi
 
-  tmpfile=$(mktemp "${TMPDIR:-/tmp}/wtc-popup.XXXXXX")
+  tmpfile=$(mktemp "${TMPDIR:-/tmp}/wcc-popup.XXXXXX")
   printf '%s' "$prompt" > "$tmpfile"
 
-  wtc --tmux $plan_flag -f "$tmpfile" "$branch"
+  wcc --tmux $plan_flag -f "$tmpfile" "$branch"
   rm -f "$tmpfile"
 }

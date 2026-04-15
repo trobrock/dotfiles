@@ -1,3 +1,3 @@
-function wtd() {
+function wd() {
   wt remove -D
 }
