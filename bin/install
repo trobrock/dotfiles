@@ -204,10 +204,17 @@ setup_firewall() {
     sudo firewall-cmd --zone=public --add-port=22/tcp --permanent
   fi
 
+  # Allow Syncthing web UI (port 8384) from Tailscale network only
+  local syncthing_rule='rule family="ipv4" source address="100.64.0.0/10" port port="8384" protocol="tcp" accept'
+  if ! sudo firewall-cmd --zone=public --list-rich-rules | grep -qF "$syncthing_rule"; then
+    log "Adding Syncthing GUI (port 8384) for Tailscale to firewall rules..."
+    sudo firewall-cmd --zone=public --add-rich-rule="$syncthing_rule" --permanent
+  fi
+
   # Apply all permanent rules
   sudo firewall-cmd --reload
 
-  log "Firewall setup complete. Default zone: public, SSH allowed on port 22, Docker networking configured."
+  log "Firewall setup complete. Default zone: public, SSH on 22, Syncthing GUI on 8384 (Tailscale only)."
 }
 
 setup_hyprshot_cleanup_cron() {
