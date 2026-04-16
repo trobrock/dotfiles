@@ -5,7 +5,9 @@
     "additionalDirectories": [
       "~/.local/share/mise",
       "~/.cache"
-    ]
+    ],
+    "defaultMode": "plan",
+    "disableAutoMode": "disable"
   },
   "model": "claude-opus-4-7",
   "effortLevel": "xhigh",
