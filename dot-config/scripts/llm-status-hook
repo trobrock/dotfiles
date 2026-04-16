@@ -22,13 +22,25 @@ if [[ -z "$PANE" ]]; then
   exit 0
 fi
 
-THINKING_ICON=$'\uf0e7'
-INPUT_ICON=$'\uf075'
-ALL_ICONS="${THINKING_ICON}|${INPUT_ICON}"
+# Use \x byte escapes (portable to bash 3.2) — \u escapes silently become the
+# literal string "\uf0e7" under /bin/bash on macOS, which corrupts the title.
+THINKING_ICON=$'\xef\x83\xa7'
+INPUT_ICON=$'\xef\x81\xb5'
 CURRENT_TITLE=$(tmux display-message -t "$PANE" -p '#W')
 
-# Strip any status icon from the current title
-BASE_TITLE=$(echo "$CURRENT_TITLE" | sed -E "s/ (${ALL_ICONS})$//")
+# Strip trailing status icons. Iteratively peel off real glyphs and any legacy
+# "\uf0e7"/"\uf075" escape text left over from historically-broken runs.
+BASE_TITLE="$CURRENT_TITLE"
+while : ; do
+  PREV="$BASE_TITLE"
+  BASE_TITLE="${BASE_TITLE%"$THINKING_ICON"}"
+  BASE_TITLE="${BASE_TITLE%"$INPUT_ICON"}"
+  BASE_TITLE="${BASE_TITLE%uf0e7}"
+  BASE_TITLE="${BASE_TITLE%uf075}"
+  BASE_TITLE="${BASE_TITLE%\\}"
+  BASE_TITLE="${BASE_TITLE% }"
+  [[ "$BASE_TITLE" == "$PREV" ]] && break
+done
 
 case "$STATE" in
   waiting)
