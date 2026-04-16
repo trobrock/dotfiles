@@ -7,7 +7,6 @@ export XDG_CONFIG_HOME="$HOME/.config"
 export EDITOR="nvim"
 export GOOSE_STATUS_HOOK="$HOME/.config/scripts/goose-hook"
 export OP_BIOMETRIC_UNLOCK_ENABLED=true
-export CLAUDE_CODE_EFFORT_LEVEL=max
 
 # Claude Code's shell snapshots don't capture chpwd_functions, so zoxide's
 # doctor falsely warns on every cd. Silence it only inside Claude Code.
