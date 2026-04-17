@@ -7,7 +7,7 @@
       "~/.cache"
     ],
     "defaultMode": "plan",
-    "disableAutoMode": "disable"
+    "disableAutoMode": true
   },
   "model": "claude-opus-4-7",
   "effortLevel": "xhigh",
