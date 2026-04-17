@@ -69,6 +69,10 @@ language = "en"
 # Translate non-English speech to English
 translate = false
 
+# Biases Whisper toward proper nouns frequently dictated across daily work.
+# Prior context only — not transcribed into output.
+initial_prompt = "Ruby on Rails, Comfortly, Channex, rezStream, Stripe, ViewComponent, Flipper, Sentry, PagerDuty, Hyprland, Waybar, VoxType, Claude Code, Arch Linux, Neovim."
+
 # https://github.com/peteonrails/voxtype/blob/main/docs/CONFIGURATION.md#gpu_isolation
 gpu_isolation = true
 
