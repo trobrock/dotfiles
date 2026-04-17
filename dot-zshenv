@@ -3,6 +3,13 @@ if [ -f /opt/homebrew/bin/brew ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
+# Claude Code's shell snapshots don't capture chpwd/precmd hooks, so the
+# `mise activate zsh` in .zshrc can't re-resolve tool versions when Claude
+# cds into a project. Use shim-based activation only inside Claude Code.
+if [ -n "$CLAUDECODE" ] && command -v mise &> /dev/null; then
+  eval "$(mise activate zsh --shims)"
+fi
+
 export XDG_CONFIG_HOME="$HOME/.config"
 export EDITOR="nvim"
 export GOOSE_STATUS_HOOK="$HOME/.config/scripts/goose-hook"
