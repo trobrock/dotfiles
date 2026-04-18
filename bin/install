@@ -85,7 +85,7 @@ install_packages() {
     brew bundle
   elif [ "$(uname)" = "Linux" ]; then
     archfile_remove_missing
-    yay -S --needed --noconfirm $(archfile_packages)
+    yay -Syu --needed --noconfirm $(archfile_packages)
     archfile_write_lock
   fi
 }
