@@ -4,7 +4,7 @@ return {
   opts = function()
     return {
       options = {
-        theme = "catppuccin",
+        theme = "catppuccin-mocha",
       },
       sections = {
         lualine_a = { "mode" },
