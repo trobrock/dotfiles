@@ -244,14 +244,19 @@ setup_github_user() {
   fi
 }
 
+ac_power_setting() {
+  pmset -g custom | awk -v key="$1" '/^AC Power:/{flag=1; next} /^Battery Power:/{flag=0} flag && $1==key{print $2; exit}'
+}
+
 setup_power_management() {
-  local current
-  current=$(pmset -g custom | awk '/^AC Power:/{flag=1; next} /^Battery Power:/{flag=0} flag && $1=="sleep"{print $2; exit}')
-  if [ "$current" = "0" ]; then
-    return
+  if [ "$(ac_power_setting sleep)" != "0" ]; then
+    log "Disabling system sleep on AC power so SSH stays reachable..."
+    sudo pmset -c sleep 0
   fi
-  log "Disabling system sleep on AC power so SSH stays reachable (display/disk still sleep)..."
-  sudo pmset -c sleep 0
+  if [ "$(ac_power_setting disksleep)" != "0" ]; then
+    log "Disabling disk sleep on AC power so SSH logins don't stall waking disks..."
+    sudo pmset -c disksleep 0
+  fi
 }
 
 install_package_manager
