@@ -2,6 +2,15 @@ function wcc-popup() {
   local branch prompt tmpfile plan_flag="" suggestion=""
   local ollama_model="${WCC_OLLAMA_MODEL:-llama3.2:1b}"
 
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    local main_worktree current_worktree
+    main_worktree=$(git worktree list --porcelain 2>/dev/null | awk '/^worktree / {print $2; exit}')
+    current_worktree=$(git rev-parse --show-toplevel 2>/dev/null)
+    if [[ -n "$main_worktree" && "$main_worktree" != "$current_worktree" ]]; then
+      cd "$main_worktree" || return 1
+    fi
+  fi
+
   prompt=$(gum write \
     --placeholder "initial prompt for claude (ctrl-d to finish, empty to skip)" \
     --header "prompt:  enter submit · ctrl+j new line · ctrl+e editor" \
