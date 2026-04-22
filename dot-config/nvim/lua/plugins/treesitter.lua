@@ -1,81 +1,87 @@
 return {
-  "nvim-treesitter/nvim-treesitter",
-  dependencies = {
-    "RRethy/nvim-treesitter-endwise",
-    "nvim-treesitter/nvim-treesitter-textobjects"
+  {
+    "nvim-treesitter/nvim-treesitter",
+    branch = "main",
+    lazy = false,
+    build = ":TSUpdate",
+    dependencies = {
+      "RRethy/nvim-treesitter-endwise",
+    },
+    config = function()
+      local ts = require("nvim-treesitter")
+      ts.setup()
+
+      ts.install({
+        "lua", "javascript", "ruby", "go", "yaml", "vim",
+        "markdown", "markdown_inline", "html", "dockerfile", "gitignore",
+      })
+
+      vim.api.nvim_create_autocmd("FileType", {
+        callback = function(args)
+          local buf = args.buf
+          if vim.bo[buf].buftype ~= "" then return end
+          if not pcall(vim.treesitter.start, buf) then return end
+          vim.bo[buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+        end,
+      })
+
+      -- Incremental selection using Nvim 0.12 built-in `an`/`in` tree-sitter selectors.
+      vim.keymap.set("n", "<C-space>", "van", { remap = true, desc = "Start incremental selection" })
+      vim.keymap.set("x", "<C-space>", "an", { remap = true, desc = "Expand selection to parent node" })
+      vim.keymap.set("x", "<BS>", "in", { remap = true, desc = "Shrink selection to child node" })
+    end,
   },
-  build = ":TSUpdate",
-  config = function()
-    local config = require("nvim-treesitter.configs")
+  {
+    "nvim-treesitter/nvim-treesitter-textobjects",
+    branch = "main",
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
+    config = function()
+      require("nvim-treesitter-textobjects").setup({
+        select = { lookahead = true },
+        move = { set_jumps = true },
+      })
 
-    config.setup({
-      ensure_installed = { "lua", "javascript", "ruby", "go", "yaml", "vim", "markdown", "html", "dockerfile", "gitignore" },
-      auto_install = true,
-      highlight = { enable = true, additional_vim_regex_highlighting = true },
-      indent = { enabled = true },
-      endwise = { enable = true },
-      incremental_selection = {
-        enable = true,
-        keymaps = {
-          init_selection = "<C-space>",
-          node_incremental = "<C-space>",
-          scope_incremental = false,
-          node_decremental = "<bs>",
-        },
-      },
-      textobjects = {
-        select = {
-          enable = true,
+      local select = require("nvim-treesitter-textobjects.select")
+      local function sel(query)
+        return function() select.select_textobject(query, "textobjects") end
+      end
+      vim.keymap.set({ "x", "o" }, "B=", sel("@block.outer"),    { desc = "outer block" })
+      vim.keymap.set({ "x", "o" }, "b=", sel("@block.inner"),    { desc = "inner block" })
+      vim.keymap.set({ "x", "o" }, "F=", sel("@function.outer"), { desc = "outer function" })
+      vim.keymap.set({ "x", "o" }, "f=", sel("@function.inner"), { desc = "inner function" })
 
-          -- Automatically jump forward to textobj, similar to targets.vim
-          lookahead = true,
+      local move = require("nvim-treesitter-textobjects.move")
+      local function nstart(query, group) return function() move.goto_next_start(query, group or "textobjects") end end
+      local function nend(query)          return function() move.goto_next_end(query, "textobjects") end end
+      local function pstart(query)        return function() move.goto_previous_start(query, "textobjects") end end
+      local function pend(query)          return function() move.goto_previous_end(query, "textobjects") end end
 
-          keymaps = {
-            -- You can use the capture groups defined in textobjects.scm
-            ["B="] = { query = "@block.outer", desc = "Select outer part of a block" },
-            ["b="] = { query = "@block.inner", desc = "Select inner part of a block" },
-            ["F="] = { query = "@function.outer", desc = "Select outer part of a function" },
-            ["f="] = { query = "@function.inner", desc = "Select inner part of a function" },
-          }
-        },
-        move = {
-          enable = true,
-          set_jumps = true, -- whether to set jumps in the jumplist
-          goto_next_start = {
-            ["]f"] = { query = "@call.outer", desc = "Next function call start" },
-            ["]m"] = { query = "@function.outer", desc = "Next method/function def start" },
-            ["]c"] = { query = "@class.outer", desc = "Next class start" },
-            ["]i"] = { query = "@conditional.outer", desc = "Next conditional start" },
-            ["]l"] = { query = "@loop.outer", desc = "Next loop start" },
+      local modes = { "n", "x", "o" }
+      vim.keymap.set(modes, "]f", nstart("@call.outer"),        { desc = "Next function call start" })
+      vim.keymap.set(modes, "]m", nstart("@function.outer"),    { desc = "Next method/function def start" })
+      vim.keymap.set(modes, "]c", nstart("@class.outer"),       { desc = "Next class start" })
+      vim.keymap.set(modes, "]i", nstart("@conditional.outer"), { desc = "Next conditional start" })
+      vim.keymap.set(modes, "]l", nstart("@loop.outer"),        { desc = "Next loop start" })
+      vim.keymap.set(modes, "]s", nstart("@local.scope", "locals"), { desc = "Next scope" })
+      vim.keymap.set(modes, "]z", nstart("@fold", "folds"),     { desc = "Next fold" })
 
-            -- You can pass a query group to use query from `queries/<lang>/<query_group>.scm file in your runtime path.
-            -- Below example nvim-treesitter's `locals.scm` and `folds.scm`. They also provide highlights.scm and indent.scm.
-            ["]s"] = { query = "@scope", query_group = "locals", desc = "Next scope" },
-            ["]z"] = { query = "@fold", query_group = "folds", desc = "Next fold" },
-          },
-          goto_next_end = {
-            ["]F"] = { query = "@call.outer", desc = "Next function call end" },
-            ["]M"] = { query = "@function.outer", desc = "Next method/function def end" },
-            ["]C"] = { query = "@class.outer", desc = "Next class end" },
-            ["]I"] = { query = "@conditional.outer", desc = "Next conditional end" },
-            ["]L"] = { query = "@loop.outer", desc = "Next loop end" },
-          },
-          goto_previous_start = {
-            ["[f"] = { query = "@call.outer", desc = "Prev function call start" },
-            ["[m"] = { query = "@function.outer", desc = "Prev method/function def start" },
-            ["[c"] = { query = "@class.outer", desc = "Prev class start" },
-            ["[i"] = { query = "@conditional.outer", desc = "Prev conditional start" },
-            ["[l"] = { query = "@loop.outer", desc = "Prev loop start" },
-          },
-          goto_previous_end = {
-            ["[F"] = { query = "@call.outer", desc = "Prev function call end" },
-            ["[M"] = { query = "@function.outer", desc = "Prev method/function def end" },
-            ["[C"] = { query = "@class.outer", desc = "Prev class end" },
-            ["[I"] = { query = "@conditional.outer", desc = "Prev conditional end" },
-            ["[L"] = { query = "@loop.outer", desc = "Prev loop end" },
-          },
-        },
-      },
-    })
-  end,
+      vim.keymap.set(modes, "]F", nend("@call.outer"),        { desc = "Next function call end" })
+      vim.keymap.set(modes, "]M", nend("@function.outer"),    { desc = "Next method/function def end" })
+      vim.keymap.set(modes, "]C", nend("@class.outer"),       { desc = "Next class end" })
+      vim.keymap.set(modes, "]I", nend("@conditional.outer"), { desc = "Next conditional end" })
+      vim.keymap.set(modes, "]L", nend("@loop.outer"),        { desc = "Next loop end" })
+
+      vim.keymap.set(modes, "[f", pstart("@call.outer"),        { desc = "Prev function call start" })
+      vim.keymap.set(modes, "[m", pstart("@function.outer"),    { desc = "Prev method/function def start" })
+      vim.keymap.set(modes, "[c", pstart("@class.outer"),       { desc = "Prev class start" })
+      vim.keymap.set(modes, "[i", pstart("@conditional.outer"), { desc = "Prev conditional start" })
+      vim.keymap.set(modes, "[l", pstart("@loop.outer"),        { desc = "Prev loop start" })
+
+      vim.keymap.set(modes, "[F", pend("@call.outer"),        { desc = "Prev function call end" })
+      vim.keymap.set(modes, "[M", pend("@function.outer"),    { desc = "Prev method/function def end" })
+      vim.keymap.set(modes, "[C", pend("@class.outer"),       { desc = "Prev class end" })
+      vim.keymap.set(modes, "[I", pend("@conditional.outer"), { desc = "Prev conditional end" })
+      vim.keymap.set(modes, "[L", pend("@loop.outer"),        { desc = "Prev loop end" })
+    end,
+  },
 }
