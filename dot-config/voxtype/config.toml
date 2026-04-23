@@ -129,7 +129,7 @@ on_transcription = false
 # Text processing options (word replacements, spoken punctuation)
 #
 # Enable spoken punctuation conversion (e.g., say "period" to get ".")
-spoken_punctuation = true
+spoken_punctuation = false
 #
 # Custom word replacements (case-insensitive)
 replacements = { "ChanX" = "Channex", "clod" = "Claude", "Clod" = "Claude" }
