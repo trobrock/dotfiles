@@ -12,4 +12,5 @@ Archfile.lock
 dot-zsh/compcache
 hooks
 darwin
+docs
 linux
