@@ -55,6 +55,9 @@ function tm() {
     tmux new-session -d -s "dotfiles"
     tmux send-keys -t "dotfiles" "cd dotfiles" C-m
     tmux send-keys -t "dotfiles" C-l
+
+    ~/.config/tmux/plugins/tpm/bin/install_plugins >/dev/null
+    ~/.config/tmux/plugins/tpm/bin/update_plugins all >/dev/null
   fi
 
   tmux attach-session -t "dev"
