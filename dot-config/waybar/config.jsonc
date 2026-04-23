@@ -23,8 +23,8 @@
         "bluetooth",
         "power-profiles-daemon",
         "network",
-        "battery",
-        "custom/voxtype"
+        "custom/voxtype",
+        "battery"
       ]
     },
     // Modules configuration
@@ -117,10 +117,10 @@
             "warning": 30,
             "critical": 15
         },
-        "format": "{icon}",
-        "format-full": "{icon}",
-        "format-charging": "󰂄",
-        "format-plugged": "",
+        "format": "{icon} {power:>1.0f}W",
+        "format-full": "{icon} {power:>1.0f}W",
+        "format-charging": "󰂄 {power:>1.0f}W",
+        "format-plugged": " {power:>1.0f}W",
         "tooltip-format-discharging": "{power:>1.0f}W↓ {capacity}%\n{time} remaining",
         "tooltip-format-charging": "{power:>1.0f}W↑ {capacity}%\n{time} to full",
         "format-icons": ["", "", "", "", ""]
