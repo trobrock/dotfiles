@@ -115,6 +115,11 @@ ollama-rocm
 opencode
 openssh
 power-profiles-daemon
+python
+python-numpy
+python-onnxruntime-cpu
+python-openwakeword
+python-scikit-learn
 restic
 ripgrep
 ruby-build

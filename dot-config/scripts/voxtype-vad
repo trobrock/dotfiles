@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""VoxType wake-word daemon.
+
+Listens continuously on the default PipeWire source, waits for the
+"hey jarvis" wake word (openWakeWord), then calls `voxtype record start`
+so VoxType transcribes the following utterance. Stops on silence
+(silero-vad hangover).
+
+Opt-in: not enabled on login. Toggle with SUPER+SHIFT+V or
+`systemctl --user start voxtype-vad`.
+"""
+
+from __future__ import annotations
+
+import os
+import signal
+import subprocess
+import sys
+import urllib.request
+from pathlib import Path
+
+import numpy as np
+import onnxruntime as ort
+from openwakeword.model import Model as WakeWordModel
+from openwakeword.utils import download_models
+
+WAKE_WORD = "hey_jarvis"
+WAKE_THRESHOLD = 0.5
+SPEECH_THRESHOLD = 0.5  # silero probability above which a frame counts as speech
+
+SILERO_URL = (
+    "https://github.com/snakers4/silero-vad/raw/v5.1.2"
+    "/src/silero_vad/data/silero_vad.onnx"
+)
+
+SAMPLE_RATE = 16000
+SILERO_FRAME = 512   # silero-v5 requires exactly 512 @ 16kHz (~32ms)
+WAKE_FRAME = 1280    # openWakeWord expects 80ms multiples; 80ms = 1280 samples
+
+SILENCE_HANGOVER_MS = 1500  # stop recording after this much trailing silence
+SILENCE_HANGOVER_FRAMES = max(1, SILENCE_HANGOVER_MS // (SILERO_FRAME * 1000 // SAMPLE_RATE))
+
+RUNTIME_DIR = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}")
+STATE_DIR = RUNTIME_DIR / "voxtype-vad"
+STATE_FILE = STATE_DIR / "state"
+CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache")) / "voxtype-vad"
+# openWakeWord's bundled download_models() targets the system site-packages dir
+# by default, which is not writable for a non-root user. Redirect to user cache.
+OWW_DIR = CACHE_DIR / "openwakeword"
+WAKE_MODEL_BASENAME = "hey_jarvis_v0.1.onnx"
+MELSPEC_BASENAME = "melspectrogram.onnx"
+EMBEDDING_BASENAME = "embedding_model.onnx"
+
+
+def log(msg: str) -> None:
+    print(msg, file=sys.stderr, flush=True)
+
+
+def ensure_silero() -> Path:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    path = CACHE_DIR / "silero_vad.onnx"
+    if path.exists() and path.stat().st_size > 1_500_000:
+        return path
+    log(f"fetching silero-vad model -> {path}")
+    tmp = path.with_suffix(".onnx.tmp")
+    urllib.request.urlretrieve(SILERO_URL, tmp)
+    tmp.rename(path)
+    return path
+
+
+def ensure_wake_models() -> None:
+    OWW_DIR.mkdir(parents=True, exist_ok=True)
+    download_models([WAKE_WORD], target_directory=str(OWW_DIR))
+
+
+def write_state(value: str) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(value + "\n")
+
+
+def voxtype(subcommand: str) -> None:
+    try:
+        subprocess.run(
+            ["voxtype", "record", subcommand],
+            check=True,
+            timeout=5,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
+        log(f"voxtype record {subcommand} failed: {e}")
+
+
+def main() -> int:
+    ensure_wake_models()
+    silero_path = ensure_silero()
+
+    silero = ort.InferenceSession(str(silero_path), providers=["CPUExecutionProvider"])
+    silero_inputs = {i.name for i in silero.get_inputs()}
+    if {"input", "state", "sr"} - silero_inputs:
+        log(f"unexpected silero inputs: {silero_inputs}")
+        return 1
+    silero_state = np.zeros((2, 1, 128), dtype=np.float32)
+    sr_arr = np.array(SAMPLE_RATE, dtype=np.int64)
+
+    wake = WakeWordModel(
+        wakeword_models=[str(OWW_DIR / WAKE_MODEL_BASENAME)],
+        inference_framework="onnx",
+        melspec_model_path=str(OWW_DIR / MELSPEC_BASENAME),
+        embedding_model_path=str(OWW_DIR / EMBEDDING_BASENAME),
+    )
+
+    pw_cat = subprocess.Popen(
+        [
+            "pw-cat", "--record",
+            "--rate", str(SAMPLE_RATE),
+            "--channels", "1",
+            "--format", "s16",
+            "--raw", "-",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    assert pw_cat.stdout is not None
+
+    recording = False
+    consecutive_silence = 0
+    wake_buf = np.zeros(0, dtype=np.int16)
+    stopping = False
+
+    def handle_term(_signum, _frame):
+        nonlocal stopping
+        stopping = True
+
+    signal.signal(signal.SIGTERM, handle_term)
+    signal.signal(signal.SIGINT, handle_term)
+
+    write_state("idle")
+    log(f"wake-word daemon running (word={WAKE_WORD!r}, threshold={WAKE_THRESHOLD})")
+
+    silero_frame_bytes = SILERO_FRAME * 2
+    try:
+        while not stopping:
+            raw = pw_cat.stdout.read(silero_frame_bytes)
+            if not raw or len(raw) < silero_frame_bytes:
+                log("pw-cat stream ended")
+                break
+            pcm_i16 = np.frombuffer(raw, dtype=np.int16)
+
+            if recording:
+                # End-of-utterance detection only; ignore wake word until we stop.
+                pcm_f32 = pcm_i16.astype(np.float32).reshape(1, -1) / 32768.0
+                prob, silero_state = silero.run(
+                    None, {"input": pcm_f32, "state": silero_state, "sr": sr_arr}
+                )
+                is_speech = float(prob[0][0]) >= SPEECH_THRESHOLD
+                consecutive_silence = 0 if is_speech else consecutive_silence + 1
+                if consecutive_silence >= SILENCE_HANGOVER_FRAMES:
+                    recording = False
+                    consecutive_silence = 0
+                    log("silence -> voxtype record stop")
+                    voxtype("stop")
+                    write_state("idle")
+            else:
+                # Wake-word detection on 80ms (1280-sample) frames.
+                wake_buf = np.concatenate([wake_buf, pcm_i16])
+                while len(wake_buf) >= WAKE_FRAME:
+                    frame = wake_buf[:WAKE_FRAME]
+                    wake_buf = wake_buf[WAKE_FRAME:]
+                    scores = wake.predict(frame)
+                    # openWakeWord keys the score dict by the model filename
+                    # stem when loaded from a full path, so take the max across
+                    # whatever keys are present.
+                    score = max(scores.values(), default=0.0)
+                    if score >= WAKE_THRESHOLD:
+                        log(f"wake word triggered (score={score:.3f}) -> voxtype record start")
+                        recording = True
+                        consecutive_silence = 0
+                        silero_state = np.zeros((2, 1, 128), dtype=np.float32)
+                        voxtype("start")
+                        write_state("recording")
+                        wake_buf = np.zeros(0, dtype=np.int16)
+                        break
+    finally:
+        if recording:
+            log("stopping mid-recording -> voxtype record stop")
+            voxtype("stop")
+        pw_cat.terminate()
+        try:
+            pw_cat.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            pw_cat.kill()
+        write_state("off")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

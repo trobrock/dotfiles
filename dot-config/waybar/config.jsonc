@@ -24,6 +24,7 @@
         "power-profiles-daemon",
         "network",
         "custom/voxtype",
+        "custom/voxtype-vad",
         "battery"
       ]
     },
@@ -50,6 +51,12 @@
       "format": "{}",
       "tooltip": true,
       "on-click": "systemctl --user restart voxtype"
+    },
+    "custom/voxtype-vad": {
+      "exec": "systemctl --user is-active -q voxtype-vad && echo '● VAD' || echo ''",
+      "interval": 2,
+      "tooltip": false,
+      "on-click": "systemctl --user is-active -q voxtype-vad && systemctl --user stop voxtype-vad || systemctl --user start voxtype-vad"
     },
     "custom/tailscale": {
         "exec": "~/.config/waybar/scripts/tailscale.sh",

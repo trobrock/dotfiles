@@ -55,6 +55,12 @@ tooltip {
   padding: 0 6px;
 }
 
+#custom-voxtype-vad {
+  border-radius: 0;
+  padding: 0 6px;
+  color: #a6e3a1;
+}
+
 #custom-tailscale {
   border-radius: 10px 0 0 10px;
   padding-right: 6px;
@@ -244,6 +250,7 @@ tooltip {
 #power-profiles-daemon:hover,
 #battery:hover,
 #custom-voxtype:hover,
+#custom-voxtype-vad:hover,
 #clock:hover {
   background: #45475a;
   transition: all 0.3s ease;
@@ -261,6 +268,7 @@ tooltip {
   border-radius: 0 10px 10px 0;
 }
 
-#custom-voxtype:hover {
+#custom-voxtype:hover,
+#custom-voxtype-vad:hover {
   border-radius: 0;
 }

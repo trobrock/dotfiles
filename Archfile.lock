@@ -108,6 +108,10 @@ openslide
 pipewire
 polkit-gnome
 power-profiles-daemon
+python-numpy
+python-onnxruntime-cpu
+python-openwakeword
+python-scikit-learn
 qalculate-gtk
 restic
 ripgrep

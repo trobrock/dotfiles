@@ -1,0 +1,16 @@
+[Unit]
+Description=VoxType VAD-driven always-on dictation
+Documentation=https://github.com/snakers4/silero-vad
+PartOf=graphical-session.target
+After=graphical-session.target voxtype.service
+Requires=voxtype.service
+
+[Service]
+Type=simple
+ExecStart=%h/.config/scripts/voxtype-vad
+Restart=on-failure
+RestartSec=5
+Environment=XDG_RUNTIME_DIR=%t
+
+[Install]
+WantedBy=graphical-session.target
