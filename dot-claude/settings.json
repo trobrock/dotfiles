@@ -127,5 +127,6 @@
     }
   },
   "effortLevel": "xhigh",
-  "skipDangerousModePermissionPrompt": true
+  "skipDangerousModePermissionPrompt": true,
+  "tui": "fullscreen"
 }
