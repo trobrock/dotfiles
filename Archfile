@@ -21,6 +21,7 @@ elephant-todo
 elephant-unicode
 elephant-websearch
 fprintd
+gpu-screen-recorder
 localsend
 mako
 noto-fonts-emoji
@@ -89,6 +90,7 @@ firewalld
 fwupd
 fzf
 gcalcli
+gifski
 git
 git-lfs
 github-cli
