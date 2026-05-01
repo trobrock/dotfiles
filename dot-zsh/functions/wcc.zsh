@@ -32,6 +32,7 @@ function wcc() {
   # Branch existence check
   local is_pr=false
   local create_flag=""
+  local -a base_args
   if [[ "$branch_name" =~ ^pr:([0-9]+)$ ]]; then
     is_pr=true
   fi
@@ -40,6 +41,12 @@ function wcc() {
       git ls-remote --heads origin "$branch_name")
     if [ -z "$branch_exists" ]; then
       create_flag="--create"
+      local default_branch
+      default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null \
+        | sed 's@^origin/@@')
+      default_branch="${default_branch:-main}"
+      git fetch origin "$default_branch" --quiet 2>/dev/null
+      base_args=(--base "origin/$default_branch")
     fi
   fi
 
@@ -72,16 +79,16 @@ function wcc() {
     fi
 
     tmux send-keys -t ":$win_name" \
-      "WCC_PROMPT=\$(cat $tmpfile) && rm $tmpfile && wt switch $create_flag \"$branch_name\" -x claude -- ${claude_flags[*]} $prompt_arg" Enter
+      "WCC_PROMPT=\$(cat $tmpfile) && rm $tmpfile && wt switch $create_flag ${base_args[*]} \"$branch_name\" -x claude -- ${claude_flags[*]} $prompt_arg" Enter
 
     tmux select-window -t ":$win_name"
     echo "Spawned in tmux window '$win_name' on branch '$branch_name'"
   else
     # --- normal mode: run in current shell ---
     if [ -n "$prompt" ]; then
-      wt switch $create_flag "$branch_name" -x claude -- "${claude_flags[@]}" "$prompt"
+      wt switch $create_flag "${base_args[@]}" "$branch_name" -x claude -- "${claude_flags[@]}" "$prompt"
     else
-      wt switch $create_flag "$branch_name" -x claude -- "${claude_flags[@]}"
+      wt switch $create_flag "${base_args[@]}" "$branch_name" -x claude -- "${claude_flags[@]}"
     fi
   fi
 }

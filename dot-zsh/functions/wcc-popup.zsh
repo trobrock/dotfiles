@@ -1,6 +1,7 @@
 function wcc-popup() {
   local branch prompt tmpfile plan_flag="" suggestion=""
   local ollama_model="${WCC_OLLAMA_MODEL:-llama3.2:1b}"
+  local DIRENV_LOG_FORMAT=""
 
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     local main_worktree current_worktree
