@@ -110,6 +110,13 @@ archfile_remove_missing() {
   fi
 }
 
+install_pi_dev() {
+  if [ -z "$(command -v pi)" ]; then
+    log "pi.dev not found, installing..."
+    curl -fsSL https://pi.dev/install.sh | sh
+  fi
+}
+
 init_1password() {
   if [ "$(uname)" = "Linux" ]; then
     if [ ! -f $HOME/.config/1Password/settings/settings.json ] ; then
@@ -280,6 +287,7 @@ fi
 clean_broken_symlinks
 
 install_packages
+install_pi_dev
 setup_github_user
 init_1password
 

@@ -103,6 +103,7 @@ jq
 lazydocker
 lazygit
 less
+lld
 magic-wormhole
 man-db
 minio-client
@@ -125,6 +126,7 @@ python-scikit-learn
 restic
 ripgrep
 ruby-build
+rust
 sd
 stow
 syncthing
