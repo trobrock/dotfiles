@@ -134,6 +134,10 @@ spoken_punctuation = false
 # Custom word replacements (case-insensitive)
 replacements = { "ChanX" = "Channex", "clod" = "Claude", "Clod" = "Claude" }
 
+[osd]
+# Disable the on-screen waveform shown while recording (added in v0.7.x)
+enabled = false
+
 [status]
 # Status display icons for Waybar/tray integrations
 #
