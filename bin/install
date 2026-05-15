@@ -132,7 +132,7 @@ install_developerly() {
     log "Installing developerly hooks..."
     developerly hooks install
     log "Installing developerly skills..."
-    developerly skill install --global
+    developerly skill install --global --force
   else
     log_error "developerly install appears to have failed; skipping hooks/skills."
   fi
