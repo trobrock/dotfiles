@@ -117,6 +117,27 @@ install_pi_dev() {
   fi
 }
 
+install_developerly() {
+  if [ -z "$(command -v developerly)" ]; then
+    log "developerly not found, installing..."
+    curl -fsSL https://raw.githubusercontent.com/getcomfortly/developerly-cli/main/install.sh | sh
+  fi
+
+  # Make developerly visible to this script even if ~/.local/bin isn't on PATH yet.
+  if [ -z "$(command -v developerly)" ] && [ -x "$HOME/.local/bin/developerly" ]; then
+    export PATH="$HOME/.local/bin:$PATH"
+  fi
+
+  if command -v developerly >/dev/null 2>&1; then
+    log "Installing developerly hooks..."
+    developerly hooks install
+    log "Installing developerly skills..."
+    developerly skill install --global
+  else
+    log_error "developerly install appears to have failed; skipping hooks/skills."
+  fi
+}
+
 init_1password() {
   if [ "$(uname)" = "Linux" ]; then
     if [ ! -f $HOME/.config/1Password/settings/settings.json ] ; then
@@ -288,6 +309,7 @@ clean_broken_symlinks
 
 install_packages
 install_pi_dev
+install_developerly
 setup_github_user
 init_1password
 
