@@ -86,6 +86,7 @@ docker-buildx
 docker-compose
 dosfstools
 eza
+fd
 firewalld
 fwupd
 fzf

@@ -1,5 +1,6 @@
 # Local auth/session/cache state; never commit secrets or generated sessions.
 auth.json
+bin/
 sessions/
 git/
 npm/
