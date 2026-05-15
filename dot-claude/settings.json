@@ -1,42 +1,86 @@
 {
-  "permissions": {
-    "allow": [],
-    "deny": [],
-    "defaultMode": "plan",
-    "disableAutoMode": "disable",
-    "additionalDirectories": [
-      "~/.local/share/mise",
-      "~/.cache"
-    ]
+  "agentPushNotifEnabled": true,
+  "effortLevel": "xhigh",
+  "enabledPlugins": {
+    "comfortly@comfortly": true,
+    "ruby-lsp@claude-plugins-official": true,
+    "stripe@claude-plugins-official": true
   },
-  "model": "opus",
+  "extraKnownMarketplaces": {
+    "comfortly": {
+      "source": {
+        "repo": "getcomfortly/claude",
+        "source": "github"
+      }
+    },
+    "trobrock": {
+      "source": {
+        "repo": "trobrock/claude-plugins",
+        "source": "github"
+      }
+    }
+  },
   "hooks": {
-    "SessionStart": [
+    "Notification": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "~/.config/scripts/llm-status-hook end"
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh notification",
+            "type": "command"
           }
         ]
       }
     ],
-    "UserPromptSubmit": [
+    "PermissionRequest": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "~/.config/scripts/llm-status-hook thinking"
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh permission_request",
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh post_tool_use",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh post_tool_failure",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
       }
     ],
     "PreToolUse": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "~/.config/scripts/llm-status-hook thinking"
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh pre_tool_use",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh session_end",
+            "type": "command"
           }
         ]
       }
@@ -45,39 +89,18 @@
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "~/.config/scripts/llm-status-hook waiting"
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh stop",
+            "type": "command"
           }
         ]
       }
     ],
-    "Notification": [
+    "UserPromptSubmit": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "~/.config/scripts/llm-status-hook input"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.config/scripts/llm-status-hook end"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "ExitPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.config/scripts/llm-status-hook thinking"
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh user_prompt_submit",
+            "type": "command"
           }
         ]
       }
@@ -86,8 +109,8 @@
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "~/.config/scripts/claude-worktree-create"
+            "command": "~/.config/scripts/claude-worktree-create",
+            "type": "command"
           }
         ]
       }
@@ -96,38 +119,28 @@
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "~/.config/scripts/claude-worktree-remove"
+            "command": "~/.config/scripts/claude-worktree-remove",
+            "type": "command"
           }
         ]
       }
     ]
   },
-  "statusLine": {
-    "type": "command",
-    "command": "~/.config/scripts/claude-statusline"
+  "model": "opus",
+  "permissions": {
+    "additionalDirectories": [
+      "~/.local/share/mise",
+      "~/.cache"
+    ],
+    "allow": [],
+    "defaultMode": "plan",
+    "deny": [],
+    "disableAutoMode": "disable"
   },
-  "enabledPlugins": {
-    "stripe@claude-plugins-official": true,
-    "ruby-lsp@claude-plugins-official": true,
-    "comfortly@comfortly": true
-  },
-  "extraKnownMarketplaces": {
-    "comfortly": {
-      "source": {
-        "source": "github",
-        "repo": "getcomfortly/claude"
-      }
-    },
-    "trobrock": {
-      "source": {
-        "source": "github",
-        "repo": "trobrock/claude-plugins"
-      }
-    }
-  },
-  "effortLevel": "xhigh",
-  "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
-  "agentPushNotifEnabled": true
+  "statusLine": {
+    "command": "~/.config/scripts/claude-statusline",
+    "type": "command"
+  },
+  "tui": "fullscreen"
 }
