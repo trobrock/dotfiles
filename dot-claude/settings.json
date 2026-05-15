@@ -25,14 +25,6 @@
       {
         "hooks": [
           {
-            "command": "~/.config/scripts/llm-status-hook input",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
             "command": "/home/trobrock/.claude/hooks/developerly-status.sh notification",
             "type": "command"
           }
@@ -51,15 +43,6 @@
       }
     ],
     "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "~/.config/scripts/llm-status-hook thinking",
-            "type": "command"
-          }
-        ],
-        "matcher": "ExitPlanMode"
-      },
       {
         "hooks": [
           {
@@ -85,14 +68,6 @@
       {
         "hooks": [
           {
-            "command": "~/.config/scripts/llm-status-hook thinking",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
             "command": "/home/trobrock/.claude/hooks/developerly-status.sh pre_tool_use",
             "type": "command"
           }
@@ -104,39 +79,13 @@
       {
         "hooks": [
           {
-            "command": "~/.config/scripts/llm-status-hook end",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
             "command": "/home/trobrock/.claude/hooks/developerly-status.sh session_end",
             "type": "command"
           }
         ]
       }
     ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "command": "~/.config/scripts/llm-status-hook end",
-            "type": "command"
-          }
-        ]
-      }
-    ],
     "Stop": [
-      {
-        "hooks": [
-          {
-            "command": "~/.config/scripts/llm-status-hook waiting",
-            "type": "command"
-          }
-        ]
-      },
       {
         "hooks": [
           {
@@ -147,14 +96,6 @@
       }
     ],
     "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "command": "~/.config/scripts/llm-status-hook thinking",
-            "type": "command"
-          }
-        ]
-      },
       {
         "hooks": [
           {
