@@ -10,7 +10,7 @@ import { Type, type Static } from "typebox";
 const CODEX_EXPLORE_MODEL = "openai-codex/gpt-5.3-codex-spark";
 const FALLBACK_MODEL = CODEX_EXPLORE_MODEL;
 const READ_ONLY_TOOLS = "read,grep,find,ls";
-const MAX_OUTPUT_CHARS = 24_000;
+const MAX_OUTPUT_CHARS = 8_000;
 
 const exploreSubagentSchema = Type.Object({
   task: Type.String({
@@ -121,25 +121,24 @@ function resolveExploreModel(currentModel?: { provider?: string; id?: string }):
 }
 
 function makeSystemPrompt(): string {
-  return `You are explore, a fast read-only codebase exploration subagent inspired by OpenCode's Explore agent.
+  return `You are explore, a fast read-only codebase exploration subagent.
 
-Purpose:
-- Explore repositories and answer targeted questions about files, symbols, architecture, behavior, and likely change locations.
-- Keep the parent agent's context small by returning a compact, high-signal report instead of dumping raw files.
+Goal: answer the parent agent's specific codebase question with the least context and tool usage possible.
 
 Rules:
-- You are read-only. Do not modify files. Do not propose that you modified files.
-- Use only the available read/search/list tools.
-- Prefer broad search first, then read only the smallest relevant files/sections.
-- Do not include large code excerpts. Quote only short identifiers or tiny snippets when necessary.
-- If the task is ambiguous, make a reasonable exploration plan and state assumptions.
+- Read-only: never modify files or claim you did.
+- Use only read/search/list tools.
+- Prefer grep/find first; read only the smallest relevant sections.
+- Stop once you can answer with useful confidence. Avoid exhaustive audits unless explicitly requested.
+- Do not paste large code excerpts. Use paths, line numbers, symbols, and tiny snippets only when necessary.
+- Keep the final report under ~900 words unless the task explicitly asks for more.
 
-Return format:
-1. Short answer / conclusion.
-2. Key files and symbols, with why each matters.
-3. Relevant details or control/data flow.
-4. Recommended next steps for the parent agent.
-5. Open questions or confidence level if applicable.`;
+Return:
+- Conclusion.
+- Key files/symbols and why they matter.
+- Relevant flow/details.
+- Recommended next steps.
+- Open questions/confidence, if useful.`;
 }
 
 async function runExploreSubagent(input: ExploreSubagentInput, defaultCwd: string, signal?: AbortSignal, onProgress?: (progress: ExploreProgress) => void): Promise<{
@@ -157,10 +156,15 @@ async function runExploreSubagent(input: ExploreSubagentInput, defaultCwd: strin
     "--mode", "json",
     "-p",
     "--no-session",
+    "--no-extensions",
+    "--no-skills",
+    "--no-prompt-templates",
+    "--no-themes",
     "--no-context-files",
     "--model", model,
+    "--thinking", "minimal",
     "--tools", READ_ONLY_TOOLS,
-    "--append-system-prompt", promptPath,
+    "--system-prompt", promptPath,
     `Explore task: ${input.task}`,
   ];
 
