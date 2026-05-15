@@ -38,6 +38,11 @@ type UsageStats = {
   model?: string;
 };
 
+type ExploreProgress = {
+  text: string;
+  usage: UsageStats;
+};
+
 function getPiInvocation(args: string[]): { command: string; args: string[] } {
   const currentScript = process.argv[1];
   if (currentScript && !currentScript.startsWith("/$bunfs/root/")) {
@@ -63,6 +68,32 @@ function finalAssistantText(messages: Message[]): string {
 function truncateOutput(text: string): string {
   if (text.length <= MAX_OUTPUT_CHARS) return text;
   return `${text.slice(0, MAX_OUTPUT_CHARS)}\n\n[explore_subagent output truncated to ${MAX_OUTPUT_CHARS} chars]`;
+}
+
+function describeToolStep(toolName: string, args: any): string {
+  if (toolName === "read") return `Reading ${args?.path ?? "a relevant file"}`;
+  if (toolName === "grep") {
+    const pattern = args?.pattern ?? args?.query ?? "a pattern";
+    return `Searching for ${JSON.stringify(pattern)}${args?.path ? ` in ${args.path}` : " across the codebase"}`;
+  }
+  if (toolName === "find") return `Scanning files under ${args?.path ?? args?.dir ?? "."}${args?.name ? ` matching ${args.name}` : ""}`;
+  if (toolName === "ls") return `Looking at ${args?.path ?? "the current directory"}`;
+  return `Using ${toolName} to gather more context`;
+}
+
+function formatCount(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+  return String(value);
+}
+
+function friendlyUsageLine(usage: UsageStats): string {
+  const tokens = usage.input || usage.output || usage.cacheRead || usage.cacheWrite
+    ? `Tokens: ${formatCount(usage.input)} in / ${formatCount(usage.output)} out${usage.cacheRead ? ` / ${formatCount(usage.cacheRead)} cached` : ""}`
+    : "Tokens: waiting for first response";
+  const cost = usage.cost ? ` · Cost: $${usage.cost.toFixed(4)}` : "";
+  const turns = usage.turns ? ` · ${usage.turns} turn${usage.turns === 1 ? "" : "s"}` : "";
+  return `${tokens}${cost}${turns}`;
 }
 
 function resolveExploreModel(currentModel?: { provider?: string; id?: string }): string {
@@ -111,7 +142,7 @@ Return format:
 5. Open questions or confidence level if applicable.`;
 }
 
-async function runExploreSubagent(input: ExploreSubagentInput, defaultCwd: string, signal?: AbortSignal): Promise<{
+async function runExploreSubagent(input: ExploreSubagentInput, defaultCwd: string, signal?: AbortSignal, onProgress?: (progress: ExploreProgress) => void): Promise<{
   exitCode: number;
   output: string;
   stderr: string;
@@ -147,6 +178,8 @@ async function runExploreSubagent(input: ExploreSubagentInput, defaultCwd: strin
   let stderr = "";
   let wasAborted = false;
 
+  const progress = (text: string) => onProgress?.({ text, usage: { ...usage } });
+
   try {
     const exitCode = await new Promise<number>((resolve) => {
       const invocation = getPiInvocation(args);
@@ -167,6 +200,16 @@ async function runExploreSubagent(input: ExploreSubagentInput, defaultCwd: strin
           return;
         }
 
+        if (event.type === "turn_start") {
+          progress(usage.turns === 0 ? "Making an exploration plan" : "Following up on the first findings");
+          return;
+        }
+
+        if (event.type === "tool_execution_start") {
+          progress(describeToolStep(event.toolName, event.args));
+          return;
+        }
+
         if (event.type !== "message_end" || !event.message) return;
 
         const message = event.message as Message;
@@ -183,6 +226,7 @@ async function runExploreSubagent(input: ExploreSubagentInput, defaultCwd: strin
         usage.cacheWrite += message.usage.cacheWrite || 0;
         usage.cost += message.usage.cost?.total || 0;
         usage.contextTokens = message.usage.totalTokens || usage.contextTokens;
+        progress("Summarizing what was found");
       };
 
       proc.stdout.on("data", (chunk: Buffer) => {
@@ -257,9 +301,18 @@ export default function (pi: ExtensionAPI) {
     parameters: exploreSubagentSchema,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const model = params.model ?? resolveExploreModel(ctx.model);
-      onUpdate?.({ content: [{ type: "text", text: `Exploring with ${model}...` }] });
+      const progressLines = [`Exploring with ${model}...`];
+      const emitProgress = (usage?: UsageStats) => {
+        const recentLines = progressLines.slice(-12).map((line) => `• ${line}`);
+        const tokenLine = usage ? `\n\n${friendlyUsageLine(usage)}` : "";
+        onUpdate?.({ content: [{ type: "text", text: `${recentLines.join("\n")}${tokenLine}` }] });
+      };
+      emitProgress();
 
-      const result = await runExploreSubagent({ ...params, model }, ctx.cwd, signal);
+      const result = await runExploreSubagent({ ...params, model }, ctx.cwd, signal, (progress) => {
+        progressLines.push(progress.text);
+        emitProgress(progress.usage);
+      });
       const text = result.exitCode === 0
         ? result.output
         : `Explore subagent failed with exit code ${result.exitCode}.\n\nSTDERR:\n${result.stderr}\n\nOutput:\n${result.output}`;
