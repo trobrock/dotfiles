@@ -7,9 +7,15 @@ ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 source "${ZINIT_HOME}/zinit.zsh"
 
 # Install plugins
+# fzf-tab must be loaded before plugins that wrap widgets (e.g. syntax-highlighting)
+# and after compinit, but we use turbo mode below to defer the heavy ones.
 zinit light zsh-users/zsh-completions
-zinit light zsh-users/zsh-autosuggestions
 zinit light Aloxaf/fzf-tab
+
+# Turbo-load these after the prompt is shown for a snappier startup
+zinit ice wait lucid atload'_zsh_autosuggest_start'
+zinit light zsh-users/zsh-autosuggestions
+zinit ice wait lucid
 zinit light zsh-users/zsh-syntax-highlighting
 
 # Key bindings for autosuggestions
@@ -20,6 +26,20 @@ source ~/.zsh/history.zsh
 source ~/.zsh/completion.zsh
 source ~/.zsh/aliases.zsh
 source ~/.zsh_secrets
+
+# Initialize completions: only regenerate the dump once per day, otherwise
+# skip the security audit for a much faster startup.
+autoload -Uz compinit
+# Only run the full security audit + dump rebuild once every 24h.
+# Array assignment (unlike `[[ ]]`) expands glob qualifiers.
+_zcompdump_stale=(~/.zcompdump(N.mh+24))
+if (( ${#_zcompdump_stale} )); then
+  compinit
+else
+  compinit -C
+fi
+unset _zcompdump_stale
+zinit cdreplay -q
 
 # fzf + catppuccin theme
 export FZF_DEFAULT_OPTS=" \
