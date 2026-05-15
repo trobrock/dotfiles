@@ -7,7 +7,8 @@ import { join } from "node:path";
 import { Text } from "@earendil-works/pi-tui";
 import { Type, type Static } from "typebox";
 
-const FALLBACK_MODEL = "openai-codex/gpt-5.4-mini";
+const CODEX_EXPLORE_MODEL = "openai-codex/gpt-5.3-codex-spark";
+const FALLBACK_MODEL = CODEX_EXPLORE_MODEL;
 const READ_ONLY_TOOLS = "read,grep,find,ls";
 const MAX_OUTPUT_CHARS = 24_000;
 
@@ -70,7 +71,7 @@ function resolveExploreModel(currentModel?: { provider?: string; id?: string }):
   const normalized = `${provider}/${id}`.toLowerCase();
 
   if (provider === "openai-codex" || normalized.includes("codex") || normalized.includes("openai/gpt-5")) {
-    return "openai-codex/gpt-5.4-mini";
+    return CODEX_EXPLORE_MODEL;
   }
 
   if (provider === "anthropic") {
