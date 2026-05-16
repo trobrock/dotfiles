@@ -4,5 +4,10 @@
     "npm:@benvargas/pi-firecrawl"
   ],
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5"
+  "defaultModel": "gpt-5.5",
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 12000
+  }
 }
