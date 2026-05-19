@@ -321,8 +321,16 @@ install_pacman_hooks() {
   sudo cp "$(dirname "$0")/../hooks/"*.hook /etc/pacman.d/hooks/
 }
 
+setup_voxtype_gpu() {
+  if command -v voxtype >/dev/null 2>&1; then
+    log "Ensuring VoxType GPU acceleration is enabled..."
+    sudo voxtype setup gpu --enable
+  fi
+}
+
 if [ "$(uname)" = "Linux" ]; then
   install_pacman_hooks
+  setup_voxtype_gpu
   allow_fingerprint_usage
   setup_auto_login
   setup_firewall
