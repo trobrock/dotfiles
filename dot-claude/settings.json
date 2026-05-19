@@ -25,7 +25,15 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh notification",
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh notification",
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh notification",
             "type": "command"
           }
         ]
@@ -35,7 +43,16 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh permission_request",
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh permission_request",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh permission_request",
             "type": "command"
           }
         ],
@@ -46,7 +63,16 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh post_tool_use",
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh post_tool_use",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh post_tool_use",
             "type": "command"
           }
         ],
@@ -57,7 +83,16 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh post_tool_failure",
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh post_tool_failure",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh post_tool_failure",
             "type": "command"
           }
         ],
@@ -68,7 +103,16 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh pre_tool_use",
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh pre_tool_use",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh pre_tool_use",
             "type": "command"
           }
         ],
@@ -79,7 +123,15 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh session_end",
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh session_end",
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh session_end",
             "type": "command"
           }
         ]
@@ -89,7 +141,15 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh stop",
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh stop",
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh stop",
             "type": "command"
           }
         ]
@@ -99,7 +159,15 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh user_prompt_submit",
+            "command": "/home/trobrock/.claude/hooks/developerly-status.sh user_prompt_submit",
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh user_prompt_submit",
             "type": "command"
           }
         ]
