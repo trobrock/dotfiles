@@ -350,7 +350,11 @@ install_developerly
 setup_github_user
 init_1password
 
-install_secrets
+# install_secrets uses sops + age (see bin/ss). On a fresh box this will fail
+# cleanly if the age key hasn't been scp'd to ~/.config/sops/age/keys.txt yet;
+# the rest of the install should still complete. Re-run bin/install (or bin/ss)
+# after the key is in place.
+install_secrets || log_error "Continuing despite secrets install failure; re-run bin/ss after seeding the age key."
 
 install_pacman_hooks() {
   log "Installing pacman hooks..."

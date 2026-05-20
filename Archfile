@@ -67,6 +67,7 @@ zoom
 
 # CLI
 1password-cli
+age
 asciinema
 base-devel
 bat
@@ -124,6 +125,7 @@ ripgrep
 ruby-build
 rust
 sd
+sops
 stow
 syncthing
 tailscale

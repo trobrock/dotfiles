@@ -1,5 +1,6 @@
 # vim: set ft=ruby
 
+brew "age"
 brew "aws-vault"
 brew "awscli"
 brew "azure-cli"
@@ -36,6 +37,7 @@ brew "restic"
 brew "ripgrep"
 brew "ruby-build"
 brew "sd"
+brew "sops"
 brew "stow"
 brew "syncthing"
 brew "terraform"
