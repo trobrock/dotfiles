@@ -5,6 +5,53 @@ set -e
 source "$(dirname "$0")/lib/logging.sh"
 source "$(dirname "$0")/clean-broken-symlinks"
 
+ONLY_STOW=false
+for arg in "$@"; do
+  case "$arg" in
+    --only-stow)
+      ONLY_STOW=true
+      ;;
+    -h|--help)
+      echo "Usage: $(basename "$0") [--only-stow]"
+      echo ""
+      echo "  --only-stow   Only run the stow commands (skip package install, shell setup, etc.)"
+      exit 0
+      ;;
+    *)
+      log_error "Unknown argument: $arg"
+      exit 1
+      ;;
+  esac
+done
+
+run_stow() {
+  log "Installing dotfiles using stow..."
+  source "$(dirname "$0")/lib/stow.sh"
+  clean_absolute_symlinks
+  stow --verbose=2 --dotfiles --adopt -t $HOME . 2>&1 | clean_stow_output
+  clean_broken_symlinks
+
+  log "Installing platform-specific dotfiles..."
+  if [ "$(uname)" = "Darwin" ]; then
+    stow --verbose=2 --dotfiles --adopt -t $HOME -d . darwin 2>&1 | clean_stow_output
+  elif [ "$(uname)" = "Linux" ]; then
+    stow --verbose=2 --dotfiles --adopt -t $HOME -d . linux 2>&1 | clean_stow_output
+  fi
+  clean_broken_symlinks
+}
+
+if [ "$ONLY_STOW" = true ]; then
+  install_stow_check() {
+    if [ -z "$(command -v stow)" ]; then
+      log_error "stow is not installed. Run '$(basename "$0")' without --only-stow first."
+      exit 1
+    fi
+  }
+  install_stow_check
+  run_stow
+  exit 0
+fi
+
 install_package_manager() {
   if [ "$(uname)" = "Darwin" ]; then
     if [ -z "$(command -v brew)" ]; then
@@ -293,19 +340,7 @@ change_shell_to_zsh
 init_tpm
 # init_goose
 
-log "Installing dotfiles using stow..."
-source "$(dirname "$0")/lib/stow.sh"
-clean_absolute_symlinks
-stow --verbose=2 --dotfiles --adopt -t $HOME . 2>&1 | clean_stow_output
-clean_broken_symlinks
-
-log "Installing platform-specific dotfiles..."
-if [ "$(uname)" = "Darwin" ]; then
-  stow --verbose=2 --dotfiles --adopt -t $HOME -d . darwin 2>&1 | clean_stow_output
-elif [ "$(uname)" = "Linux" ]; then
-  stow --verbose=2 --dotfiles --adopt -t $HOME -d . linux 2>&1 | clean_stow_output
-fi
-clean_broken_symlinks
+run_stow
 
 install_packages
 install_pi_dev
