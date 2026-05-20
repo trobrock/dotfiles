@@ -25,15 +25,7 @@
       {
         "hooks": [
           {
-            "command": "/home/trobrock/.claude/hooks/developerly-status.sh notification",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh notification",
+            "command": "~/.claude/hooks/developerly-status.sh notification",
             "type": "command"
           }
         ]
@@ -43,16 +35,7 @@
       {
         "hooks": [
           {
-            "command": "/home/trobrock/.claude/hooks/developerly-status.sh permission_request",
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh permission_request",
+            "command": "~/.claude/hooks/developerly-status.sh permission_request",
             "type": "command"
           }
         ],
@@ -63,16 +46,7 @@
       {
         "hooks": [
           {
-            "command": "/home/trobrock/.claude/hooks/developerly-status.sh post_tool_use",
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh post_tool_use",
+            "command": "~/.claude/hooks/developerly-status.sh post_tool_use",
             "type": "command"
           }
         ],
@@ -83,16 +57,7 @@
       {
         "hooks": [
           {
-            "command": "/home/trobrock/.claude/hooks/developerly-status.sh post_tool_failure",
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh post_tool_failure",
+            "command": "~/.claude/hooks/developerly-status.sh post_tool_failure",
             "type": "command"
           }
         ],
@@ -103,16 +68,7 @@
       {
         "hooks": [
           {
-            "command": "/home/trobrock/.claude/hooks/developerly-status.sh pre_tool_use",
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh pre_tool_use",
+            "command": "~/.claude/hooks/developerly-status.sh pre_tool_use",
             "type": "command"
           }
         ],
@@ -123,15 +79,7 @@
       {
         "hooks": [
           {
-            "command": "/home/trobrock/.claude/hooks/developerly-status.sh session_end",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh session_end",
+            "command": "~/.claude/hooks/developerly-status.sh session_end",
             "type": "command"
           }
         ]
@@ -141,15 +89,7 @@
       {
         "hooks": [
           {
-            "command": "/home/trobrock/.claude/hooks/developerly-status.sh stop",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh stop",
+            "command": "~/.claude/hooks/developerly-status.sh stop",
             "type": "command"
           }
         ]
@@ -159,35 +99,7 @@
       {
         "hooks": [
           {
-            "command": "/home/trobrock/.claude/hooks/developerly-status.sh user_prompt_submit",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "/Users/trobrock/.claude/hooks/developerly-status.sh user_prompt_submit",
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "WorktreeCreate": [
-      {
-        "hooks": [
-          {
-            "command": "~/.config/scripts/claude-worktree-create",
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "WorktreeRemove": [
-      {
-        "hooks": [
-          {
-            "command": "~/.config/scripts/claude-worktree-remove",
+            "command": "~/.claude/hooks/developerly-status.sh user_prompt_submit",
             "type": "command"
           }
         ]
