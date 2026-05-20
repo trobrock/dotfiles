@@ -10,6 +10,7 @@ Archfile.lock
 .gitignore
 .claude
 dot-zsh/compcache
+dot-pi
 hooks
 darwin
 docs
