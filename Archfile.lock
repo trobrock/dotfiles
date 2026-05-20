@@ -1,5 +1,6 @@
 1password-beta
 1password-cli
+age
 alsa-plugins
 asciinema
 base-devel
@@ -120,6 +121,7 @@ samba
 sd
 seahorse
 slack-desktop-wayland
+sops
 stow
 streamdeck-ui
 stripe-cli
