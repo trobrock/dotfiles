@@ -13,10 +13,4 @@ CLEANED_TRANSCRIPT=$(ollama run llama3.2:1b \
 Transcript:
 $TRANSCRIPT") || exit $?
 
-# Keep type mode, but also make the final text available if focus was wrong.
-# Ignore clipboard failures so VoxType can still type/fallback normally.
-if [[ -n "$CLEANED_TRANSCRIPT" ]] && command -v wl-copy >/dev/null 2>&1; then
-  printf '%s' "$CLEANED_TRANSCRIPT" | wl-copy >/dev/null 2>&1 || true
-fi
-
 printf '%s' "$CLEANED_TRANSCRIPT"
