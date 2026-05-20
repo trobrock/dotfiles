@@ -30,3 +30,22 @@ bin/diff: This shows what symlinks are missing.
 bin/ss: Decrypts machine secrets from `~/.config/dotfiles-secrets/secrets.yaml` via `sops` and writes them to `~/.zsh_secrets`. Run on its own to refresh secrets without doing a full install.
 
 bin/migrate-from-1password: One-shot migration that pulls the legacy "ZSH Secrets" 1Password item into the sops-encrypted file. Run once on a GUI-capable machine that's signed into 1Password.
+
+## llm-usage (tmux widget)
+
+`dot-local/bin/llm-usage` aggregates token usage from local Claude Code
+(`~/.claude/projects/*/*.jsonl`) and Pi (`~/.local/state/pi/agent/sessions/**/*.jsonl`)
+session logs and renders a tmux status string showing today's tokens, a trend
+arrow vs. the prior-7-day daily average, and the trailing 7-day total:
+
+    󱙺 8.2M ▲ 446% · 18M/7d
+
+Useful subcommands:
+
+- `llm-usage show` — fast cached render (used by tmux `status-right`).
+- `llm-usage refresh` — synchronous rescan; use on first install.
+- `llm-usage stats` — human-readable breakdown for the last 14 days.
+- `llm-usage reset` — wipe the `~/.cache/llm-usage/` cache.
+
+The collector is incremental (per-file byte offsets in `state.json`), so steady-state
+runs are sub-second.

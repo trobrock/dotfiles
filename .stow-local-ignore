@@ -1,4 +1,4 @@
-bin
+^/bin$
 README.md
 ^/CLAUDE.md
 Brewfile
