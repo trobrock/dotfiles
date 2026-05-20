@@ -233,11 +233,11 @@ export default function taskListTracker(pi: ExtensionAPI) {
     }, {
       overlay: true,
       overlayOptions: {
-        anchor: "right-center",
+        anchor: "top-right",
         width: "28%",
         minWidth: 32,
         maxHeight: "70%",
-        margin: { right: 1 },
+        margin: { top: 1, right: 1 },
         nonCapturing: true,
         visible: (termWidth) => termWidth >= 100 && todos.length > 0,
       },
