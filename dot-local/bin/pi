@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+pi_package="npm:@earendil-works/pi-coding-agent"
+node_dir="${PI_NODE_DIR:-}"
+
+if [ -z "$node_dir" ] && command -v mise >/dev/null 2>&1; then
+  node_dir="$(mise where -C "$HOME" node 2>/dev/null || true)"
+fi
+
+flags=()
+case "${1:-}" in
+  install|remove|uninstall|update|list|config)
+    ;;
+  *)
+    if [ -n "${PI_DEFAULT_PROVIDER:-}" ]; then
+      flags+=(--provider "$PI_DEFAULT_PROVIDER")
+    fi
+    if [ -n "${PI_DEFAULT_MODEL:-}" ]; then
+      flags+=(--model "$PI_DEFAULT_MODEL")
+    fi
+    ;;
+esac
+
+if [ -n "$node_dir" ]; then
+  node_bin_dir="$node_dir/bin"
+  pi_bin="$node_bin_dir/pi"
+
+  if [ -x "$pi_bin" ]; then
+    export PATH="$node_bin_dir:$PATH"
+    exec "$pi_bin" "${flags[@]}" "$@"
+  fi
+fi
+
+if command -v mise >/dev/null 2>&1; then
+  exec mise exec -C "$HOME" "$pi_package" -- pi "${flags[@]}" "$@"
+fi
+
+echo "pi: executable not found with the mise global Node version and mise is not available" >&2
+exit 127
