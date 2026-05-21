@@ -3,3 +3,5 @@
 dot-zsh/compcache
 /dot-agents/.skill-lock.json
 dot-config/systemd/user/graphical-session.target.wants/
+/dot-config/developerly/credentials.toml
+/dot-config/developerly/projects.toml

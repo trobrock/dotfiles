@@ -1,0 +1,39 @@
+# Shared Developerly preferences. Machine-local projects live in
+# ~/.config/developerly/projects.toml; auth lives in credentials.toml.
+status_poll_ms = 750
+pr_poll_ms = 20000
+launcher_kind = "pi"
+launcher_command = ""
+default_planning_mode = false
+theme = "catppuccin-mocha"
+root_session = "developerly"
+root_session_tui = false
+
+[keys]
+assign_epic = ["a"]
+attach = ["enter"]
+attach_worktree = ["w", "shift+enter"]
+changelog = ["C"]
+clear_filter = ["F"]
+delete_task = ["d"]
+edit_task = ["e"]
+filter_assigned_to_me = ["M"]
+filter_epic = ["E"]
+filter_org = ["O"]
+filter_project = ["f"]
+help = ["?"]
+jump_to_root = ["r"]
+nav_down = ["down", "j"]
+nav_up = ["up", "k"]
+new_task = ["n"]
+open_pr = ["o"]
+preview = ["p"]
+projects = ["P"]
+queue_task = ["Q"]
+quit = ["ctrl+q", "q"]
+refresh = ["R"]
+reorder_prefix = ["m"]
+search = ["/"]
+toggle_done = ["space"]
+toggle_done_section = ["D"]
+upgrade = ["u"]
