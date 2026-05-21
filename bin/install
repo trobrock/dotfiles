@@ -160,10 +160,43 @@ archfile_remove_missing() {
 }
 
 install_pi_dev() {
-  if [ -z "$(command -v pi)" ]; then
-    log "pi.dev not found, installing..."
-    curl -fsSL https://pi.dev/install.sh | sh
+  # Install pi into an isolated npm prefix so it lives at
+  # $HOME/.local/share/pi-cli/bin/pi and never sits inside a mise-managed
+  # Node's bin dir. That way `mise activate zsh` can't prepend pi ahead of the
+  # ~/.local/bin/pi shim (which handles PI_DEFAULT_* env overrides and pins
+  # the runtime to the global mise Node).
+  local pi_prefix="$HOME/.local/share/pi-cli"
+  local pi_package="@earendil-works/pi-coding-agent"
+  local node_dir
+
+  if ! command -v mise >/dev/null 2>&1; then
+    log_error "mise not found; cannot install pi"
+    return 1
   fi
+
+  node_dir="$(mise where -C "$HOME" node 2>/dev/null || true)"
+  if [ -z "$node_dir" ]; then
+    log "No global mise node; installing node@lts..."
+    mise use -g node@lts
+    node_dir="$(mise where -C "$HOME" node)"
+  fi
+
+  # Cleanup: prior installs may have placed pi inside the mise node (via
+  # pi.dev/install.sh or `npm install -g`), which `mise activate` prepends
+  # ahead of ~/.local/bin and shadows the shim.
+  if [ -e "$node_dir/bin/pi" ]; then
+    log "Removing pi from mise-managed node to avoid PATH shadowing..."
+    PATH="$node_dir/bin:$PATH" npm uninstall -g "$pi_package" >/dev/null 2>&1 || true
+  fi
+
+  # Cleanup: if pi was tracked via `mise use -g npm:...`, drop it too.
+  if mise ls 2>/dev/null | grep -q "npm:$pi_package"; then
+    log "Removing mise-tracked npm:$pi_package..."
+    mise use -g --rm "npm:$pi_package" >/dev/null 2>&1 || true
+  fi
+
+  log "Installing pi into $pi_prefix (isolated from mise PATH)..."
+  PATH="$node_dir/bin:$PATH" npm install -g --prefix="$pi_prefix" --silent "$pi_package"
 }
 
 install_developerly() {
