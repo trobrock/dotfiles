@@ -11,6 +11,8 @@ Archfile.lock
 .claude
 dot-zsh/compcache
 dot-pi
+^/dot-config/developerly/credentials\.toml$
+^/dot-config/developerly/projects\.toml$
 hooks
 darwin
 docs
