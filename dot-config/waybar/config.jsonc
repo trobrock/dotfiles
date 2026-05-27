@@ -24,6 +24,7 @@
         "power-profiles-daemon",
         "network",
         "custom/voxtype",
+        "custom/screenrecording",
         "battery"
       ]
     },
@@ -50,6 +51,16 @@
       "format": "{}",
       "tooltip": true,
       "on-click": "systemctl --user restart voxtype"
+    },
+    "custom/screenrecording": {
+      "exec": "~/.config/waybar/scripts/screen-recording.sh",
+      "return-type": "json",
+      "format": "{}",
+      "tooltip": true,
+      "hide-empty-text": true,
+      "signal": 8,
+      "interval": 5,
+      "on-click": "~/.config/scripts/record-screen menu"
     },
     "custom/tailscale": {
         "exec": "~/.config/waybar/scripts/tailscale.sh",
