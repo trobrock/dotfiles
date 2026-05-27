@@ -55,6 +55,16 @@ tooltip {
   padding: 0 6px;
 }
 
+#custom-screenrecording {
+  border-radius: 0;
+  padding: 0 6px;
+  color: #f38ba8;
+}
+
+#custom-screenrecording.active {
+  animation: blink 0.8s linear infinite alternate;
+}
+
 #custom-tailscale {
   border-radius: 10px 0 0 10px;
   padding-right: 6px;
@@ -244,6 +254,7 @@ tooltip {
 #power-profiles-daemon:hover,
 #battery:hover,
 #custom-voxtype:hover,
+#custom-screenrecording:hover,
 #clock:hover {
   background: #45475a;
   transition: all 0.3s ease;
@@ -261,6 +272,7 @@ tooltip {
   border-radius: 0 10px 10px 0;
 }
 
-#custom-voxtype:hover {
+#custom-voxtype:hover,
+#custom-screenrecording:hover {
   border-radius: 0;
 }

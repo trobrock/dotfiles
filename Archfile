@@ -27,6 +27,7 @@ mako
 noto-fonts-emoji
 obsidian
 pipewire
+slurp
 ttf-cascadia-code-nerd
 voxtype
 vulkan-icd-loader
@@ -88,6 +89,7 @@ docker-compose
 dosfstools
 eza
 fd
+ffmpeg
 firewalld
 fwupd
 fzf
