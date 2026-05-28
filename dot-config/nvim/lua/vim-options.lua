@@ -8,8 +8,14 @@ vim.cmd("set tabstop=2")
 vim.cmd("set softtabstop=2")
 vim.cmd("set shiftwidth=2")
 
--- Use the system clipboard
-vim.opt.clipboard = "unnamedplus"
+-- Use the system clipboard when a provider is available.
+local has_clipboard = vim.fn.executable("wl-copy") == 1
+  or vim.fn.executable("xclip") == 1
+  or vim.fn.executable("xsel") == 1
+  or vim.fn.executable("pbcopy") == 1
+if has_clipboard then
+  vim.opt.clipboard = "unnamedplus"
+end
 
 -- set relative number and show numbers
 vim.cmd("set number")
@@ -54,7 +60,9 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 -- copy current file path to clipboard
-vim.keymap.set("n", "cp", ":let @+ = expand('%:p')<CR>", { desc = "Copy current file path to clipboard" })
+if has_clipboard then
+  vim.keymap.set("n", "cp", ":let @+ = expand('%:p')<CR>", { desc = "Copy current file path to clipboard" })
+end
 
 -- configure diagnostic display
 vim.diagnostic.config({

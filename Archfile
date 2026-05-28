@@ -1,4 +1,4 @@
-# Hyprland
+# [desktop] Hyprland
 hypridle
 hyprland
 hyprlock
@@ -6,7 +6,7 @@ hyprpaper
 hyprshot
 uwsm
 
-# Misc UI
+# [desktop] Misc UI
 elephant
 elephant-bluetooth
 elephant-calc
@@ -40,19 +40,18 @@ xdg-desktop-portal-hyprland
 xorg-xhost
 xournalpp
 
-# Security
+# [desktop] Security
 gnome-keyring
 polkit-gnome
-libsecret
 seahorse
 
-# Printing
+# [desktop] Printing
 cups
 cups-pdf
 system-config-printer
 epson-inkjet-printer-escpr
 
-# Applications
+# [desktop] Applications
 1password-beta
 chromium
 discord
@@ -66,7 +65,7 @@ streamdeck-ui
 telegram-desktop
 zoom
 
-# CLI
+# [shared] CLI
 1password-cli
 age
 asciinema
@@ -107,6 +106,7 @@ jq
 lazydocker
 lazygit
 less
+libsecret
 lld
 magic-wormhole
 man-db
@@ -145,14 +145,15 @@ yarn
 yazi
 zip
 zoxide
+zsh
 
-# Dev
+# [shared] Dev
 libvips
 mariadb-clients
 openslide
 stripe-cli
 
-# Gaming
+# [desktop] Gaming
 alsa-lib
 alsa-plugins
 cups

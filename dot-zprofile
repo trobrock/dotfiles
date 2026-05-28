@@ -1,9 +1,19 @@
-# Auto-start Hyprland on Linux login
-if [[ "$(uname)" == "Linux" ]]; then
-  if uwsm check may-start -g 120 > /dev/null; then
-    exec uwsm start hyprland-uwsm.desktop
+# Auto-start Hyprland on Linux desktop logins.
+_dotfiles_profile_file="${DOTFILES_PROFILE_FILE:-$HOME/.config/dotfiles/profile}"
+_dotfiles_profile="${DOTFILES_PROFILE:-}"
+if [[ -z "$_dotfiles_profile" && -r "$_dotfiles_profile_file" ]]; then
+  _dotfiles_profile="$(<"$_dotfiles_profile_file")"
+fi
+_dotfiles_profile="${_dotfiles_profile:-desktop}"
+
+if [[ "$(uname)" == "Linux" && "$_dotfiles_profile" != "server" ]]; then
+  if [[ -z "$SSH_CONNECTION$SSH_TTY" && -z "$WAYLAND_DISPLAY$DISPLAY" ]] && command -v uwsm >/dev/null 2>&1; then
+    if uwsm check may-start -g 120 > /dev/null; then
+      exec uwsm start hyprland-uwsm.desktop
+    fi
   fi
 fi
+unset _dotfiles_profile _dotfiles_profile_file
 
 # OrbStack (macOS only, login shell)
 if [[ "$(uname)" == "Darwin" ]] ; then

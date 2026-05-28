@@ -2,53 +2,128 @@
 
 set -e
 
-source "$(dirname "$0")/lib/logging.sh"
-source "$(dirname "$0")/clean-broken-symlinks"
-
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROFILE_FILE="${DOTFILES_PROFILE_FILE:-$HOME/.config/dotfiles/profile}"
+DOTFILES_PROFILE="${DOTFILES_PROFILE:-desktop}"
 ONLY_STOW=false
-for arg in "$@"; do
-  case "$arg" in
+
+source "$SCRIPT_DIR/lib/logging.sh"
+source "$SCRIPT_DIR/clean-broken-symlinks"
+
+usage() {
+  echo "Usage: $(basename "$0") [--profile desktop|server] [--only-stow]"
+  echo ""
+  echo "  --profile     Install profile to use. Defaults to \$DOTFILES_PROFILE or desktop."
+  echo "                desktop: current GUI workstation behavior."
+  echo "                server:  headless Arch profile; skips GUI packages/setup."
+  echo "  --only-stow   Only run Pi layout and stow commands (skip package install, shell setup, etc.)"
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
     --only-stow)
       ONLY_STOW=true
+      shift
+      ;;
+    --profile)
+      if [ -z "${2:-}" ]; then
+        log_error "--profile requires one of: desktop, server"
+        exit 1
+      fi
+      DOTFILES_PROFILE="$2"
+      shift 2
+      ;;
+    --profile=*)
+      DOTFILES_PROFILE="${1#*=}"
+      shift
       ;;
     -h|--help)
-      echo "Usage: $(basename "$0") [--only-stow]"
-      echo ""
-      echo "  --only-stow   Only run Pi layout and stow commands (skip package install, shell setup, etc.)"
+      usage
       exit 0
       ;;
     *)
-      log_error "Unknown argument: $arg"
+      log_error "Unknown argument: $1"
+      usage
       exit 1
       ;;
   esac
 done
 
+validate_profile() {
+  case "$DOTFILES_PROFILE" in
+    desktop|server)
+      ;;
+    *)
+      log_error "Unknown profile: $DOTFILES_PROFILE"
+      log_error "Expected one of: desktop, server"
+      exit 1
+      ;;
+  esac
+
+  if [ "$DOTFILES_PROFILE" = "server" ] && [ "$(uname)" != "Linux" ]; then
+    log_error "The server profile is only supported on Linux."
+    exit 1
+  fi
+}
+
+persist_profile() {
+  mkdir -p "$(dirname "$PROFILE_FILE")"
+  echo "$DOTFILES_PROFILE" > "$PROFILE_FILE"
+}
+
+is_desktop_profile() {
+  [ "$DOTFILES_PROFILE" = "desktop" ]
+}
+
+stow_package() {
+  local package="$1"
+  stow --verbose=2 --dotfiles --no-folding --adopt -t "$HOME" -d "$REPO_DIR" "$package" 2>&1 | clean_stow_output
+}
+
+unstow_package() {
+  local package="$1"
+  if [ -d "$REPO_DIR/$package" ]; then
+    stow --verbose=2 --dotfiles --no-folding -D -t "$HOME" -d "$REPO_DIR" "$package" 2>&1 | clean_stow_output || true
+  fi
+}
+
 run_stow() {
-  "$(dirname "$0")/setup-pi-agent-layout"
+  "$SCRIPT_DIR/setup-pi-agent-layout"
 
   log "Installing dotfiles using stow..."
-  source "$(dirname "$0")/lib/stow.sh"
+  source "$SCRIPT_DIR/lib/stow.sh"
   clean_absolute_symlinks
-  stow --verbose=2 --dotfiles --adopt -t $HOME . 2>&1 | clean_stow_output
+  stow_package .
   clean_broken_symlinks
 
-  log "Installing platform-specific dotfiles..."
+  log "Installing platform/profile-specific dotfiles..."
   if [ "$(uname)" = "Darwin" ]; then
-    stow --verbose=2 --dotfiles --adopt -t $HOME -d . darwin 2>&1 | clean_stow_output
+    unstow_package server
+    stow_package darwin
   elif [ "$(uname)" = "Linux" ]; then
-    stow --verbose=2 --dotfiles --adopt -t $HOME -d . linux 2>&1 | clean_stow_output
+    if is_desktop_profile; then
+      unstow_package server
+      stow_package linux
+    else
+      unstow_package linux
+      stow_package server
+    fi
   fi
   clean_broken_symlinks
 }
 
+install_stow_check() {
+  if [ -z "$(command -v stow)" ]; then
+    log_error "stow is not installed. Run '$(basename "$0")' without --only-stow first."
+    exit 1
+  fi
+}
+
+validate_profile
+persist_profile
+
 if [ "$ONLY_STOW" = true ]; then
-  install_stow_check() {
-    if [ -z "$(command -v stow)" ]; then
-      log_error "stow is not installed. Run '$(basename "$0")' without --only-stow first."
-      exit 1
-    fi
-  }
   install_stow_check
   run_stow
   exit 0
@@ -57,7 +132,7 @@ fi
 install_package_manager() {
   if [ "$(uname)" = "Darwin" ]; then
     if [ -z "$(command -v brew)" ]; then
-      log "Homebew not found, installing..."
+      log "Homebrew not found, installing..."
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     fi
   elif [ "$(uname)" = "Linux" ]; then
@@ -114,46 +189,81 @@ change_shell_to_zsh() {
 init_tpm() {
   if [ ! -d "$HOME/.config/tmux/plugins" ] ; then
     log "Initializing Tmux Plugin Manager (TPM)..."
-    git clone https://github.com/tmux-plugins/tpm $HOME/.config/tmux/plugins/tpm
+    git clone https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
   fi
 }
 
 init_goose() {
   if [ ! -d "$HOME/.config/goose" ] ; then
-    mkdir -p $HOME/.config/goose
+    mkdir -p "$HOME/.config/goose"
   fi
 }
 
 archfile_packages() {
-  grep -v '^#' Archfile | tr '\n' ' '
+  local profile="${1:-$DOTFILES_PROFILE}"
+
+  awk -v profile="$profile" '
+    /^[[:space:]]*#/ {
+      desktop_section = ($0 ~ /\[desktop\]/)
+      next
+    }
+    /^[[:space:]]*$/ { next }
+    profile == "server" && desktop_section { next }
+    { print }
+  ' "$REPO_DIR/Archfile"
+}
+
+archfile_lock_file() {
+  if [ "$DOTFILES_PROFILE" = "server" ]; then
+    echo "$REPO_DIR/Archfile.server.lock"
+  else
+    echo "$REPO_DIR/Archfile.lock"
+  fi
 }
 
 install_packages() {
-  log "Installing packages..."
+  log "Installing packages for $DOTFILES_PROFILE profile..."
   if [ "$(uname)" = "Darwin" ]; then
-    brew bundle
+    brew bundle --file "$REPO_DIR/Brewfile"
   elif [ "$(uname)" = "Linux" ]; then
-    archfile_remove_missing
-    yay -Syu --needed --noconfirm $(archfile_packages)
-    archfile_write_lock
+    local packages=()
+    mapfile -t packages < <(archfile_packages)
+
+    if [ ${#packages[@]} -eq 0 ]; then
+      log_error "No Arch packages selected for $DOTFILES_PROFILE profile."
+      exit 1
+    fi
+
+    archfile_remove_missing "${packages[@]}"
+    yay -Syu --needed --noconfirm "${packages[@]}"
+    archfile_write_lock "${packages[@]}"
   fi
 }
 
 archfile_write_lock() {
-  pacman -Qe $(archfile_packages) | awk '{print $1}' | sort > Archfile.lock
+  local packages=("$@")
+  pacman -Qe "${packages[@]}" 2>/dev/null | awk '{print $1}' | sort -u > "$(archfile_lock_file)"
 }
 
 archfile_remove_missing() {
-  if [ -f Archfile.lock ]; then
-    packages=()
+  local lock_file
+  lock_file="$(archfile_lock_file)"
+
+  if [ -f "$lock_file" ]; then
+    local desired_packages
+    desired_packages="$(mktemp)"
+    printf '%s\n' "$@" > "$desired_packages"
+
+    local packages=()
     while read -r package; do
-      if ! grep -q "^$package\$" Archfile; then
+      if ! grep -qxF "$package" "$desired_packages"; then
         packages+=("$package")
       fi
-    done < Archfile.lock
+    done < "$lock_file"
+    rm -f "$desired_packages"
 
     if [ ${#packages[@]} -gt 0 ]; then
-      log "Removing packages not in Archfile: ${packages[*]}"
+      log "Removing packages not in $(basename "$lock_file"): ${packages[*]}"
       yay -Rns --noconfirm "${packages[@]}" || true
     fi
   fi
@@ -222,10 +332,10 @@ install_developerly() {
 
 init_1password() {
   if [ "$(uname)" = "Linux" ]; then
-    if [ ! -f $HOME/.config/1Password/settings/settings.json ] ; then
+    if [ ! -f "$HOME/.config/1Password/settings/settings.json" ] ; then
       log "enabling h/w acceleration for 1password..."
-      mkdir -p $HOME/.config/1Password/settings
-      cat > $HOME/.config/1Password/settings/settings.json <<JSON
+      mkdir -p "$HOME/.config/1Password/settings"
+      cat > "$HOME/.config/1Password/settings/settings.json" <<JSON
 {
   "version": 1,
   "app.useHardwareAcceleration": true,
@@ -237,7 +347,7 @@ JSON
   fi
 }
 
-source "$(dirname "$0")/ss"
+source "$SCRIPT_DIR/ss"
 
 setup_fingerprint() {
   fingerprints=$(fprintd-list `whoami` | awk '/ - /{print $3}')
@@ -328,9 +438,21 @@ setup_firewall() {
 }
 
 setup_syncthing() {
+  if ! command -v systemctl >/dev/null 2>&1; then
+    log_error "systemctl not found; skipping syncthing user service setup."
+    return
+  fi
+
+  if ! systemctl --user show-environment >/dev/null 2>&1; then
+    log_error "No user systemd session available; skipping syncthing user service setup."
+    return
+  fi
+
   if ! systemctl --user is-enabled syncthing.service >/dev/null 2>&1; then
     log "Enabling syncthing user service..."
-    systemctl --user enable --now syncthing.service
+    if ! systemctl --user enable --now syncthing.service; then
+      log_error "Could not enable syncthing user service."
+    fi
   fi
 }
 
@@ -350,7 +472,13 @@ setup_hyprshot_cleanup_cron() {
 setup_github_user() {
   if [ -z "$(git config --global github.user)" ] && command -v gh >/dev/null 2>&1; then
     log "Setting github.user in git config..."
-    git config --global github.user "$(gh api user --jq '.login')"
+    local github_user
+    github_user="$(gh api user --jq '.login' 2>/dev/null || true)"
+    if [ -n "$github_user" ]; then
+      git config --global github.user "$github_user"
+    else
+      log_error "Could not determine GitHub user from gh; skipping github.user setup."
+    fi
   fi
 }
 
@@ -369,6 +497,19 @@ setup_power_management() {
   fi
 }
 
+install_pacman_hooks() {
+  log "Installing pacman hooks..."
+  sudo mkdir -p /etc/pacman.d/hooks
+  sudo cp "$REPO_DIR/hooks/"*.hook /etc/pacman.d/hooks/
+}
+
+setup_voxtype_gpu() {
+  if command -v voxtype >/dev/null 2>&1; then
+    log "Ensuring VoxType GPU acceleration is enabled..."
+    sudo voxtype setup gpu --enable
+  fi
+}
+
 install_package_manager
 install_stow
 change_shell_to_zsh
@@ -381,7 +522,10 @@ install_packages
 install_pi_dev
 install_developerly
 setup_github_user
-init_1password
+
+if is_desktop_profile; then
+  init_1password
+fi
 
 # install_secrets uses sops + age (see bin/ss). On a fresh box this will fail
 # cleanly if the age key hasn't been scp'd to ~/.config/sops/age/keys.txt yet;
@@ -389,27 +533,17 @@ init_1password
 # after the key is in place.
 install_secrets || log_error "Continuing despite secrets install failure; re-run bin/ss after seeding the age key."
 
-install_pacman_hooks() {
-  log "Installing pacman hooks..."
-  sudo mkdir -p /etc/pacman.d/hooks
-  sudo cp "$(dirname "$0")/../hooks/"*.hook /etc/pacman.d/hooks/
-}
-
-setup_voxtype_gpu() {
-  if command -v voxtype >/dev/null 2>&1; then
-    log "Ensuring VoxType GPU acceleration is enabled..."
-    sudo voxtype setup gpu --enable
-  fi
-}
-
 if [ "$(uname)" = "Linux" ]; then
-  install_pacman_hooks
-  setup_voxtype_gpu
-  allow_fingerprint_usage
-  setup_auto_login
   setup_firewall
   setup_syncthing
-  setup_hyprshot_cleanup_cron
+
+  if is_desktop_profile; then
+    install_pacman_hooks
+    setup_voxtype_gpu
+    allow_fingerprint_usage
+    setup_auto_login
+    setup_hyprshot_cleanup_cron
+  fi
 elif [ "$(uname)" = "Darwin" ]; then
   setup_power_management
 fi

@@ -1,3 +1,62 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
-stow --dotfiles -nv -t ~ .
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DOTFILES_PROFILE="${DOTFILES_PROFILE:-desktop}"
+
+usage() {
+  echo "Usage: $(basename "$0") [--profile desktop|server]"
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --profile)
+      if [ -z "${2:-}" ]; then
+        echo "--profile requires one of: desktop, server" >&2
+        exit 1
+      fi
+      DOTFILES_PROFILE="$2"
+      shift 2
+      ;;
+    --profile=*)
+      DOTFILES_PROFILE="${1#*=}"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+case "$DOTFILES_PROFILE" in
+  desktop|server)
+    ;;
+  *)
+    echo "Unknown profile: $DOTFILES_PROFILE" >&2
+    exit 1
+    ;;
+esac
+
+if [ "$DOTFILES_PROFILE" = "server" ] && [ "$(uname)" != "Linux" ]; then
+  echo "The server profile is only supported on Linux." >&2
+  exit 1
+fi
+
+stow --dotfiles --no-folding -nv -t "$HOME" -d "$REPO_DIR" .
+
+if [ "$(uname)" = "Darwin" ]; then
+  stow --dotfiles --no-folding -nv -t "$HOME" -d "$REPO_DIR" darwin
+elif [ "$(uname)" = "Linux" ]; then
+  if [ "$DOTFILES_PROFILE" = "server" ]; then
+    stow --dotfiles --no-folding -nv -t "$HOME" -d "$REPO_DIR" server
+  else
+    stow --dotfiles --no-folding -nv -t "$HOME" -d "$REPO_DIR" linux
+  fi
+fi
