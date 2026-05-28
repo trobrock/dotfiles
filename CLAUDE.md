@@ -8,7 +8,7 @@ This is a GNU Stow-managed dotfiles repo.
 
 - **`dot-` prefix convention** — files/dirs named `dot-foo` get symlinked to `~/.foo` when stowed (e.g., `dot-zshrc` → `~/.zshrc`, `dot-claude/settings.json` → `~/.claude/settings.json`). Use this prefix when adding new config that should land in `$HOME`.
 - **Repo-local vs. stowed** — `dot-claude/` is **global** (stows to `~/.claude/`). Anything repo-scoped (like this file) must live at the repo root AND be listed in `.stow-local-ignore` so stow won't symlink it.
-- **Package manifests** — `Archfile` (Linux) and `Brewfile` (macOS) are the source of truth for installed packages. Add new entries alphabetically within the matching comment-delimited section. `Archfile.lock` and `Brewfile.lock.json` are generated — do not hand-edit.
+- **Package manifests** — `Archfile` (Linux) and `Brewfile` (macOS) are the source of truth for installed packages. Add new entries alphabetically within the matching comment-delimited section. In `Archfile`, sections tagged `[desktop]` are skipped by the headless server profile; untagged and `[shared]` sections install everywhere. `Archfile.lock`, `Archfile.server.lock`, and `Brewfile.lock.json` are generated — do not hand-edit.
 - **Platform split** — `linux/` and `darwin/` hold OS-specific setup scripts. Cross-platform config lives in `dot-*` at the root.
 - **Primary platform** — Arch + Hyprland. `linux/` and `Archfile` are the actively-used paths; macOS/Brewfile exist but aren't daily-driven.
 

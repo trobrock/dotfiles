@@ -13,7 +13,15 @@ fi
 export XDG_CONFIG_HOME="$HOME/.config"
 export EDITOR="nvim"
 export GOOSE_STATUS_HOOK="$HOME/.config/scripts/goose-hook"
-export OP_BIOMETRIC_UNLOCK_ENABLED=true
+_dotfiles_profile_file="${DOTFILES_PROFILE_FILE:-$HOME/.config/dotfiles/profile}"
+_dotfiles_profile="${DOTFILES_PROFILE:-}"
+if [ -z "$_dotfiles_profile" ] && [ -r "$_dotfiles_profile_file" ]; then
+  _dotfiles_profile="$(<"$_dotfiles_profile_file")"
+fi
+if [ "${_dotfiles_profile:-desktop}" != "server" ]; then
+  export OP_BIOMETRIC_UNLOCK_ENABLED=true
+fi
+unset _dotfiles_profile _dotfiles_profile_file
 
 # Claude Code's shell snapshots don't capture chpwd_functions, so zoxide's
 # doctor falsely warns on every cd. Silence it only inside Claude Code.

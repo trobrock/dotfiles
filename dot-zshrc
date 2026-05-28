@@ -25,7 +25,7 @@ source ~/.zsh/prompt.zsh
 source ~/.zsh/history.zsh
 source ~/.zsh/completion.zsh
 source ~/.zsh/aliases.zsh
-source ~/.zsh_secrets
+[[ -r ~/.zsh_secrets ]] && source ~/.zsh_secrets
 
 # Initialize completions: only regenerate the dump once per day, otherwise
 # skip the security audit for a much faster startup.
@@ -48,17 +48,23 @@ export FZF_DEFAULT_OPTS=" \
 --color=marker:#b4befe,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8 \
 --color=selected-bg:#45475a \
 --multi"
-source <(fzf --zsh)
-bindkey -r '^R'
+if command -v fzf >/dev/null 2>&1; then
+  source <(fzf --zsh)
+  bindkey -r '^R'
+fi
 
 if command -v mise &> /dev/null; then
   eval "$(mise activate zsh)"
-else
+elif command -v rbenv &> /dev/null; then
   eval "$(rbenv init - --no-rehash zsh)"
 fi
 
-eval "$(direnv hook zsh)"
+if command -v direnv >/dev/null 2>&1; then
+  eval "$(direnv hook zsh)"
+fi
 
 if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
 
-eval "$(zoxide init --cmd cd zsh)"
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init --cmd cd zsh)"
+fi
