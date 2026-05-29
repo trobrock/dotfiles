@@ -14,7 +14,6 @@ btop
 chromium
 codename-goose-bin
 cups
-cups
 cups-pdf
 diff-so-fancy
 direnv
@@ -80,7 +79,6 @@ lib32-libxinerama
 lib32-libxslt
 lib32-mpg123
 lib32-ncurses
-lib32-ocl-icd
 lib32-ocl-icd
 lib32-openal
 lib32-v4l-utils
@@ -157,3 +155,4 @@ yazi
 zip
 zoom
 zoxide
+zsh
