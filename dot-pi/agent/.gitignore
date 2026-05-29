@@ -6,3 +6,8 @@
 /sessions
 *.log
 *.lock
+
+# MCP: per-machine config, generated cache, and OAuth tokens (secrets)
+/mcp.json
+/mcp-cache.json
+/mcp-oauth/

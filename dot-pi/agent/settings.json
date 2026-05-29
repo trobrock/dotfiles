@@ -1,7 +1,8 @@
 {
-  "lastChangelogVersion": "0.76.0",
+  "lastChangelogVersion": "0.77.0",
   "packages": [
-    "npm:@benvargas/pi-firecrawl"
+    "npm:@benvargas/pi-firecrawl",
+    "npm:pi-mcp-adapter"
   ],
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.5",
