@@ -21,6 +21,16 @@ fi
 if [ "${_dotfiles_profile:-desktop}" != "server" ]; then
   export OP_BIOMETRIC_UNLOCK_ENABLED=true
 fi
+
+# Point at the user-managed ssh-agent on Linux desktops. On servers, and
+# inside SSH sessions with agent forwarding, sshd sets SSH_AUTH_SOCK first;
+# the -z guard keeps us from clobbering a forwarded socket.
+if [ "$(uname)" = "Linux" ] \
+   && [ "${_dotfiles_profile:-desktop}" != "server" ] \
+   && [ -z "${SSH_AUTH_SOCK:-}" ]; then
+  export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+fi
+
 unset _dotfiles_profile _dotfiles_profile_file
 
 # Claude Code's shell snapshots don't capture chpwd_functions, so zoxide's

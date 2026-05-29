@@ -456,6 +456,47 @@ setup_syncthing() {
   fi
 }
 
+setup_ssh_agent_linux() {
+  if ! command -v systemctl >/dev/null 2>&1; then
+    log_error "systemctl not found; skipping ssh-agent user service setup."
+    return
+  fi
+  if ! systemctl --user show-environment >/dev/null 2>&1; then
+    log_error "No user systemd session available; skipping ssh-agent setup."
+    return
+  fi
+
+  if ! systemctl --user is-enabled ssh-agent.service >/dev/null 2>&1; then
+    log "Enabling ssh-agent user service..."
+    systemctl --user enable --now ssh-agent.service \
+      || log_error "Could not enable ssh-agent.service."
+  fi
+
+  if ! systemctl --user is-enabled ssh-agent-unlock.service >/dev/null 2>&1; then
+    log "Enabling ssh-agent-unlock user service..."
+    systemctl --user enable --now ssh-agent-unlock.service \
+      || log_error "Could not enable ssh-agent-unlock.service (is the sops-encrypted key in place?)."
+  fi
+}
+
+setup_ssh_agent_darwin() {
+  local plist="$HOME/Library/LaunchAgents/com.trobrock.ssh-agent-unlock.plist"
+  local label="com.trobrock.ssh-agent-unlock"
+  local uid
+  uid="$(id -u)"
+
+  if [ ! -f "$plist" ]; then
+    log_error "LaunchAgent plist missing at $plist; did stow run?"
+    return
+  fi
+
+  log "Reloading ssh-agent-unlock LaunchAgent..."
+  launchctl bootout "gui/$uid/$label" 2>/dev/null || true
+  if ! launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null; then
+    log_error "Could not load $label LaunchAgent; see /tmp/ssh-agent-unlock.log."
+  fi
+}
+
 setup_hyprshot_cleanup_cron() {
   local cron_job="0 2 * * * $HOME/.config/scripts/cleanup-hyprshot 30"
   
@@ -543,7 +584,9 @@ if [ "$(uname)" = "Linux" ]; then
     allow_fingerprint_usage
     setup_auto_login
     setup_hyprshot_cleanup_cron
+    setup_ssh_agent_linux
   fi
 elif [ "$(uname)" = "Darwin" ]; then
   setup_power_management
+  setup_ssh_agent_darwin
 fi

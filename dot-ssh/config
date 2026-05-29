@@ -1,0 +1,31 @@
+# Managed by dotfiles. Stowed to ~/.ssh/config.
+
+# OrbStack (macOS) writes its own host config and asks to be Include'd at
+# the top of ~/.ssh/config. Safe no-op on Linux where the file is absent.
+Include ~/.orbstack/ssh/config
+
+# Defaults applied to every host. AddKeysToAgent re-adds the key on first
+# use if for some reason the agent unlock service didn't already load it.
+Host *
+  AddKeysToAgent yes
+  ServerAliveInterval 60
+  ServerAliveCountMax 3
+
+# -- Agent forwarding for trusted hosts -----------------------------------
+#
+# ForwardAgent lets a remote box use your local SSH key (for git auth, for
+# `ssh-keygen -Y sign` commit signing, etc.) without ever having the key
+# itself. Only enable this for hosts you fully trust: root on the remote
+# can talk to your forwarded agent for the duration of the session.
+#
+# Add Host blocks per machine, e.g.:
+#
+#   Host my-server
+#     HostName my-server.example
+#     User trobrock
+#     ForwardAgent yes
+#
+# Or for a whole trusted subnet/tailnet:
+#
+#   Host *.tail-scale-name.ts.net
+#     ForwardAgent yes

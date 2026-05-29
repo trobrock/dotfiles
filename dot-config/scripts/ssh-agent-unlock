@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Decrypt the sops-encrypted SSH private key and load it into the running
+# ssh-agent. Idempotent: exits 0 if the key is already loaded. The decrypted
+# key never touches disk -- it is piped directly into `ssh-add -`.
+#
+# Invoked by:
+#   - Linux:  ~/.config/systemd/user/ssh-agent-unlock.service
+#   - macOS:  ~/Library/LaunchAgents/com.trobrock.ssh-agent-unlock.plist
+#
+# Required: sops, age, ssh-add, an unlocked age key at SOPS_AGE_KEY_FILE
+# (default ~/.config/sops/age/keys.txt), and an encrypted key file at
+# $DOTFILES_SECRETS_DIR/ssh/id_ed25519 (default ~/.config/dotfiles-secrets/...).
+
+set -euo pipefail
+
+SECRETS_DIR="${DOTFILES_SECRETS_DIR:-$HOME/.config/dotfiles-secrets}"
+ENCRYPTED_KEY="$SECRETS_DIR/ssh/id_ed25519"
+PUBLIC_KEY="$HOME/.ssh/id_ed25519.pub"
+
+log() { printf 'ssh-agent-unlock: %s\n' "$*" >&2; }
+
+if [ ! -f "$ENCRYPTED_KEY" ]; then
+  log "encrypted key not found at $ENCRYPTED_KEY; nothing to load"
+  exit 0
+fi
+
+# Wait briefly for the agent socket to appear (systemd may race us).
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "$SSH_AUTH_SOCK" ]; then
+    break
+  fi
+  sleep 0.2
+done
+
+if [ -z "${SSH_AUTH_SOCK:-}" ] || [ ! -S "$SSH_AUTH_SOCK" ]; then
+  log "SSH_AUTH_SOCK not set or socket missing; bailing"
+  exit 1
+fi
+
+# Idempotency: if we already know the public key and its fingerprint is in
+# the agent, do nothing.
+if [ -f "$PUBLIC_KEY" ]; then
+  fp="$(ssh-keygen -lf "$PUBLIC_KEY" 2>/dev/null | awk '{print $2}')"
+  if [ -n "$fp" ] && ssh-add -l 2>/dev/null | grep -qF "$fp"; then
+    log "key already loaded"
+    exit 0
+  fi
+fi
+
+for cmd in sops ssh-add; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    log "$cmd not on PATH"
+    exit 1
+  fi
+done
+
+# Decrypt and pipe straight into ssh-add. The key inside the sops envelope
+# must be passphrase-less; sops is the at-rest encryption layer.
+if ! sops --decrypt --input-type binary --output-type binary "$ENCRYPTED_KEY" \
+     | ssh-add - >/dev/null 2>&1; then
+  log "failed to decrypt or load key"
+  exit 1
+fi
+
+log "key loaded into agent"

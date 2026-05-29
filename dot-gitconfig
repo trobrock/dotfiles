@@ -45,6 +45,8 @@
 	helper = !/usr/bin/gh auth git-credential
 [gpg]
   format = ssh
+[gpg "ssh"]
+  allowedSignersFile = ~/.config/git/allowed_signers
 
 [include]
   path = ~/.config/local/gitconfig

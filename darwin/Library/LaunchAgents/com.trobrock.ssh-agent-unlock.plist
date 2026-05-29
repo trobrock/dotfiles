@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.trobrock.ssh-agent-unlock</string>
+
+  <!-- Run via zsh so ~/.zshenv is sourced and homebrew/sops are on PATH. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-c</string>
+    <string>exec "$HOME/.config/scripts/ssh-agent-unlock"</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/ssh-agent-unlock.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/ssh-agent-unlock.log</string>
+</dict>
+</plist>
