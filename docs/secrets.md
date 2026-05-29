@@ -102,10 +102,18 @@ If the age key is missing when `bin/install` runs, it prints the scp instruction
 ### Edit secrets
 
 ```bash
-sops ~/.config/dotfiles-secrets/secrets.yaml
+bin/se               # or: bin/se -m "Add FOO for arch box"
 ```
 
-This opens `$EDITOR` with the decrypted contents. Save and exit; sops re-encrypts on write. Then `git commit && git push`.
+`bin/se` opens `$EDITOR` via sops, and on save commits + pushes the secrets repo, then regenerates `~/.zsh_secrets`. If the file is unchanged (aborted edit), it exits without touching git or `~/.zsh_secrets`.
+
+To do it manually:
+
+```bash
+sops ~/.config/dotfiles-secrets/secrets.yaml
+cd ~/.config/dotfiles-secrets && git commit -am "..." && git push
+bin/ss
+```
 
 ### Refresh `~/.zsh_secrets` after editing
 
@@ -117,11 +125,10 @@ bin/ss
 
 1. Add a new top-level section to `secrets.yaml`:
    ```bash
-   sops ~/.config/dotfiles-secrets/secrets.yaml
+   bin/se -m "Add new-machine-name section"
    # add `new-machine-name:` with its fields
    ```
-2. Commit and push.
-3. On the new machine, run `bin/install` (after seeding the age key). It'll prompt for the section name.
+2. On the new machine, run `bin/install` (after seeding the age key). It'll prompt for the section name.
 
 ### Add a new machine with its own age key (optional, for cleaner revocation)
 

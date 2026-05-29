@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+# se — edit, commit, push, and re-install machine secrets in one shot.
+#
+# Opens $SECRETS_FILE in $EDITOR via sops. If the file changed on write,
+# commits and pushes the secrets repo, then regenerates ~/.zsh_secrets via
+# bin/ss. If nothing changed, exits without touching git or ~/.zsh_secrets.
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/logging.sh"
+# Pull in $SECRETS_* vars and the check_secrets_tooling / ensure_secrets_repo /
+# install_secrets helpers. The guard at the bottom of bin/ss prevents its main
+# block from firing when sourced.
+# shellcheck source=./ss
+source "$SCRIPT_DIR/ss"
+
+usage() {
+  cat <<EOF
+Usage: se [-m MESSAGE] [-h]
+
+Edit machine-specific secrets end-to-end:
+  1. sops decrypts \$SECRETS_FILE and opens it in \$EDITOR
+  2. On save, commits and pushes the secrets repo
+  3. Regenerates ~/.zsh_secrets via bin/ss
+
+Options:
+  -m, --message MSG   Commit message (default: "Update secrets")
+  -h, --help          Show this help
+EOF
+}
+
+COMMIT_MSG="Update secrets"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -m|--message)
+      [[ -z "${2:-}" ]] && { log_error "$1 requires a value"; exit 2; }
+      COMMIT_MSG="$2"; shift 2;;
+    -h|--help) usage; exit 0;;
+    *) log_error "Unknown argument: $1"; usage >&2; exit 2;;
+  esac
+done
+
+check_secrets_tooling || exit 1
+ensure_secrets_repo  || exit 1
+
+# Snapshot the encrypted blob so we can detect "no save" / aborted edits.
+hash_before=$(git -C "$SECRETS_REPO_DIR" hash-object "$SECRETS_FILE")
+
+log "Editing $SECRETS_FILE..."
+sops "$SECRETS_FILE"
+
+hash_after=$(git -C "$SECRETS_REPO_DIR" hash-object "$SECRETS_FILE")
+
+if [[ "$hash_before" == "$hash_after" ]]; then
+  log "No changes to $SECRETS_FILE; skipping commit/push."
+else
+  log "Committing: $COMMIT_MSG"
+  git -C "$SECRETS_REPO_DIR" add -- "$SECRETS_FILE"
+  git -C "$SECRETS_REPO_DIR" commit -m "$COMMIT_MSG"
+
+  log "Pushing..."
+  if ! git -C "$SECRETS_REPO_DIR" push; then
+    log_error "git push failed; commit is local. Retry with:"
+    log_error "  git -C $SECRETS_REPO_DIR push"
+  fi
+fi
+
+install_secrets
