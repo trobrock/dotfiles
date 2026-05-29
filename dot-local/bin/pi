@@ -26,6 +26,9 @@ case "${1:-}" in
     if [ -n "${PI_DEFAULT_MODEL:-}" ]; then
       flags+=(--model "$PI_DEFAULT_MODEL")
     fi
+    if [ -n "${PI_DEFAULT_THINKING_LEVEL:-}" ]; then
+      flags+=(--thinking "$PI_DEFAULT_THINKING_LEVEL")
+    fi
     ;;
 esac
 
