@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
-import type { ExtensionAPI, Model } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, Model } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 const DEFAULT_SHIP_MODEL = process.env.PI_SHIP_MODEL || "openai-codex/gpt-5.3-codex-spark";
@@ -68,6 +68,7 @@ function findModel(
 
 export default function shipAuto(pi: ExtensionAPI) {
   const shipPromptPath = join(getAgentDir(), "prompts", "ship.md");
+
   function loadShipPrompt(): string {
     if (!existsSync(shipPromptPath)) {
       throw new Error(`Ship prompt missing at ${shipPromptPath}`);
@@ -77,67 +78,63 @@ export default function shipAuto(pi: ExtensionAPI) {
     return stripFrontmatter(raw).trim();
   }
 
-  pi.on("input", (event) => {
-    const trimmed = event.text.trim();
-    if (!/^\/ship(?:\s|$)/.test(trimmed)) {
-      return { action: "continue" };
+  const runShip = async (args: string, ctx: ExtensionContext) => {
+    const modelArg = args.trim() || undefined;
+    const originalModel = ctx.model;
+    const targetModel = findModel(modelArg, ctx.modelRegistry, originalModel?.provider);
+
+    await ctx.waitForIdle();
+
+    if (!targetModel) {
+      ctx.ui.notify(
+        `Could not resolve ship model ${modelArg ? `"${modelArg}"` : `"${DEFAULT_SHIP_MODEL}"`}.`,
+        "error",
+      );
+      return;
     }
 
-    return {
-      action: "transform",
-      text: `/ship-auto${event.text.slice("/ship".length)}`,
-    };
-  });
+    const shouldSwitchModel =
+      !originalModel ||
+      originalModel.provider !== targetModel.provider ||
+      originalModel.id !== targetModel.id;
+    let didSwitchForShip = false;
 
-  pi.registerCommand("ship-auto", {
-    description: "Ship the current branch using a cheap model, then restore your original model",
-    handler: async (args, ctx) => {
-      const modelArg = args.trim() || undefined;
-      const originalModel = ctx.model;
-      const targetModel = findModel(modelArg, ctx.modelRegistry, originalModel?.provider);
-
-      await ctx.waitForIdle();
-
-      if (!targetModel) {
+    if (shouldSwitchModel) {
+      const modelOk = await pi.setModel(targetModel);
+      if (modelOk) {
+        didSwitchForShip = true;
+        ctx.ui.notify(`Switched to ${targetModel.provider}/${targetModel.id} for shipping.`, "info");
+      } else {
         ctx.ui.notify(
-          `Could not resolve ship model ${modelArg ? `"${modelArg}"` : `"${DEFAULT_SHIP_MODEL}"`}.`,
-          "error",
+          `No API key for ship model ${targetModel.provider}/${targetModel.id}; continuing with current model.`,
+          "warning",
         );
-        return;
       }
+    }
 
-      const shouldSwitchModel =
-        !originalModel ||
-        originalModel.provider !== targetModel.provider ||
-        originalModel.id !== targetModel.id;
-      let didSwitchForShip = false;
-
-      if (shouldSwitchModel) {
-        const modelOk = await pi.setModel(targetModel);
-        if (modelOk) {
-          didSwitchForShip = true;
-          ctx.ui.notify(`Switched to ${targetModel.provider}/${targetModel.id} for shipping.`, "info");
-        } else {
-          ctx.ui.notify(
-            `No API key for ship model ${targetModel.provider}/${targetModel.id}; continuing with current model.`,
-            "warning",
-          );
-        }
+    try {
+      const prompt = loadShipPrompt();
+      pi.sendUserMessage(prompt);
+      await ctx.waitForIdle();
+    } finally {
+      if (didSwitchForShip && originalModel) {
+        await pi.setModel(originalModel);
+        ctx.ui.notify(
+          `Restored model to ${originalModel.provider}/${originalModel.id}.`,
+          "info",
+        );
       }
+    }
+  };
 
-      try {
-        const prompt = loadShipPrompt();
-        pi.sendUserMessage(prompt);
-        await ctx.waitForIdle();
-      } finally {
-        if (didSwitchForShip && originalModel) {
-          await pi.setModel(originalModel);
-          ctx.ui.notify(
-            `Restored model to ${originalModel.provider}/${originalModel.id}.`,
-            "info",
-          );
-        }
-      }
-    },
+  const shipAction = {
+    description: "Ship the current branch using a cheap model, then restore your original model",
+    handler: runShip,
+  };
+
+  pi.registerCommand("ship-auto", shipAction);
+  pi.registerCommand("ship", {
+    ...shipAction,
+    description: "Alias for /ship-auto",
   });
 }
