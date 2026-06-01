@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.77.0",
+  "lastChangelogVersion": "0.78.0",
   "packages": [
     "npm:@benvargas/pi-firecrawl",
     "npm:pi-mcp-adapter"
@@ -10,5 +10,6 @@
     "enabled": true,
     "reserveTokens": 16384,
     "keepRecentTokens": 12000
-  }
+  },
+  "defaultThinkingLevel": "xhigh"
 }

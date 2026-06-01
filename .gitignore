@@ -5,3 +5,5 @@ dot-zsh/compcache
 dot-config/systemd/user/*.target.wants/
 /dot-config/developerly/credentials.toml
 /dot-config/developerly/projects.toml
+/dot-pi/agent/extensions/developerly-*.ts
+/dot-pi/agent/mcp-onboarding.json
