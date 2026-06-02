@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 const CUSTOM_TYPE = "session-notes";
 const STATUS_ID = "session-notes";
+const WIDGET_ID = "session-notes-widget";
 const MAX_VISIBLE_NOTES = 12;
 
 type SessionNote = {
@@ -69,6 +70,10 @@ function appendToEditor(existing: string, addition: string): string {
 	return `${existing}\n${addition}`;
 }
 
+function pendingNotesText(count: number): string {
+	return `${count} note${count === 1 ? "" : "s"} pending`;
+}
+
 async function chooseInsertionText(noteText: string, ctx: ExtensionContext): Promise<string | null> {
 	const currentText = ctx.ui.getEditorText();
 	if (!currentText.trim()) return noteText;
@@ -94,10 +99,16 @@ export default function sessionNotes(pi: ExtensionAPI) {
 
 		if (notes.length === 0) {
 			ctx.ui.setStatus(STATUS_ID, undefined);
+			ctx.ui.setWidget(WIDGET_ID, undefined);
 			return;
 		}
 
 		ctx.ui.setStatus(STATUS_ID, ctx.ui.theme.fg("accent", `notes ${notes.length}`));
+		ctx.ui.setWidget(WIDGET_ID, (_tui, theme) => new Text(
+			`${theme.fg("accent", theme.bold(`📝 ${pendingNotesText(notes.length)}`))}${theme.fg("dim", " — /notes")}`,
+			0,
+			0,
+		));
 	}
 
 	function reconstructState(ctx: ExtensionContext): void {
