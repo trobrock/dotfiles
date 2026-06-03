@@ -31,6 +31,25 @@ if [ "$(uname)" = "Linux" ] \
   export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
 fi
 
+# Same idea on macOS, but Apple's launchd ssh-agent uses a *dynamic* socket
+# path that it never publishes, so non-login / non-interactive shells and tool
+# subprocesses (e.g. an agent's `/bin/bash`) can't discover it -- which breaks
+# signed commits. The com.trobrock.ssh-agent LaunchAgent runs our own agent at
+# this fixed path; we point every shell at it.
+if [ "$(uname)" = "Darwin" ] \
+   && [ "${_dotfiles_profile:-desktop}" != "server" ]; then
+  if [ -n "${SSH_CONNECTION:-}" ]; then
+    # Inbound SSH session: prefer a forwarded agent if one was provided, but
+    # fall back to our local fixed-path agent when there is no forwarded
+    # socket (e.g. SSHing in without ForwardAgent).
+    [ -z "${SSH_AUTH_SOCK:-}" ] && export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+  else
+    # Local session: unconditionally override Apple's dynamic socket (it would
+    # otherwise win) with our fixed-path agent.
+    export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+  fi
+fi
+
 unset _dotfiles_profile _dotfiles_profile_file
 
 # Claude Code's shell snapshots don't capture chpwd_functions, so zoxide's

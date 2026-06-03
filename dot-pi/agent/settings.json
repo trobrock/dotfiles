@@ -4,8 +4,6 @@
     "npm:@benvargas/pi-firecrawl",
     "npm:pi-mcp-adapter"
   ],
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5",
   "compaction": {
     "enabled": true,
     "reserveTokens": 16384,
