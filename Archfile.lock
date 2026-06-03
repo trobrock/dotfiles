@@ -12,7 +12,6 @@ bluez-utils
 brightnessctl
 btop
 chromium
-codename-goose-bin
 cups
 cups-pdf
 diff-so-fancy
@@ -96,7 +95,6 @@ man-db
 mariadb-clients
 minio-client
 mise
-mosh
 mplayer
 mtr
 neovim
@@ -105,7 +103,6 @@ noto-fonts-emoji
 npm
 obsidian
 ollama-rocm
-opencode
 openslide
 pipewire
 polkit-gnome
@@ -139,7 +136,6 @@ voxtype
 vulkan-radeon
 walker
 waybar
-wemux
 wget
 wine-staging
 winetricks

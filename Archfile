@@ -65,19 +65,20 @@ streamdeck-ui
 telegram-desktop
 zoom
 
-# [shared] CLI
+# [desktop] CLI
+bluetuith
+bluez
+bluez-utils
+brightnessctl
 1password-cli
+
+# [shared] CLI
 age
 asciinema
 base-devel
 bat
 bind
-bluetuith
-bluez
-bluez-utils
-brightnessctl
 btop
-codename-goose-bin
 curl
 diff-so-fancy
 direnv
@@ -112,14 +113,12 @@ magic-wormhole
 man-db
 minio-client
 mise
-mosh
 mplayer
 mtr
 neovim
 nodejs
 npm
 ollama-rocm
-opencode
 openssh
 power-profiles-daemon
 restic
@@ -137,7 +136,6 @@ tmux
 tree-sitter-cli
 udisks2
 unzip
-wemux
 wget
 worktrunk-bin
 yamllint
