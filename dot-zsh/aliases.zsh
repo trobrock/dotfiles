@@ -16,7 +16,11 @@ alias cat='bat'
 alias lg='lazygit'
 alias gaa='git add -A'
 alias gb='git branch'
-alias gbc='git fetch -p && git branch -vv | grep ": gone]" | awk "\$1 != \"+\" && \$1 != \"*\" {print \$1}" | xargs git branch -D'
+function gbc() {
+  git fetch -p && git branch -vv | awk '/: gone\]/ && $1 != "+" && $1 != "*" {print $1}' | while read -r branch; do
+    git branch -D "$branch"
+  done
+}
 alias gc='git commit'
 alias gco='git checkout'
 alias gd='git diff'
