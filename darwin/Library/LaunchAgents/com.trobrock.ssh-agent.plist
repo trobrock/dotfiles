@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.trobrock.ssh-agent</string>
+
+  <!--
+    Run our own ssh-agent at a fixed socket path (mirrors the Linux systemd
+    ssh-agent.service). Apple's launchd agent uses a dynamic, unpublished
+    socket that non-interactive/tool-spawned shells can't find, which breaks
+    signed commits. We:
+      1. clear any stale socket from a previous run,
+      2. publish the fixed path into the launchd session so GUI-launched apps
+         (and their child processes, e.g. an agent's bash) inherit it,
+      3. exec ssh-agent in the foreground (-D) bound to that path (-a).
+    Keep this in sync with the SSH_AUTH_SOCK export in ~/.zshenv.
+  -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-c</string>
+    <string>rm -f "$HOME/.ssh/agent.sock"; launchctl setenv SSH_AUTH_SOCK "$HOME/.ssh/agent.sock"; exec /usr/bin/ssh-agent -D -a "$HOME/.ssh/agent.sock"</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/ssh-agent.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/ssh-agent.log</string>
+</dict>
+</plist>

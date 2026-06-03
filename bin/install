@@ -480,21 +480,30 @@ setup_ssh_agent_linux() {
 }
 
 setup_ssh_agent_darwin() {
-  local plist="$HOME/Library/LaunchAgents/com.trobrock.ssh-agent-unlock.plist"
-  local label="com.trobrock.ssh-agent-unlock"
   local uid
   uid="$(id -u)"
 
-  if [ ! -f "$plist" ]; then
-    log_error "LaunchAgent plist missing at $plist; did stow run?"
-    return
-  fi
+  # (label -> log) pairs, agent first so its fixed socket exists before the
+  # unlock agent tries to load the key into it.
+  local labels=("com.trobrock.ssh-agent" "com.trobrock.ssh-agent-unlock")
+  local logs=("/tmp/ssh-agent.log" "/tmp/ssh-agent-unlock.log")
 
-  log "Reloading ssh-agent-unlock LaunchAgent..."
-  launchctl bootout "gui/$uid/$label" 2>/dev/null || true
-  if ! launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null; then
-    log_error "Could not load $label LaunchAgent; see /tmp/ssh-agent-unlock.log."
-  fi
+  local i label plist
+  for i in "${!labels[@]}"; do
+    label="${labels[$i]}"
+    plist="$HOME/Library/LaunchAgents/$label.plist"
+
+    if [ ! -f "$plist" ]; then
+      log_error "LaunchAgent plist missing at $plist; did stow run?"
+      continue
+    fi
+
+    log "Reloading $label LaunchAgent..."
+    launchctl bootout "gui/$uid/$label" 2>/dev/null || true
+    if ! launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null; then
+      log_error "Could not load $label LaunchAgent; see ${logs[$i]}."
+    fi
+  done
 }
 
 setup_hyprshot_cleanup_cron() {
