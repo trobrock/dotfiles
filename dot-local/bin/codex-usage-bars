@@ -19,6 +19,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
+from typing import Callable
 
 DEFAULT_TTL_SECONDS = 60
 DEFAULT_TIMEOUT_SECONDS = 5
@@ -33,7 +34,7 @@ CLAUDE_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 CLAUDE_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 CLAUDE_KEYCHAIN_SERVICE = "Claude Code-credentials"
 
-CACHE_VERSION = 5
+CACHE_VERSION = 6
 LOCK_MAX_AGE_SECONDS = 120
 TOKEN_REFRESH_SKEW_SECONDS = 60
 LOG_MAX_BYTES = 256 * 1024
@@ -151,34 +152,69 @@ def displayed_percent(used_percent: float | None) -> float | None:
 
 
 def severity_color(percent: float, default: str) -> str:
-    if percent >= 85:
+    if percent >= 90:
         return PILL_FG_DANGER
-    if percent >= 65:
+    if percent >= 75:
         return PILL_FG_WARN
     return default
 
 
-def render_pill(bg: str, label_fg: str, icon: str, label: str, percent: float | None) -> str:
+def render_pill(
+    bg: str,
+    label_fg: str,
+    icon: str,
+    label: str,
+    percent: float | None,
+    severity_percent: float | None = None,
+) -> str:
     shown = displayed_percent(percent)
     if shown is None:
         value_str = "—"
         value_fg = label_fg
+        icon_color_percent = None
     else:
         value_str = f"{shown:.0f}%"
         value_fg = severity_color(shown, PILL_FG_VALUE)
+        icon_color_percent = displayed_percent(severity_percent)
+
+    icon_fg = severity_color(icon_color_percent, label_fg) if icon_color_percent is not None else label_fg
     return (
-        f"#[bg={bg},fg={label_fg}] {icon} {label} "
+        f"#[bg={bg},fg={icon_fg}] {icon} "
+        f"#[fg={label_fg}]{label} "
         f"#[fg={value_fg}]{value_str}"
         f"#[fg={label_fg}] "
     )
 
 
-def render_chain(codex_percent: float | None, claude_percent: float | None) -> str:
+def render_chain(
+    codex_percent: float | None,
+    claude_percent: float | None,
+    codex_severity_percent: float | None = None,
+    claude_severity_percent: float | None = None,
+) -> str:
     pills = []
-    if codex_percent is not None:
-        pills.append(render_pill(PILL_BG_CODEX, PILL_FG_CODEX_LABEL, CODEX_ICON, "codex", codex_percent))
-    if claude_percent is not None:
-        pills.append(render_pill(PILL_BG_CLAUDE, PILL_FG_CLAUDE_LABEL, CLAUDE_ICON, "claude", claude_percent))
+    if codex_percent is not None or codex_severity_percent is not None:
+        pills.append(
+            render_pill(
+                PILL_BG_CODEX,
+                PILL_FG_CODEX_LABEL,
+                CODEX_ICON,
+                "codex",
+                codex_percent,
+                codex_severity_percent,
+            )
+        )
+    if claude_percent is not None or claude_severity_percent is not None:
+        pills.append(
+            render_pill(
+                PILL_BG_CLAUDE,
+                PILL_FG_CLAUDE_LABEL,
+                CLAUDE_ICON,
+                "claude",
+                claude_percent,
+                claude_severity_percent,
+            )
+        )
     if not pills:
         return ""
     return "".join((*pills, RESET_STYLE))
@@ -194,18 +230,32 @@ def parse_cached_percent(output: str, label: str) -> float | None:
         return None
 
 
-def cached_provider_percent(cached: dict[str, Any] | None, provider: str) -> float | None:
+def cached_provider_metric(cached: dict[str, Any] | None, key: str, provider: str) -> float | None:
     if not cached:
         return None
-    percentages = cached.get("percentages")
-    if isinstance(percentages, dict):
-        percent = percentages.get(provider)
-        if isinstance(percent, (int, float)):
-            return float(percent)
-    output = cached.get("output")
+    values = cached.get(key)
+    if isinstance(values, dict):
+        value = values.get(provider)
+        if isinstance(value, (int, float)):
+            return float(value)
+    return None
+
+
+def cached_provider_percent(cached: dict[str, Any] | None, provider: str) -> float | None:
+    percent = cached_provider_metric(cached, "percentages", provider)
+    if percent is not None:
+        return percent
+    output = cached.get("output") if cached else None
     if isinstance(output, str):
         return parse_cached_percent(output, provider)
     return None
+
+
+def cached_provider_severity_percent(cached: dict[str, Any] | None, provider: str) -> float | None:
+    severity = cached_provider_metric(cached, "severity_percentages", provider)
+    if severity is not None:
+        return severity
+    return cached_provider_percent(cached, provider)
 
 
 def cached_provider_state(cached: dict[str, Any] | None, provider: str) -> dict[str, Any]:
@@ -328,12 +378,34 @@ def select_codex_rate_limit(payload: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def is_codex_weekly_window(window: dict[str, Any]) -> bool:
+def is_codex_window_seconds(window: dict[str, Any], target_seconds: float) -> bool:
     seconds = window.get("limit_window_seconds")
     if not isinstance(seconds, (int, float)):
         return False
-    week = 7 * 24 * 60 * 60
-    return week * 0.95 <= seconds <= week * 1.05
+    return target_seconds * 0.95 <= seconds <= target_seconds * 1.05
+
+
+def is_codex_weekly_window(window: dict[str, Any]) -> bool:
+    return is_codex_window_seconds(window, 7 * 24 * 60 * 60)
+
+
+def is_codex_five_hour_window(window: dict[str, Any]) -> bool:
+    return is_codex_window_seconds(window, 5 * 60 * 60)
+
+
+def _extract_codex_window_used_percent(
+    windows: list[dict[str, Any]],
+    matcher: Callable[[dict[str, Any]], bool],
+    *,
+    label: str,
+) -> float | None:
+    window = next((window for window in windows if matcher(window)), None)
+    if not isinstance(window, dict):
+        return None
+    used = window.get("used_percent")
+    if not isinstance(used, (int, float)):
+        raise UsageError(f"{label} did not include used_percent")
+    return float(used)
 
 
 def read_codex_auth() -> tuple[str, str | None]:
@@ -357,7 +429,7 @@ def read_codex_auth() -> tuple[str, str | None]:
     return access_token, account_id
 
 
-def fetch_codex_weekly_percent() -> float:
+def fetch_codex_percents() -> tuple[float, float]:
     access_token, account_id = read_codex_auth()
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -376,14 +448,23 @@ def fetch_codex_weekly_percent() -> float:
         for window in (rate_limit.get("primary_window"), rate_limit.get("secondary_window"))
         if isinstance(window, dict)
     ]
-    weekly = next((window for window in windows if is_codex_weekly_window(window)), None)
+    weekly = _extract_codex_window_used_percent(
+        windows,
+        is_codex_weekly_window,
+        label="Codex weekly window",
+    )
     if weekly is None:
         raise UsageError("Codex usage response did not include a weekly window")
 
-    used = weekly.get("used_percent")
-    if not isinstance(used, (int, float)):
-        raise UsageError("Codex weekly window did not include used_percent")
-    return float(used)
+    five_hour = _extract_codex_window_used_percent(
+        windows,
+        is_codex_five_hour_window,
+        label="Codex five-hour window",
+    )
+    if five_hour is None:
+        five_hour = weekly
+
+    return weekly, five_hour
 
 
 # Claude --------------------------------------------------------------------
@@ -521,7 +602,37 @@ def claude_access_token() -> str:
     return access_token
 
 
-def fetch_claude_weekly_percent() -> float:
+def _normalize_window_label(label: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", label.casefold())
+
+
+def is_claude_five_hour_window_key(label: str) -> bool:
+    normalized = _normalize_window_label(label)
+    return ("five" in normalized or "5" in normalized) and "hour" in normalized
+
+
+def is_claude_weekly_window_key(label: str) -> bool:
+    normalized = _normalize_window_label(label)
+    return (
+        ("seven" in normalized and "day" in normalized)
+        or ("7day" in normalized)
+        or ("week" in normalized)
+    )
+
+
+def _extract_claude_utilization(payload: dict[str, Any], label_matcher: Callable[[str], bool]) -> float | None:
+    for key, value in payload.items():
+        if not isinstance(key, str) or not isinstance(value, dict):
+            continue
+        utilization = value.get("utilization")
+        if not isinstance(utilization, (int, float)):
+            continue
+        if label_matcher(key):
+            return float(utilization)
+    return None
+
+
+def fetch_claude_percents() -> tuple[float, float]:
     token = claude_access_token()
     payload = request_json(
         claude_usage_url(),
@@ -533,13 +644,18 @@ def fetch_claude_weekly_percent() -> float:
             "anthropic-beta": "oauth-2025-04-20",
         },
     )
-    weekly = payload.get("seven_day")
-    if not isinstance(weekly, dict):
-        raise UsageError("Claude usage response did not include seven_day")
-    utilization = weekly.get("utilization")
-    if not isinstance(utilization, (int, float)):
-        raise UsageError("Claude seven_day did not include utilization")
-    return float(utilization)
+    if not isinstance(payload, dict):
+        raise UsageError("Claude usage response was not an object")
+
+    weekly = _extract_claude_utilization(payload, is_claude_weekly_window_key)
+    if weekly is None:
+        raise UsageError("Claude usage response did not include a weekly window")
+
+    five_hour = _extract_claude_utilization(payload, is_claude_five_hour_window_key)
+    if five_hour is None:
+        five_hour = weekly
+
+    return weekly, five_hour
 
 
 # Status/cache ---------------------------------------------------------------
@@ -547,21 +663,23 @@ def fetch_claude_weekly_percent() -> float:
 
 def collect_percentages(
     previous: dict[str, Any] | None = None,
-) -> tuple[dict[str, float | None], dict[str, dict[str, Any]]]:
+) -> tuple[dict[str, float | None], dict[str, float | None], dict[str, dict[str, Any]]]:
     percentages: dict[str, float | None] = {}
+    severity_percentages: dict[str, float | None] = {}
     provider_state: dict[str, dict[str, Any]] = {}
     for provider, fetcher in (
-        ("codex", fetch_codex_weekly_percent),
-        ("claude", fetch_claude_weekly_percent),
+        ("codex", fetch_codex_percents),
+        ("claude", fetch_claude_percents),
     ):
         now = time.time()
         previous_state = cached_provider_state(previous, provider)
         if should_skip_provider_fetch(provider, previous, now):
             percentages[provider] = cached_provider_percent(previous, provider)
+            severity_percentages[provider] = cached_provider_severity_percent(previous, provider)
             provider_state[provider] = previous_state
             continue
         try:
-            percentages[provider] = fetcher()
+            percentages[provider], severity_percentages[provider] = fetcher()
             provider_state[provider] = {
                 "last_attempt_at": now,
                 "last_success_at": now,
@@ -569,20 +687,31 @@ def collect_percentages(
         except (OSError, ValueError, UsageError, urllib.error.URLError, json.JSONDecodeError) as error:
             log_provider_failure(provider, error)
             percentages[provider] = cached_provider_percent(previous, provider)
+            severity_percentages[provider] = cached_provider_severity_percent(previous, provider)
             provider_state[provider] = {
                 **previous_state,
                 "last_attempt_at": now,
                 "last_error_at": now,
                 "next_attempt_at": now + failure_backoff_seconds(error),
             }
-    return percentages, provider_state
+    return percentages, severity_percentages, provider_state
 
 
 def collect_output(
     previous: dict[str, Any] | None = None,
-) -> tuple[str, dict[str, float | None], dict[str, dict[str, Any]]]:
-    percentages, provider_state = collect_percentages(previous)
-    return render_chain(percentages["codex"], percentages["claude"]), percentages, provider_state
+) -> tuple[str, dict[str, float | None], dict[str, float | None], dict[str, dict[str, Any]]]:
+    percentages, severity_percentages, provider_state = collect_percentages(previous)
+    return (
+        render_chain(
+            percentages.get("codex"),
+            percentages.get("claude"),
+            severity_percentages.get("codex"),
+            severity_percentages.get("claude"),
+        ),
+        percentages,
+        severity_percentages,
+        provider_state,
+    )
 
 
 def read_cache() -> dict[str, Any] | None:
@@ -599,6 +728,7 @@ def read_cache() -> dict[str, Any] | None:
 def write_cache(
     output: str,
     percentages: dict[str, float | None],
+    severity_percentages: dict[str, float | None],
     provider_state: dict[str, dict[str, Any]],
 ) -> None:
     path = cache_file()
@@ -609,6 +739,7 @@ def write_cache(
         "fetched_at": time.time(),
         "output": output,
         "percentages": percentages,
+        "severity_percentages": severity_percentages,
         "provider_state": provider_state,
     }
     with tmp.open("w", encoding="utf-8") as handle:
@@ -655,8 +786,8 @@ def refresh_cache() -> bool:
         return False
     try:
         previous = read_cache()
-        output, percentages, provider_state = collect_output(previous)
-        write_cache(output, percentages, provider_state)
+        output, percentages, severity_percentages, provider_state = collect_output(previous)
+        write_cache(output, percentages, severity_percentages, provider_state)
         return True
     finally:
         release_lock(fd)
