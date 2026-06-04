@@ -1,0 +1,363 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+SWAP_SIZE="96g"
+SKIP_HIBERNATE_SWAP=false
+NEEDS_MKINITCPIO=false
+RESUME_OFFSET=""
+
+log() {
+  echo "==> $*"
+}
+
+warn() {
+  echo "WARN: $*" >&2
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [--swap-size SIZE] [--skip-hibernate-swap]
+
+Configures laptop lid handling for suspend-then-hibernate and prepares disk
+hibernation support on this Arch/btrfs system.
+
+Options:
+  --swap-size SIZE          Size for /swap/swapfile if it does not exist.
+                            Defaults to $SWAP_SIZE.
+  --skip-hibernate-swap     Only install systemd logind/sleep config and disable
+                            the stale amd-debug s2idle hook.
+EOF
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --swap-size)
+      if [ -z "${2:-}" ]; then
+        echo "--swap-size requires a value" >&2
+        exit 1
+      fi
+      SWAP_SIZE="$2"
+      shift 2
+      ;;
+    --swap-size=*)
+      SWAP_SIZE="${1#*=}"
+      shift
+      ;;
+    --skip-hibernate-swap)
+      SKIP_HIBERNATE_SWAP=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+require_linux() {
+  if [ "$(uname)" != "Linux" ]; then
+    echo "This setup is only supported on Linux." >&2
+    exit 1
+  fi
+}
+
+install_file_if_changed() {
+  local src="$1"
+  local dest="$2"
+
+  sudo mkdir -p "$(dirname "$dest")"
+
+  if sudo test -f "$dest" && sudo cmp -s "$src" "$dest"; then
+    log "$dest already up to date"
+    return
+  fi
+
+  log "Installing $dest"
+  sudo install -Dm644 "$src" "$dest"
+}
+
+install_systemd_sleep_config() {
+  log "Ensuring systemd lid/sleep configuration..."
+  install_file_if_changed \
+    "$REPO_DIR/system/etc/systemd/logind.conf.d/70-lid-suspend-then-hibernate.conf" \
+    /etc/systemd/logind.conf.d/70-lid-suspend-then-hibernate.conf
+  install_file_if_changed \
+    "$REPO_DIR/system/etc/systemd/sleep.conf.d/70-suspend-then-hibernate.conf" \
+    /etc/systemd/sleep.conf.d/70-suspend-then-hibernate.conf
+}
+
+disable_stale_s2idle_hook() {
+  local hook="/usr/lib/systemd/system-sleep/s2idle-hook"
+
+  if [ ! -e "$hook" ]; then
+    return
+  fi
+
+  if ! grep -q "amd_debug" "$hook" 2>/dev/null || ! grep -q "amd-debug-tools" "$hook" 2>/dev/null; then
+    warn "$hook exists but does not look like the stale amd-debug hook; leaving it alone."
+    return
+  fi
+
+  if pacman -Qo "$hook" >/dev/null 2>&1; then
+    warn "$hook is owned by a package; leaving it alone."
+    return
+  fi
+
+  local backup="$hook.disabled-by-dotfiles-$(date +%Y%m%d%H%M%S)"
+  log "Disabling stale unowned amd-debug s2idle hook: $backup"
+  sudo mv "$hook" "$backup"
+}
+
+ensure_fstab_line() {
+  local pattern="$1"
+  local line="$2"
+
+  if ! grep -Eq "$pattern" /etc/fstab; then
+    log "Adding fstab entry: $line"
+    echo "$line" | sudo tee -a /etc/fstab >/dev/null
+  fi
+}
+
+root_btrfs_device() {
+  local source
+  source="$(findmnt -no SOURCE -T /)"
+  echo "${source%%[*}"
+}
+
+ensure_swap_subvolume_exists() {
+  local root_device tmp_top mounted=false
+
+  root_device="$(root_btrfs_device)"
+  tmp_top="$(mktemp -d)"
+
+  sudo mount -o subvolid=5 "$root_device" "$tmp_top"
+  mounted=true
+
+  if ! sudo btrfs subvolume show "$tmp_top/@swap" >/dev/null 2>&1; then
+    log "Creating top-level btrfs @swap subvolume..."
+    sudo btrfs subvolume create "$tmp_top/@swap"
+  fi
+
+  if [ "$mounted" = true ]; then
+    sudo umount "$tmp_top"
+  fi
+  rmdir "$tmp_top"
+}
+
+ensure_swap_mount() {
+  local root_fstype root_uuid
+
+  root_fstype="$(findmnt -no FSTYPE -T /)"
+  if [ "$root_fstype" != "btrfs" ]; then
+    echo "Expected / to be btrfs, got: $root_fstype" >&2
+    exit 1
+  fi
+
+  root_uuid="$(findmnt -no UUID -T /)"
+  if [ -z "$root_uuid" ] || [ -z "$(root_btrfs_device)" ]; then
+    echo "Could not determine root btrfs UUID/device." >&2
+    exit 1
+  fi
+
+  sudo mkdir -p /swap
+
+  ensure_swap_subvolume_exists
+
+  ensure_fstab_line \
+    '^[^#].*[[:space:]]/swap[[:space:]]+btrfs[[:space:]]' \
+    "UUID=$root_uuid /swap btrfs rw,relatime,ssd,space_cache=v2,subvol=/@swap 0 0"
+
+  if findmnt -M /swap >/dev/null 2>&1; then
+    return
+  fi
+
+  if find /swap -mindepth 1 -maxdepth 1 | grep -q .; then
+    echo "/swap is not empty but is not mounted; refusing to hide existing contents." >&2
+    exit 1
+  fi
+
+  log "Mounting /swap"
+  sudo mount /swap
+}
+
+ensure_swapfile() {
+  ensure_swap_mount
+
+  if [ ! -e /swap/swapfile ]; then
+    log "Creating btrfs swapfile at /swap/swapfile ($SWAP_SIZE)..."
+    sudo btrfs filesystem mkswapfile --size "$SWAP_SIZE" --uuid clear /swap/swapfile
+  fi
+
+  sudo chmod 600 /swap/swapfile
+
+  ensure_fstab_line \
+    '^[^#].*[[:space:]]/swap/swapfile[[:space:]]+none[[:space:]]+swap[[:space:]]' \
+    "/swap/swapfile none swap defaults,pri=10 0 0"
+
+  if ! swapon --noheadings --show=NAME | grep -Fxq /swap/swapfile; then
+    log "Activating /swap/swapfile with lower priority than zram..."
+    sudo swapon --priority 10 /swap/swapfile
+  fi
+}
+
+set_runtime_resume_location() {
+  local root_device resume_device resume_offset major_hex minor_hex resume_majmin
+
+  root_device="$(root_btrfs_device)"
+  resume_device="$(readlink -f "$root_device")"
+  resume_offset="$(sudo btrfs inspect-internal map-swapfile -r /swap/swapfile)"
+  major_hex="$(stat -c '%t' "$resume_device")"
+  minor_hex="$(stat -c '%T' "$resume_device")"
+  resume_majmin="$(printf '%d:%d' "0x$major_hex" "0x$minor_hex")"
+
+  log "Setting runtime hibernate resume location: $root_device ($resume_majmin) offset $resume_offset"
+  echo "$resume_majmin" | sudo tee /sys/power/resume >/dev/null || warn "Could not write /sys/power/resume"
+  echo "$resume_offset" | sudo tee /sys/power/resume_offset >/dev/null || warn "Could not write /sys/power/resume_offset"
+
+  RESUME_OFFSET="$resume_offset"
+}
+
+ensure_mkinitcpio_resume_hook() {
+  local result
+
+  log "Ensuring mkinitcpio resume hook is present..."
+  result="$(sudo python - <<'PY'
+from datetime import datetime
+from pathlib import Path
+import re
+import shutil
+
+path = Path('/etc/mkinitcpio.conf')
+text = path.read_text()
+
+pattern = re.compile(r'^(HOOKS=\()([^)]*)(\))', re.MULTILINE)
+match = pattern.search(text)
+if not match:
+    raise SystemExit('Could not find HOOKS=(...) in /etc/mkinitcpio.conf')
+
+hooks = match.group(2).split()
+if 'resume' in hooks:
+    print('unchanged')
+    raise SystemExit(0)
+
+if 'filesystems' in hooks:
+    insert_at = hooks.index('filesystems') + 1
+elif 'encrypt' in hooks:
+    insert_at = hooks.index('encrypt') + 1
+elif 'fsck' in hooks:
+    insert_at = hooks.index('fsck')
+else:
+    insert_at = len(hooks)
+
+hooks.insert(insert_at, 'resume')
+new_line = match.group(1) + ' '.join(hooks) + match.group(3)
+backup = path.with_name(path.name + '.bak-dotfiles-' + datetime.now().strftime('%Y%m%d%H%M%S'))
+shutil.copy2(path, backup)
+path.write_text(pattern.sub(new_line, text, count=1))
+print('changed')
+PY
+)"
+
+  if [ "$result" = "changed" ]; then
+    NEEDS_MKINITCPIO=true
+    log "Added resume hook to /etc/mkinitcpio.conf"
+  else
+    log "/etc/mkinitcpio.conf already contains resume hook"
+  fi
+}
+
+ensure_boot_resume_args() {
+  local resume_offset="$1"
+  local resume_device result
+
+  resume_device="$(root_btrfs_device)"
+  log "Ensuring systemd-boot entries include resume=$resume_device resume_offset=$resume_offset..."
+
+  result="$(sudo env RESUME_DEVICE="$resume_device" RESUME_OFFSET="$resume_offset" python - <<'PY'
+from datetime import datetime
+from pathlib import Path
+import os
+import shutil
+
+resume_device = os.environ['RESUME_DEVICE']
+resume_offset = os.environ['RESUME_OFFSET']
+backup_suffix = '.bak-dotfiles-' + datetime.now().strftime('%Y%m%d%H%M%S')
+changed_any = False
+
+entries = sorted(Path('/boot/loader/entries').glob('*.conf'))
+if not entries:
+    raise SystemExit('No systemd-boot entries found under /boot/loader/entries')
+
+for entry in entries:
+    text = entry.read_text()
+    lines = text.splitlines(keepends=True)
+    changed = False
+    found_options = False
+
+    for i, line in enumerate(lines):
+        if not line.startswith('options '):
+            continue
+        found_options = True
+        newline = '\n' if line.endswith('\n') else ''
+        tokens = line.strip().split()
+        args = [arg for arg in tokens[1:] if not arg.startswith('resume=') and not arg.startswith('resume_offset=')]
+        args.extend([f'resume={resume_device}', f'resume_offset={resume_offset}'])
+        new_line = 'options ' + ' '.join(args) + newline
+        if lines[i] != new_line:
+            lines[i] = new_line
+            changed = True
+        break
+
+    if not found_options:
+        continue
+
+    if changed:
+        shutil.copy2(entry, str(entry) + backup_suffix)
+        entry.write_text(''.join(lines))
+        changed_any = True
+
+print('changed' if changed_any else 'unchanged')
+PY
+)"
+
+  if [ "$result" = "changed" ]; then
+    log "Updated systemd-boot resume arguments"
+  else
+    log "systemd-boot resume arguments already up to date"
+  fi
+}
+
+configure_hibernate_swap() {
+  ensure_swapfile
+  set_runtime_resume_location
+  ensure_mkinitcpio_resume_hook
+  ensure_boot_resume_args "$RESUME_OFFSET"
+
+  if [ "$NEEDS_MKINITCPIO" = true ]; then
+    log "Regenerating initramfs..."
+    sudo mkinitcpio -P
+  else
+    log "Initramfs already has the resume hook; skipping mkinitcpio rebuild"
+  fi
+}
+
+require_linux
+install_systemd_sleep_config
+disable_stale_s2idle_hook
+
+if [ "$SKIP_HIBERNATE_SWAP" = false ]; then
+  configure_hibernate_swap
+else
+  warn "Skipping disk-backed hibernate swap/resume setup. systemctl hibernate will not work until that is configured."
+fi
+
+log "Done. Reboot before relying on hibernate/resume."
+log "After reboot, test with: systemctl hibernate"

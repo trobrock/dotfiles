@@ -18,6 +18,7 @@ dot-config/systemd/user/.*\.target\.wants
 ^/dot-config/developerly/credentials\.toml$
 ^/dot-config/developerly/projects\.toml$
 hooks
+system
 darwin
 docs
 linux

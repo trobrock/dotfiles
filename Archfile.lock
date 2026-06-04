@@ -11,6 +11,7 @@ bluez
 bluez-utils
 brightnessctl
 btop
+btrfs-progs
 chromium
 cups
 cups-pdf

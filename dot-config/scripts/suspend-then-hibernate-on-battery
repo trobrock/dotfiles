@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+on_external_power=false
+
+for supply in /sys/class/power_supply/*; do
+  [ -e "$supply" ] || continue
+
+  type="$(cat "$supply/type" 2>/dev/null || true)"
+  case "$type" in
+    Mains|USB|USB_C|USB_PD)
+      if [ "$(cat "$supply/online" 2>/dev/null || echo 0)" = "1" ]; then
+        on_external_power=true
+        break
+      fi
+      ;;
+  esac
+done
+
+if [ "$on_external_power" = true ]; then
+  echo "Skipped suspend-then-hibernate - on external power"
+  exit 0
+fi
+
+exec systemctl suspend-then-hibernate
