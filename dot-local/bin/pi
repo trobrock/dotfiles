@@ -9,31 +9,100 @@ set -euo pipefail
 pi_install_dir="${PI_INSTALL_DIR:-$HOME/.local/share/pi-cli}"
 pi_bin="$pi_install_dir/bin/pi"
 pi_package="npm:@earendil-works/pi-coding-agent"
+pi_auto_update_state_dir="${PI_AUTO_UPDATE_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/pi-wrapper}"
+pi_auto_update_stamp="$pi_auto_update_state_dir/last-auto-update"
+pi_auto_update_lock="$pi_auto_update_state_dir/auto-update.lock"
 
 node_dir="${PI_NODE_DIR:-}"
 if [ -z "$node_dir" ] && command -v mise >/dev/null 2>&1; then
   node_dir="$(mise where -C "$HOME" node 2>/dev/null || true)"
 fi
 
+is_pi_package_command() {
+  case "${1:-}" in
+    install|remove|uninstall|update|list|config)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+pi_auto_update_due() {
+  [ "${PI_AUTO_UPDATE:-1}" != "0" ] || return 1
+  [ -x "$pi_bin" ] || return 1
+  ! is_pi_package_command "${1:-}" || return 1
+
+  local interval now last
+  interval="${PI_AUTO_UPDATE_INTERVAL_SECONDS:-86400}"
+  if ! [[ "$interval" =~ ^[0-9]+$ ]]; then
+    interval=86400
+  fi
+  if [ "$interval" -eq 0 ]; then
+    return 0
+  fi
+
+  now="$(date +%s)"
+  last=0
+  if [ -r "$pi_auto_update_stamp" ]; then
+    IFS= read -r last < "$pi_auto_update_stamp" || last=0
+  fi
+  if ! [[ "$last" =~ ^[0-9]+$ ]]; then
+    last=0
+  fi
+
+  [ $((now - last)) -ge "$interval" ]
+}
+
+mark_pi_auto_update_attempted() {
+  local now tmp
+  now="$(date +%s)"
+  mkdir -p "$pi_auto_update_state_dir" || return 1
+  tmp="$pi_auto_update_stamp.$$"
+  printf '%s\n' "$now" > "$tmp" && mv "$tmp" "$pi_auto_update_stamp"
+}
+
+cleanup_pi_auto_update_lock() {
+  rmdir "$pi_auto_update_lock" 2>/dev/null || true
+}
+
+auto_update_pi() {
+  pi_auto_update_due "$@" || return 0
+  mkdir -p "$pi_auto_update_state_dir" || return 0
+
+  # Avoid multiple shells trying to update the shared install at once.
+  mkdir "$pi_auto_update_lock" 2>/dev/null || return 0
+  trap cleanup_pi_auto_update_lock EXIT
+  trap 'cleanup_pi_auto_update_lock; exit 130' INT
+  trap 'cleanup_pi_auto_update_lock; exit 143' TERM
+
+  mark_pi_auto_update_attempted || true
+
+  if ! "$pi_bin" update pi; then
+    echo "pi: auto-update failed; continuing with the installed version." >&2
+  fi
+
+  cleanup_pi_auto_update_lock
+  trap - EXIT INT TERM
+}
+
 flags=()
-case "${1:-}" in
-  install|remove|uninstall|update|list|config)
-    ;;
-  *)
-    if [ -n "${PI_DEFAULT_PROVIDER:-}" ]; then
-      flags+=(--provider "$PI_DEFAULT_PROVIDER")
-    fi
-    if [ -n "${PI_DEFAULT_MODEL:-}" ]; then
-      flags+=(--model "$PI_DEFAULT_MODEL")
-    fi
-    if [ -n "${PI_DEFAULT_THINKING_LEVEL:-}" ]; then
-      flags+=(--thinking "$PI_DEFAULT_THINKING_LEVEL")
-    fi
-    ;;
-esac
+if ! is_pi_package_command "${1:-}"; then
+  if [ -n "${PI_DEFAULT_PROVIDER:-}" ]; then
+    flags+=(--provider "$PI_DEFAULT_PROVIDER")
+  fi
+  if [ -n "${PI_DEFAULT_MODEL:-}" ]; then
+    flags+=(--model "$PI_DEFAULT_MODEL")
+  fi
+  if [ -n "${PI_DEFAULT_THINKING_LEVEL:-}" ]; then
+    flags+=(--thinking "$PI_DEFAULT_THINKING_LEVEL")
+  fi
+fi
 
 if [ -n "$node_dir" ] && [ -x "$pi_bin" ]; then
   export PATH="$node_dir/bin:$PATH"
+  auto_update_pi "$@"
   exec "$pi_bin" "${flags[@]}" "$@"
 fi
 
