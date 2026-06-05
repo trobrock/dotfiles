@@ -1,6 +1,7 @@
 # vim: set ft=ruby
 
 brew "age"
+brew "agent-browser"
 brew "aws-vault"
 brew "awscli"
 brew "azure-cli"

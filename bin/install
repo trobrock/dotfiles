@@ -269,6 +269,23 @@ archfile_remove_missing() {
   fi
 }
 
+mise_node_dir() {
+  local node_dir
+
+  if ! command -v mise >/dev/null 2>&1; then
+    return 1
+  fi
+
+  node_dir="$(mise where -C "$HOME" node 2>/dev/null || true)"
+  if [ -z "$node_dir" ]; then
+    log "No global mise node; installing node@lts..."
+    mise use -g node@lts
+    node_dir="$(mise where -C "$HOME" node)"
+  fi
+
+  echo "$node_dir"
+}
+
 install_pi_dev() {
   # Install pi into an isolated npm prefix so it lives at
   # $HOME/.local/share/pi-cli/bin/pi and never sits inside a mise-managed
@@ -279,16 +296,9 @@ install_pi_dev() {
   local pi_package="@earendil-works/pi-coding-agent"
   local node_dir
 
-  if ! command -v mise >/dev/null 2>&1; then
+  if ! node_dir="$(mise_node_dir)"; then
     log_error "mise not found; cannot install pi"
     return 1
-  fi
-
-  node_dir="$(mise where -C "$HOME" node 2>/dev/null || true)"
-  if [ -z "$node_dir" ]; then
-    log "No global mise node; installing node@lts..."
-    mise use -g node@lts
-    node_dir="$(mise where -C "$HOME" node)"
   fi
 
   # Cleanup: prior installs may have placed pi inside the mise node (via
@@ -307,6 +317,39 @@ install_pi_dev() {
 
   log "Installing pi into $pi_prefix (isolated from mise PATH)..."
   PATH="$node_dir/bin:$PATH" npm install -g --prefix="$pi_prefix" --silent "$pi_package"
+}
+
+install_agent_browser() {
+  local node_dir
+
+  if [ "$(uname)" = "Darwin" ] && command -v brew >/dev/null 2>&1; then
+    if ! command -v agent-browser >/dev/null 2>&1; then
+      log "Installing agent-browser via Homebrew..."
+      brew install agent-browser
+    fi
+  else
+    if ! node_dir="$(mise_node_dir)"; then
+      log_error "mise not found; cannot install agent-browser"
+      return 1
+    fi
+
+    log "Installing agent-browser..."
+    PATH="$node_dir/bin:$PATH" npm install -g --silent agent-browser
+
+    # Make agent-browser visible to this script even if mise has not updated
+    # the current shell's PATH yet.
+    if [ -x "$node_dir/bin/agent-browser" ]; then
+      export PATH="$node_dir/bin:$PATH"
+    fi
+  fi
+
+  if command -v agent-browser >/dev/null 2>&1; then
+    log "Installing agent-browser Chrome binary..."
+    agent-browser install
+  else
+    log_error "agent-browser install appears to have failed; skipping browser install."
+    return 1
+  fi
 }
 
 install_developerly() {
@@ -588,6 +631,7 @@ run_stow
 
 install_packages
 install_pi_dev
+install_agent_browser
 install_developerly
 setup_github_user
 
