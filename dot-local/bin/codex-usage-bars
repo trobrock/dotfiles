@@ -9,9 +9,12 @@ segments continue the chain by setting the next background directly.
 
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import re
+import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -25,6 +28,9 @@ DEFAULT_TTL_SECONDS = 60
 DEFAULT_TIMEOUT_SECONDS = 5
 DEFAULT_CODEX_PROVIDER_TTL_SECONDS = 60
 DEFAULT_CLAUDE_PROVIDER_TTL_SECONDS = 10 * 60
+DEFAULT_API_SPEND_TTL_SECONDS = 10 * 60
+DEFAULT_API_SPEND_DAYS = 7
+DEFAULT_CCUSAGE_TIMEOUT_SECONDS = 30
 DEFAULT_FAILURE_BACKOFF_SECONDS = 5 * 60
 DEFAULT_RATE_LIMIT_BACKOFF_SECONDS = 30 * 60
 
@@ -34,7 +40,7 @@ CLAUDE_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 CLAUDE_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 CLAUDE_KEYCHAIN_SERVICE = "Claude Code-credentials"
 
-CACHE_VERSION = 6
+CACHE_VERSION = 8
 LOCK_MAX_AGE_SECONDS = 120
 TOKEN_REFRESH_SKEW_SECONDS = 60
 LOG_MAX_BYTES = 256 * 1024
@@ -42,14 +48,17 @@ LOG_MAX_BYTES = 256 * 1024
 # Pill styling uses the Catppuccin Mocha palette from tmux.conf.
 PILL_BG_CODEX = "#313244"
 PILL_BG_CLAUDE = "#45475a"
+PILL_BG_APISPEND = "#313244"
 PILL_FG_CODEX_LABEL = "#89b4fa"
 PILL_FG_CLAUDE_LABEL = "#cba6f7"
+PILL_FG_APISPEND_LABEL = "#a6e3a1"
 PILL_FG_VALUE = "#cdd6f4"
 PILL_FG_WARN = "#f9e2af"
 PILL_FG_DANGER = "#f38ba8"
 RESET_STYLE = "#[bg=default,fg=#cdd6f4]"
 CODEX_ICON = "\ue795"
 CLAUDE_ICON = "\U000f06a9"  # nf-md-robot
+APISPEND_ICON = "\U000f0114"  # nf-md-cash
 
 
 class UsageError(Exception):
@@ -98,6 +107,36 @@ def failure_backoff_seconds(error: BaseException) -> int:
 def usage_mode() -> str:
     mode = os.environ.get("CODEX_USAGE_BARS_MODE", "used").casefold()
     return mode if mode in ("used", "remaining") else "used"
+
+
+def api_spend_mode() -> str:
+    # auto: show only when no subscription pill has data (default)
+    # on:   always show the API-spend pill
+    # off:  never collect or show it
+    mode = os.environ.get("CODEX_USAGE_BARS_API_SPEND", "auto").casefold()
+    return mode if mode in ("auto", "on", "off") else "auto"
+
+
+def api_spend_ttl_seconds() -> int:
+    return env_int("CODEX_USAGE_BARS_API_SPEND_TTL", DEFAULT_API_SPEND_TTL_SECONDS)
+
+
+def api_spend_days() -> int:
+    return max(1, env_int("CODEX_USAGE_BARS_API_SPEND_DAYS", DEFAULT_API_SPEND_DAYS))
+
+
+def ccusage_timeout_seconds() -> int:
+    return env_int("CODEX_USAGE_BARS_CCUSAGE_TIMEOUT", DEFAULT_CCUSAGE_TIMEOUT_SECONDS)
+
+
+def ccusage_command() -> list[str]:
+    override = os.environ.get("CODEX_USAGE_BARS_CCUSAGE_CMD")
+    if override:
+        return shlex.split(override)
+    binary = shutil.which("ccusage")
+    if binary:
+        return [binary]
+    return ["npx", "-y", "ccusage@latest"]
 
 
 def cache_dir() -> Path:
@@ -186,11 +225,28 @@ def render_pill(
     )
 
 
+def format_dollars(value: float | None, decimals: int) -> str:
+    if not isinstance(value, (int, float)):
+        return "\u2014"
+    return f"${value:.{decimals}f}"
+
+
+def render_api_spend_pill(total: float | None, days: int) -> str:
+    total_str = format_dollars(total, 2)
+    return (
+        f"#[bg={PILL_BG_APISPEND},fg={PILL_FG_APISPEND_LABEL}] {APISPEND_ICON} "
+        f"#[fg={PILL_FG_APISPEND_LABEL}]api "
+        f"#[fg={PILL_FG_VALUE}]{total_str} "
+        f"#[fg={PILL_FG_APISPEND_LABEL}]{days}d "
+    )
+
+
 def render_chain(
     codex_percent: float | None,
     claude_percent: float | None,
     codex_severity_percent: float | None = None,
     claude_severity_percent: float | None = None,
+    api_spend: dict[str, Any] | None = None,
 ) -> str:
     pills = []
     if codex_percent is not None or codex_severity_percent is not None:
@@ -214,6 +270,10 @@ def render_chain(
                 claude_percent,
                 claude_severity_percent,
             )
+        )
+    if api_spend is not None:
+        pills.append(
+            render_api_spend_pill(api_spend.get("total"), api_spend_days())
         )
     if not pills:
         return ""
@@ -658,6 +718,90 @@ def fetch_claude_percents() -> tuple[float, float]:
     return weekly, five_hour
 
 
+# API spend (Anthropic API, via ccusage local logs) ------------------------
+
+
+def fetch_api_spend() -> float:
+    today = datetime.date.today()
+    since = (today - datetime.timedelta(days=api_spend_days() - 1)).strftime("%Y%m%d")
+    command = [*ccusage_command(), "daily", "--json", "--offline", "--since", since]
+    try:
+        output = subprocess.check_output(
+            command,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=ccusage_timeout_seconds(),
+        )
+    except (FileNotFoundError, subprocess.SubprocessError) as error:
+        raise UsageError(f"ccusage invocation failed: {error}") from error
+
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError as error:
+        raise UsageError("ccusage did not return valid JSON") from error
+
+    totals = data.get("totals")
+    total = totals.get("totalCost") if isinstance(totals, dict) else None
+    if not isinstance(total, (int, float)):
+        days = data.get("daily")
+        days = days if isinstance(days, list) else []
+        total = sum(
+            float(day.get("totalCost", 0))
+            for day in days
+            if isinstance(day, dict) and isinstance(day.get("totalCost"), (int, float))
+        )
+    return float(total)
+
+
+def cached_api_spend(cached: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not cached:
+        return None
+    value = cached.get("api_spend")
+    if isinstance(value, dict):
+        total = value.get("total")
+        if isinstance(total, (int, float)):
+            return {"total": float(total)}
+    return None
+
+
+def should_skip_api_spend(previous: dict[str, Any] | None, now: float) -> bool:
+    if cached_api_spend(previous) is None:
+        return False
+    state = cached_provider_state(previous, "apispend")
+    next_attempt_at = state.get("next_attempt_at")
+    if isinstance(next_attempt_at, (int, float)) and now < next_attempt_at:
+        return True
+    last_success_at = state.get("last_success_at")
+    if isinstance(last_success_at, (int, float)) and now - last_success_at < api_spend_ttl_seconds():
+        return True
+    return False
+
+
+def collect_api_spend(
+    previous: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    if api_spend_mode() == "off":
+        return None, {}
+    now = time.time()
+    previous_state = cached_provider_state(previous, "apispend")
+    if should_skip_api_spend(previous, now):
+        return cached_api_spend(previous), previous_state
+    try:
+        total = fetch_api_spend()
+        return {"total": total}, {
+            "last_attempt_at": now,
+            "last_success_at": now,
+        }
+    except (OSError, ValueError, UsageError, json.JSONDecodeError) as error:
+        log_provider_failure("apispend", error)
+        return cached_api_spend(previous), {
+            **previous_state,
+            "last_attempt_at": now,
+            "last_error_at": now,
+            "next_attempt_at": now + failure_backoff_seconds(error),
+        }
+
+
 # Status/cache ---------------------------------------------------------------
 
 
@@ -699,18 +843,37 @@ def collect_percentages(
 
 def collect_output(
     previous: dict[str, Any] | None = None,
-) -> tuple[str, dict[str, float | None], dict[str, float | None], dict[str, dict[str, Any]]]:
+) -> tuple[
+    str,
+    dict[str, float | None],
+    dict[str, float | None],
+    dict[str, dict[str, Any]],
+    dict[str, Any] | None,
+]:
     percentages, severity_percentages, provider_state = collect_percentages(previous)
+    api_spend, api_spend_state = collect_api_spend(previous)
+    provider_state = {**provider_state, "apispend": api_spend_state}
+
+    has_subscription = (
+        percentages.get("codex") is not None or percentages.get("claude") is not None
+    )
+    mode = api_spend_mode()
+    show_api_spend = api_spend is not None and (
+        mode == "on" or (mode == "auto" and not has_subscription)
+    )
+
     return (
         render_chain(
             percentages.get("codex"),
             percentages.get("claude"),
             severity_percentages.get("codex"),
             severity_percentages.get("claude"),
+            api_spend if show_api_spend else None,
         ),
         percentages,
         severity_percentages,
         provider_state,
+        api_spend,
     )
 
 
@@ -730,6 +893,7 @@ def write_cache(
     percentages: dict[str, float | None],
     severity_percentages: dict[str, float | None],
     provider_state: dict[str, dict[str, Any]],
+    api_spend: dict[str, Any] | None = None,
 ) -> None:
     path = cache_file()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -741,6 +905,7 @@ def write_cache(
         "percentages": percentages,
         "severity_percentages": severity_percentages,
         "provider_state": provider_state,
+        "api_spend": api_spend,
     }
     with tmp.open("w", encoding="utf-8") as handle:
         json.dump(data, handle)
@@ -786,8 +951,8 @@ def refresh_cache() -> bool:
         return False
     try:
         previous = read_cache()
-        output, percentages, severity_percentages, provider_state = collect_output(previous)
-        write_cache(output, percentages, severity_percentages, provider_state)
+        output, percentages, severity_percentages, provider_state, api_spend = collect_output(previous)
+        write_cache(output, percentages, severity_percentages, provider_state, api_spend)
         return True
     finally:
         release_lock(fd)
