@@ -70,6 +70,9 @@ function tm() {
 # AI
 alias crush='crush --yolo'
 
+# Developerly
+alias d='developerly tui'
+
 # Find packages without leaving the terminal
 alias yayf="yay -Slq | fzf --multi --preview 'yay -Sii {1}' --preview-window=down:75% | xargs -ro yay -S"
 
