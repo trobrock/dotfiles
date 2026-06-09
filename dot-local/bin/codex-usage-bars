@@ -40,7 +40,7 @@ CLAUDE_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 CLAUDE_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 CLAUDE_KEYCHAIN_SERVICE = "Claude Code-credentials"
 
-CACHE_VERSION = 8
+CACHE_VERSION = 9
 LOCK_MAX_AGE_SECONDS = 120
 TOKEN_REFRESH_SKEW_SECONDS = 60
 LOG_MAX_BYTES = 256 * 1024
@@ -202,7 +202,6 @@ def render_pill(
     bg: str,
     label_fg: str,
     icon: str,
-    label: str,
     percent: float | None,
     severity_percent: float | None = None,
 ) -> str:
@@ -219,7 +218,6 @@ def render_pill(
     icon_fg = severity_color(icon_color_percent, label_fg) if icon_color_percent is not None else label_fg
     return (
         f"#[bg={bg},fg={icon_fg}] {icon} "
-        f"#[fg={label_fg}]{label} "
         f"#[fg={value_fg}]{value_str}"
         f"#[fg={label_fg}] "
     )
@@ -255,7 +253,6 @@ def render_chain(
                 PILL_BG_CODEX,
                 PILL_FG_CODEX_LABEL,
                 CODEX_ICON,
-                "codex",
                 codex_percent,
                 codex_severity_percent,
             )
@@ -266,7 +263,6 @@ def render_chain(
                 PILL_BG_CLAUDE,
                 PILL_FG_CLAUDE_LABEL,
                 CLAUDE_ICON,
-                "claude",
                 claude_percent,
                 claude_severity_percent,
             )
