@@ -6,6 +6,7 @@ dot-config/systemd/user/*.target.wants/
 /dot-config/developerly/credentials.toml
 /dot-config/developerly/projects.toml
 /dot-pi/agent/extensions/developerly-*
+/dot-pi/agent/extensions/ask-user-question.ts
 /dot-pi/agent/mcp-onboarding.json
 /dot-pi/agent/skills/developerly/SKILL.md
 /dot-local/bin/__pycache__
