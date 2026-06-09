@@ -48,23 +48,40 @@ export FZF_DEFAULT_OPTS=" \
 --color=marker:#b4befe,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8 \
 --color=selected-bg:#45475a \
 --multi"
-if command -v fzf >/dev/null 2>&1; then
-  source <(fzf --zsh)
+# Cache the output of slow `tool init` style commands so we don't fork an
+# external binary on every shell start. The cache is keyed on the binary's
+# resolved path + mtime, so it regenerates automatically after upgrades. This
+# speeds up warm starts and softens cold-cache spikes (fewer binaries exec'd).
+# To force a rebuild: rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/zsh-init"
+_cache_eval() {
+  emulate -L zsh
+  local name=$1 bin=$2; shift 2
+  local binpath cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-init/${name}.zsh"
+  binpath=$(command -v "$bin" 2>/dev/null) || return 1
+  if [[ ! -s $cache || $binpath -nt $cache ]]; then
+    mkdir -p "${cache:h}"
+    "$@" > "$cache" 2>/dev/null
+  fi
+  source "$cache"
+}
+
+# fzf: keybindings + completion
+if _cache_eval fzf fzf fzf --zsh; then
   bindkey -r '^R'
 fi
 
-if command -v mise &> /dev/null; then
-  eval "$(mise activate zsh)"
-elif command -v rbenv &> /dev/null; then
-  eval "$(rbenv init - --no-rehash zsh)"
+# mise (or rbenv fallback) for runtime version management
+if ! _cache_eval mise mise mise activate zsh; then
+  if command -v rbenv &> /dev/null; then
+    eval "$(rbenv init - --no-rehash zsh)"
+  fi
 fi
 
-if command -v direnv >/dev/null 2>&1; then
-  eval "$(direnv hook zsh)"
-fi
+# direnv
+_cache_eval direnv direnv direnv hook zsh
 
-if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+# wt (worktrunk)
+_cache_eval wt wt command wt config shell init zsh
 
-if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init --cmd cd zsh)"
-fi
+# zoxide
+_cache_eval zoxide zoxide zoxide init --cmd cd zsh
