@@ -9,3 +9,4 @@ dot-config/systemd/user/*.target.wants/
 /dot-pi/agent/mcp-onboarding.json
 /dot-pi/agent/skills/developerly/SKILL.md
 /dot-local/bin/__pycache__
+/dot-pi/agent/trust.json
