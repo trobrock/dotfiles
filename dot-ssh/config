@@ -4,6 +4,15 @@
 # the top of ~/.ssh/config. Safe no-op on Linux where the file is absent.
 Include ~/.orbstack/ssh/config
 
+# Private HostName/IP details and per-machine overrides should live in
+# ~/.ssh/config.local so this public repo doesn't contain sensitive endpoints.
+# Platform/profile defaults are stowed into ~/.ssh/config.d from linux/ or
+# darwin/. Keep Includes before Host * because ssh_config uses the first value
+# it finds for many keys; keep config.local before config.d so private per-host
+# values can override platform defaults.
+Include ~/.ssh/config.local
+Include ~/.ssh/config.d/*.conf
+
 # Defaults applied to every host. AddKeysToAgent re-adds the key on first
 # use if for some reason the agent unlock service didn't already load it.
 Host *
@@ -18,14 +27,7 @@ Host *
 # itself. Only enable this for hosts you fully trust: root on the remote
 # can talk to your forwarded agent for the duration of the session.
 #
-# Add Host blocks per machine, e.g.:
-#
-#   Host my-server
-#     HostName my-server.example
-#     User trobrock
-#     ForwardAgent yes
-#
-# Or for a whole trusted subnet/tailnet:
-#
-#   Host *.tail-scale-name.ts.net
-#     ForwardAgent yes
+# The only repo-managed forwarding target today is trobrock-home, configured
+# by non-server profile overlays in ~/.ssh/config.d. If DNS doesn't resolve the
+# alias on a machine, add only the private HostName/IP detail to
+# ~/.ssh/config.local.

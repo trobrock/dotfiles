@@ -37,7 +37,7 @@ Profiles:
 
 - `bin/install` or `bin/install --profile desktop` installs the full workstation setup.
 - `bin/install --profile server` installs shared non-GUI Arch packages and skips desktop setup such as Hyprland, fingerprint auth, TTY auto-login, VoxType/Walker/Elephant hooks, 1Password GUI config, and Hyprshot cleanup.
-- The server overlay disables git commit signing for now; desktop overlays still enable the existing 1Password SSH signer.
+- Desktop/macOS profiles run a local fixed-socket `ssh-agent`; server profiles sign commits via forwarded agents from trusted workstations.
 - `bin/diff --profile server` dry-runs the server stow overlay.
 
 `Archfile` sections tagged `[desktop]` are skipped by the server profile. Untagged and `[shared]` sections install everywhere. Generated package locks are `Archfile.lock` for desktop and `Archfile.server.lock` for server.
