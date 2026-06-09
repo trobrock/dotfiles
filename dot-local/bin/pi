@@ -35,9 +35,9 @@ pi_auto_update_due() {
   ! is_pi_package_command "${1:-}" || return 1
 
   local interval now last
-  interval="${PI_AUTO_UPDATE_INTERVAL_SECONDS:-86400}"
+  interval="${PI_AUTO_UPDATE_INTERVAL_SECONDS:-3600}"
   if ! [[ "$interval" =~ ^[0-9]+$ ]]; then
-    interval=86400
+    interval=3600
   fi
   if [ "$interval" -eq 0 ]; then
     return 0
