@@ -150,7 +150,7 @@ zsh
 libvips
 mariadb-clients
 openslide
-stripe-cli
+stripe-cli-bin
 
 # [desktop] Gaming
 alsa-lib
