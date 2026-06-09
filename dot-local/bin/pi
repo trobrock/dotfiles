@@ -29,10 +29,42 @@ is_pi_package_command() {
   esac
 }
 
+is_pi_noninteractive_command() {
+  local arg
+  while [ "$#" -gt 0 ]; do
+    arg="$1"
+    case "$arg" in
+      -p|--print|--help|-h|--version|-v)
+        return 0
+        ;;
+      --mode=json|--mode=rpc)
+        return 0
+        ;;
+      --mode)
+        case "${2:-}" in
+          json|rpc)
+            return 0
+            ;;
+        esac
+        shift
+        ;;
+    esac
+    shift
+  done
+
+  return 1
+}
+
 pi_auto_update_due() {
   [ "${PI_AUTO_UPDATE:-1}" != "0" ] || return 1
   [ -x "$pi_bin" ] || return 1
   ! is_pi_package_command "${1:-}" || return 1
+  ! is_pi_noninteractive_command "$@" || return 1
+
+  # Auto-update is an interactive convenience. Do not run it for scripts,
+  # pipelines, cron jobs, or command substitutions where wrapper output could
+  # become machine-readable output (for example a Slack message body).
+  [ -t 0 ] && [ -t 1 ] || return 1
 
   local interval now last
   interval="${PI_AUTO_UPDATE_INTERVAL_SECONDS:-3600}"
@@ -79,8 +111,17 @@ auto_update_pi() {
 
   mark_pi_auto_update_attempted || true
 
-  if ! "$pi_bin" update pi; then
+  # Keep real update/failure output, but don't print the expected hourly
+  # no-op message: "pi is already up to date (v...)".
+  local update_output update_status
+  update_status=0
+  update_output="$("$pi_bin" update pi 2>&1)" || update_status=$?
+
+  if [ "$update_status" -ne 0 ]; then
+    [ -z "$update_output" ] || printf '%s\n' "$update_output" >&2
     echo "pi: auto-update failed; continuing with the installed version." >&2
+  elif [ -n "$update_output" ]; then
+    printf '%s\n' "$update_output" | grep -Ev '^pi is already up to date \(v[^)]+\)$' >&2 || true
   fi
 
   cleanup_pi_auto_update_lock
