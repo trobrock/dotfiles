@@ -8,11 +8,11 @@ The current flow uses a single Ed25519 key, stored sops-encrypted in the private
 
 - The private key lives sops-encrypted at `~/.config/dotfiles-secrets/ssh/id_ed25519`.
 - On login, a small script (`~/.config/scripts/ssh-agent-unlock`) decrypts it with sops/age and pipes it straight into `ssh-add -`. The decrypted key never touches disk.
-- Linux: a user systemd unit (`ssh-agent.service`) runs `ssh-agent` on a known socket; a oneshot `ssh-agent-unlock.service` loads the key after it.
+- Linux desktop and server profiles: a user systemd unit (`ssh-agent.service`) runs `ssh-agent` on a known socket; a oneshot `ssh-agent-unlock.service` loads the key after it.
 - macOS: a LaunchAgent (`com.trobrock.ssh-agent`) runs `ssh-agent` on a known socket; `com.trobrock.ssh-agent-unlock` loads the key after it.
-- Git signing uses native `gpg.format = ssh` — no external signer program. The agent serves the key to `ssh-keygen -Y sign` (which is what git invokes internally for SSH-format signatures).
-- Non-server profiles stow a platform-specific `IdentityAgent` config so `ssh` can find the fixed local agent even if a shell/tool didn't inherit `$SSH_AUTH_SOCK`.
-- Headless servers have no key on the box. `ForwardAgent yes` in a trusted host block forwards the workstation agent over the SSH connection; both auth and signing then use your local agent transparently.
+- Git signing uses native `gpg.format = ssh` — no external signer program. The local agent serves the key to `ssh-keygen -Y sign` (which is what git invokes internally for SSH-format signatures).
+- Platform/profile overlays stow an `IdentityAgent` config so `ssh` can find the fixed local agent even if a shell/tool didn't inherit `$SSH_AUTH_SOCK`.
+- Headless servers load their own local agent from the same sops-encrypted key. Repo-managed SSH config does not enable `ForwardAgent`; forwarding is opt-in only from `~/.ssh/config.local` for exceptional cases.
 
 Security boundary: the per-machine age private key at `~/.config/sops/age/keys.txt`. Anyone who can read that file can decrypt the SSH key. Same trust model the rest of the secrets workflow already relies on.
 
@@ -77,32 +77,30 @@ Security boundary: the per-machine age private key at `~/.config/sops/age/keys.t
    git log --show-signature -1   # "Good signature" via allowed_signers
    ```
 
-## Per-host setup for headless servers
+## Headless server setup
 
-On any server you commit from, no key install is needed — just enable agent forwarding from your workstation. The only repo-managed forwarding target today is `trobrock-home`:
+Servers sign locally. The server profile stows the same fixed-socket systemd user units as Linux desktops plus `~/.ssh/config.d/00-agent.conf`, so git signing does not depend on a workstation SSH session or a forwarded agent socket.
 
+On a server:
+
+```sh
+# Seed the age key first if this is a fresh host, then:
+bin/install --profile server
+systemctl --user daemon-reload
+systemctl --user enable --now ssh-agent.service ssh-agent-unlock.service
+ssh-add -l
 ```
-Host trobrock-home
-  ForwardAgent yes
-```
 
-Non-server profiles stow this from `linux/dot-ssh/config.d/10-agent-forwarding.conf` or `darwin/dot-ssh/config.d/10-agent-forwarding.conf`. They also stow `00-agent.conf`, which sets `IdentityAgent` to the fixed local socket. Together, that means `ssh trobrock-home` forwards the workstation agent even from tools or shells that did not inherit `$SSH_AUTH_SOCK`.
+`ssh-add -l` should list the signing key from `~/.config/dotfiles-secrets/ssh/id_ed25519`. If it does not, check that the private secrets repo exists and the server's age key can decrypt it. `~/.ssh/id_ed25519.pub` is optional, but lets the unlock script skip re-adding an already-loaded key.
 
-If a workstation needs private connection details for that alias, add only those details to `~/.ssh/config.local`:
+If a workstation needs private connection details for a server alias, keep only those details in `~/.ssh/config.local`:
 
 ```
 Host trobrock-home
   HostName <private hostname or IP>
 ```
 
-Then `ssh trobrock-home`, and inside that session:
-
-```sh
-ssh-add -l    # should show the forwarded key
-git commit -S -m "test"   # signing works against your forwarded agent
-```
-
-Only enable `ForwardAgent` for hosts you trust. Root on the remote box can use your forwarded agent for the duration of the session.
+Do not add `ForwardAgent yes` for normal git signing. If an exceptional workflow still needs forwarding, opt in per-host from `~/.ssh/config.local` and remember that root on the remote box can talk to your forwarded agent for the duration of the session.
 
 ## Rotating the key
 

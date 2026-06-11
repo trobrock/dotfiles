@@ -22,13 +22,16 @@ if [ "${_dotfiles_profile:-desktop}" != "server" ]; then
   export OP_BIOMETRIC_UNLOCK_ENABLED=true
 fi
 
-# Point at the user-managed ssh-agent on Linux desktops. On servers, and
-# inside SSH sessions with agent forwarding, sshd sets SSH_AUTH_SOCK first;
-# the -z guard keeps us from clobbering a forwarded socket.
-if [ "$(uname)" = "Linux" ] \
-   && [ "${_dotfiles_profile:-desktop}" != "server" ] \
-   && [ -z "${SSH_AUTH_SOCK:-}" ]; then
-  export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+# Point Linux shells at the user-managed fixed-socket ssh-agent. Servers use
+# this local agent for git signing too, so normal commits do not depend on SSH
+# agent forwarding. On server profiles we intentionally prefer the local socket
+# even if sshd provided a forwarded SSH_AUTH_SOCK; desktop profiles keep the
+# old -z guard so explicit inbound forwarding still works.
+if [ "$(uname)" = "Linux" ]; then
+  if [ "${_dotfiles_profile:-desktop}" = "server" ] \
+     || [ -z "${SSH_AUTH_SOCK:-}" ]; then
+    export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+  fi
 fi
 
 # Same idea on macOS, but Apple's launchd ssh-agent uses a *dynamic* socket

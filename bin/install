@@ -509,17 +509,23 @@ setup_ssh_agent_linux() {
     return
   fi
 
+  systemctl --user daemon-reload || true
+
   if ! systemctl --user is-enabled ssh-agent.service >/dev/null 2>&1; then
     log "Enabling ssh-agent user service..."
-    systemctl --user enable --now ssh-agent.service \
+    systemctl --user enable ssh-agent.service \
       || log_error "Could not enable ssh-agent.service."
   fi
+  systemctl --user start ssh-agent.service \
+    || log_error "Could not start ssh-agent.service."
 
   if ! systemctl --user is-enabled ssh-agent-unlock.service >/dev/null 2>&1; then
     log "Enabling ssh-agent-unlock user service..."
-    systemctl --user enable --now ssh-agent-unlock.service \
-      || log_error "Could not enable ssh-agent-unlock.service (is the sops-encrypted key in place?)."
+    systemctl --user enable ssh-agent-unlock.service \
+      || log_error "Could not enable ssh-agent-unlock.service."
   fi
+  systemctl --user restart ssh-agent-unlock.service \
+    || log_error "Could not restart ssh-agent-unlock.service (is the sops-encrypted key in place?)."
 }
 
 setup_ssh_agent_darwin() {
@@ -648,6 +654,7 @@ install_secrets || log_error "Continuing despite secrets install failure; re-run
 if [ "$(uname)" = "Linux" ]; then
   setup_firewall
   setup_syncthing
+  setup_ssh_agent_linux
 
   if is_desktop_profile; then
     install_pacman_hooks
@@ -656,7 +663,6 @@ if [ "$(uname)" = "Linux" ]; then
     allow_fingerprint_usage
     setup_auto_login
     setup_hyprshot_cleanup_cron
-    setup_ssh_agent_linux
   fi
 elif [ "$(uname)" = "Darwin" ]; then
   setup_power_management

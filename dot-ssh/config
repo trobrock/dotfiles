@@ -20,14 +20,11 @@ Host *
   ServerAliveInterval 60
   ServerAliveCountMax 3
 
-# -- Agent forwarding for trusted hosts -----------------------------------
+# -- Agent forwarding ------------------------------------------------------
 #
-# ForwardAgent lets a remote box use your local SSH key (for git auth, for
-# `ssh-keygen -Y sign` commit signing, etc.) without ever having the key
-# itself. Only enable this for hosts you fully trust: root on the remote
-# can talk to your forwarded agent for the duration of the session.
+# Dotfiles do not enable ForwardAgent by default. Git signing should use the
+# fixed local agent on the machine creating the commit; forwarding is too
+# fragile for automatic signing and lets the remote host talk to your local
+# agent for the duration of the session.
 #
-# The only repo-managed forwarding target today is trobrock-home, configured
-# by non-server profile overlays in ~/.ssh/config.d. If DNS doesn't resolve the
-# alias on a machine, add only the private HostName/IP detail to
-# ~/.ssh/config.local.
+# If a specific host still needs forwarding, opt in from ~/.ssh/config.local.
