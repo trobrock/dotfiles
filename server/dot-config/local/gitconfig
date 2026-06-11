@@ -4,8 +4,8 @@
 [credential "https://gist.github.com"]
 	helper = 
 	helper = !/usr/bin/gh auth git-credential
-# Signing works on servers via agent forwarding: when you SSH in with -A,
-# `ssh-keygen -Y sign` (used internally by git for ssh-format signing) reads
-# the key from your forwarded SSH_AUTH_SOCK. No key needs to live on the box.
+# Signing works on servers via the local fixed-socket ssh-agent managed by
+# ssh-agent.service + ssh-agent-unlock.service. Do not rely on forwarded agents:
+# the unlock service decrypts the sops-encrypted key into the server's agent.
 [commit]
   gpgsign = true

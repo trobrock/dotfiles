@@ -1,0 +1,13 @@
+[Unit]
+Description=Decrypt and load SSH key into ssh-agent
+Requires=ssh-agent.service
+After=ssh-agent.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
+ExecStart=%h/.config/scripts/ssh-agent-unlock
+
+[Install]
+WantedBy=default.target

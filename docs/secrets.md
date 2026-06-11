@@ -77,7 +77,7 @@ trobrock-mac:
 
 ## Bootstrapping a new headless machine
 
-1. SSH in (use agent forwarding so the box has GitHub SSH access).
+1. SSH in. If this is a brand-new box with no GitHub access yet, either temporarily use agent forwarding for the initial private secrets clone or copy `~/.config/dotfiles-secrets` from a trusted machine; normal Git signing should not use forwarding after install.
 2. Clone dotfiles: `git clone https://github.com/trobrock/dotfiles ~/dev/personal/dotfiles`
 3. **Seed the age key:**
 
@@ -87,7 +87,7 @@ trobrock-mac:
    chmod 600 ~/.config/sops/age/keys.txt
    ```
 
-4. `cd ~/dev/personal/dotfiles && bin/install`
+4. `cd ~/dev/personal/dotfiles && bin/install --profile server`
 
    The install script will:
    - Install `sops` + `age` via the package manager
