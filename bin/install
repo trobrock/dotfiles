@@ -511,7 +511,10 @@ setup_ssh_agent_linux() {
 
   systemctl --user daemon-reload || true
 
-  if ! systemctl --user is-enabled ssh-agent.service >/dev/null 2>&1; then
+  # Stowed user units show up as "linked" before they are enabled. Treat
+  # only the literal "enabled" state as autostart-enabled; otherwise systemd
+  # will know about the unit but won't create default.target.wants symlinks.
+  if [ "$(systemctl --user is-enabled ssh-agent.service 2>/dev/null || true)" != "enabled" ]; then
     log "Enabling ssh-agent user service..."
     systemctl --user enable ssh-agent.service \
       || log_error "Could not enable ssh-agent.service."
@@ -519,7 +522,7 @@ setup_ssh_agent_linux() {
   systemctl --user start ssh-agent.service \
     || log_error "Could not start ssh-agent.service."
 
-  if ! systemctl --user is-enabled ssh-agent-unlock.service >/dev/null 2>&1; then
+  if [ "$(systemctl --user is-enabled ssh-agent-unlock.service 2>/dev/null || true)" != "enabled" ]; then
     log "Enabling ssh-agent-unlock user service..."
     systemctl --user enable ssh-agent-unlock.service \
       || log_error "Could not enable ssh-agent-unlock.service."

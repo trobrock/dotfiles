@@ -28,9 +28,15 @@ fi
 # even if sshd provided a forwarded SSH_AUTH_SOCK; desktop profiles keep the
 # old -z guard so explicit inbound forwarding still works.
 if [ "$(uname)" = "Linux" ]; then
-  if [ "${_dotfiles_profile:-desktop}" = "server" ] \
-     || [ -z "${SSH_AUTH_SOCK:-}" ]; then
-    export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+  _ssh_agent_socket="$HOME/.ssh/agent.sock"
+  _old_ssh_agent_socket="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+  if [ "${_dotfiles_profile:-desktop}" = "server" ]; then
+    export SSH_AUTH_SOCK="$_ssh_agent_socket"
+  elif [ -z "${SSH_AUTH_SOCK:-}" ] \
+    || [ "${SSH_AUTH_SOCK:-}" = "$_old_ssh_agent_socket" ]; then
+    export SSH_AUTH_SOCK="$_ssh_agent_socket"
+  elif [ -z "${SSH_CONNECTION:-}" ] && [ ! -S "$SSH_AUTH_SOCK" ]; then
+    export SSH_AUTH_SOCK="$_ssh_agent_socket"
   fi
 fi
 
@@ -53,7 +59,7 @@ if [ "$(uname)" = "Darwin" ] \
   fi
 fi
 
-unset _dotfiles_profile _dotfiles_profile_file
+unset _dotfiles_profile _dotfiles_profile_file _ssh_agent_socket _old_ssh_agent_socket
 
 # Claude Code's shell snapshots don't capture chpwd_functions, so zoxide's
 # doctor falsely warns on every cd. Silence it only inside Claude Code.

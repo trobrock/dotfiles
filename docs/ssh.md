@@ -8,10 +8,10 @@ The current flow uses a single Ed25519 key, stored sops-encrypted in the private
 
 - The private key lives sops-encrypted at `~/.config/dotfiles-secrets/ssh/id_ed25519`.
 - On login, a small script (`~/.config/scripts/ssh-agent-unlock`) decrypts it with sops/age and pipes it straight into `ssh-add -`. The decrypted key never touches disk.
-- Linux desktop and server profiles: a user systemd unit (`ssh-agent.service`) runs `ssh-agent` on a known socket; a oneshot `ssh-agent-unlock.service` loads the key after it.
-- macOS: a LaunchAgent (`com.trobrock.ssh-agent`) runs `ssh-agent` on a known socket; `com.trobrock.ssh-agent-unlock` loads the key after it.
+- Linux desktop and server profiles: a user systemd unit (`ssh-agent.service`) runs `ssh-agent` on the fixed socket `~/.ssh/agent.sock`; a oneshot `ssh-agent-unlock.service` loads the key after it.
+- macOS: a LaunchAgent (`com.trobrock.ssh-agent`) runs `ssh-agent` on the same fixed socket; `com.trobrock.ssh-agent-unlock` loads the key after it.
 - Git signing uses native `gpg.format = ssh` — no external signer program. The local agent serves the key to `ssh-keygen -Y sign` (which is what git invokes internally for SSH-format signatures).
-- Platform/profile overlays stow an `IdentityAgent` config so `ssh` can find the fixed local agent even if a shell/tool didn't inherit `$SSH_AUTH_SOCK`.
+- Platform/profile overlays stow an `IdentityAgent ~/.ssh/agent.sock` config so `ssh` can find the fixed local agent even if a shell/tool didn't inherit `$SSH_AUTH_SOCK`. Avoid OpenSSH-only tokens such as `%i` here; Ruby Net::SSH/Kamal reads this config but does not expand those tokens.
 - Headless servers load their own local agent from the same sops-encrypted key. Repo-managed SSH config does not enable `ForwardAgent`; forwarding is opt-in only from `~/.ssh/config.local` for exceptional cases.
 
 Security boundary: the per-machine age private key at `~/.config/sops/age/keys.txt`. Anyone who can read that file can decrypt the SSH key. Same trust model the rest of the secrets workflow already relies on.
