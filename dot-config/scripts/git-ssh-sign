@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# ssh-keygen-compatible wrapper for Git SSH signing.
+#
+# Git's SSH signing path reads SSH_AUTH_SOCK directly; it does not honor the
+# IdentityAgent setting in ~/.ssh/config. Force signing through the stable
+# dotfiles-managed agent so tmux/sshd/GUI-provided sockets cannot break commits.
+
+fixed_sock="$HOME/.ssh/agent.sock"
+if [ -S "$fixed_sock" ]; then
+  export SSH_AUTH_SOCK="$fixed_sock"
+fi
+
+exec /usr/bin/ssh-keygen "$@"
