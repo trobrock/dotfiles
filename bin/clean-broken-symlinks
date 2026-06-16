@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
-source "$(dirname "$0")/lib/logging.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/logging.sh"
 
 remove_broken_links() {
   local path="$1"
   local pattern="$2"
   local find_args="$3"
-  
+
+  [ -e "$path" ] || return
+
   find "$path" $find_args -type l | while read -r link; do
     if [ ! -e "$link" ]; then
       target=$(readlink "$link")
@@ -26,13 +28,30 @@ clean_broken_symlinks() {
   remove_broken_links ~ "*dotfiles*" "-maxdepth 1"
 }
 
+is_systemd_enablement_link() {
+  case "$1" in
+    "$HOME/.config/systemd/user/"*.target.wants/*|"$HOME/.config/systemd/user/"*.target.requires/*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 remove_absolute_links() {
   local path="$1"
   local find_args="$2"
   local repo_dir
   repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+  [ -e "$path" ] || return
+
   find "$path" $find_args -type l | while read -r link; do
+    if is_systemd_enablement_link "$link"; then
+      continue
+    fi
+
     target=$(readlink "$link")
     case "$target" in
       "$repo_dir"/*)
