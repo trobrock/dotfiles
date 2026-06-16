@@ -22,36 +22,20 @@ if [ "${_dotfiles_profile:-desktop}" != "server" ]; then
   export OP_BIOMETRIC_UNLOCK_ENABLED=true
 fi
 
-# Point Linux shells at the user-managed fixed-socket ssh-agent. Servers use
-# this local agent for git signing too, so normal commits do not depend on SSH
-# agent forwarding. On server profiles we intentionally prefer the local socket
-# even if sshd provided a forwarded SSH_AUTH_SOCK; desktop profiles keep the
-# old -z guard so explicit inbound forwarding still works.
-if [ "$(uname)" = "Linux" ]; then
-  if [ "${_dotfiles_profile:-desktop}" = "server" ] \
-     || [ -z "${SSH_AUTH_SOCK:-}" ]; then
-    export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
-  fi
-fi
-
-# Same idea on macOS, but Apple's launchd ssh-agent uses a *dynamic* socket
-# path that it never publishes, so non-login / non-interactive shells and tool
-# subprocesses (e.g. an agent's `/bin/bash`) can't discover it -- which breaks
-# signed commits. The com.trobrock.ssh-agent LaunchAgent runs our own agent at
-# this fixed path; we point every shell at it.
-if [ "$(uname)" = "Darwin" ] \
-   && [ "${_dotfiles_profile:-desktop}" != "server" ]; then
-  if [ -n "${SSH_CONNECTION:-}" ]; then
-    # Inbound SSH session: prefer a forwarded agent if one was provided, but
-    # fall back to our local fixed-path agent when there is no forwarded
-    # socket (e.g. SSHing in without ForwardAgent).
-    [ -z "${SSH_AUTH_SOCK:-}" ] && export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
-  else
-    # Local session: unconditionally override Apple's dynamic socket (it would
-    # otherwise win) with our fixed-path agent.
+# Point shells at the dotfiles-managed fixed-socket ssh-agent. Keep this boring:
+# git signing and normal SSH auth use the local per-machine agent at one stable
+# path instead of whatever tmux, sshd, or a GUI app last exported. If a one-off
+# workflow needs a forwarded agent, override SSH_AUTH_SOCK manually in that shell.
+case "$(uname)" in
+  Linux)
     export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
-  fi
-fi
+    ;;
+  Darwin)
+    if [ "${_dotfiles_profile:-desktop}" != "server" ]; then
+      export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+    fi
+    ;;
+esac
 
 unset _dotfiles_profile _dotfiles_profile_file
 

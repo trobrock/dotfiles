@@ -46,6 +46,7 @@
 [gpg]
   format = ssh
 [gpg "ssh"]
+  program = ~/.config/scripts/git-ssh-sign
   allowedSignersFile = ~/.config/git/allowed_signers
 
 [include]

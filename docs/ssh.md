@@ -8,11 +8,11 @@ The current flow uses a single Ed25519 key, stored sops-encrypted in the private
 
 - The private key lives sops-encrypted at `~/.config/dotfiles-secrets/ssh/id_ed25519`.
 - On login, a small script (`~/.config/scripts/ssh-agent-unlock`) decrypts it with sops/age and pipes it straight into `ssh-add -`. The decrypted key never touches disk.
-- Linux desktop and server profiles: a user systemd unit (`ssh-agent.service`) runs `ssh-agent` on a known socket; a oneshot `ssh-agent-unlock.service` loads the key after it.
-- macOS: a LaunchAgent (`com.trobrock.ssh-agent`) runs `ssh-agent` on a known socket; `com.trobrock.ssh-agent-unlock` loads the key after it.
-- Git signing uses native `gpg.format = ssh` — no external signer program. The local agent serves the key to `ssh-keygen -Y sign` (which is what git invokes internally for SSH-format signatures).
-- Platform/profile overlays stow an `IdentityAgent` config so `ssh` can find the fixed local agent even if a shell/tool didn't inherit `$SSH_AUTH_SOCK`.
-- Headless servers load their own local agent from the same sops-encrypted key. Repo-managed SSH config does not enable `ForwardAgent`; forwarding is opt-in only from `~/.ssh/config.local` for exceptional cases.
+- Linux desktop and server profiles: a user systemd unit (`ssh-agent.service`) runs `ssh-agent` on the fixed socket `~/.ssh/agent.sock`; a oneshot `ssh-agent-unlock.service` loads the key after it.
+- macOS: a LaunchAgent (`com.trobrock.ssh-agent`) runs `ssh-agent` on the same fixed socket; `com.trobrock.ssh-agent-unlock` loads the key after it.
+- Git signing uses native `gpg.format = ssh` with a tiny `~/.config/scripts/git-ssh-sign` wrapper around `ssh-keygen`. Git's SSH signing code reads `$SSH_AUTH_SOCK` directly and does not honor `IdentityAgent`, so the wrapper forces signing through `~/.ssh/agent.sock` when that socket exists.
+- Platform/profile overlays stow an `IdentityAgent ~/.ssh/agent.sock` config so normal `ssh` uses the same fixed local agent. Avoid OpenSSH-only tokens such as `%i` here; Ruby Net::SSH/Kamal reads this config but does not expand those tokens.
+- Headless servers load their own local agent from the same sops-encrypted key. Repo-managed SSH config does not enable `ForwardAgent`; forwarding is opt-in only from `~/.ssh/config.local` for exceptional cases and is not part of normal git signing.
 
 Security boundary: the per-machine age private key at `~/.config/sops/age/keys.txt`. Anyone who can read that file can decrypt the SSH key. Same trust model the rest of the secrets workflow already relies on.
 
@@ -76,6 +76,29 @@ Security boundary: the per-machine age private key at `~/.config/sops/age/keys.t
    git commit --allow-empty -m "test sign"
    git log --show-signature -1   # "Good signature" via allowed_signers
    ```
+
+## Troubleshooting
+
+If `git commit` fails with `Couldn't get agent socket?`, check:
+
+```sh
+printf '%s\n' "$SSH_AUTH_SOCK"
+ls -l ~/.ssh/agent.sock
+SSH_AUTH_SOCK=~/.ssh/agent.sock ssh-add -l
+```
+
+Long-lived tmux panes may have inherited an old `/run/user/.../ssh-agent.socket`. New shells should point at `~/.ssh/agent.sock`; for an existing shell, run:
+
+```sh
+export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+```
+
+If tmux itself has a stale value from before this setup, clear or replace it once:
+
+```sh
+tmux set-environment -gu SSH_AUTH_SOCK
+tmux set-environment -gu SSH_AGENT_PID
+```
 
 ## Headless server setup
 
