@@ -30,6 +30,7 @@ inetutils
 jq
 lazydocker
 lazygit
+libheif
 libvips
 lld
 magic-wormhole
@@ -45,6 +46,7 @@ npm
 ollama-rocm
 openslide
 openssh
+poppler-glib
 power-profiles-daemon
 restic
 ripgrep
