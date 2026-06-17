@@ -17,8 +17,8 @@ type Rule = {
   text: string;
 };
 
-// Instructions appended whenever an Anthropic (Claude) model is in use.
-const ANTHROPIC_GUIDANCE = `
+// Instructions appended for model families that tend to add social filler.
+const CONCISE_STYLE_GUIDANCE = `
 NO COMPLIMENTS / NO VALIDATION (override default style where it conflicts):
 - Never affirm, validate, or compliment the user. Ban these and any paraphrase:
   "You're absolutely right", "You're right", "You're right to push back",
@@ -37,10 +37,16 @@ NO COMPLIMENTS / NO VALIDATION (override default style where it conflicts):
 - Match the user's brevity. Short question gets a short answer, not an essay.
 `.trim();
 
+function isOpenAiOrGptFamily(model: { provider: string; id: string }): boolean {
+  const provider = model.provider.toLowerCase();
+  const id = model.id.toLowerCase();
+  return provider === "openai" || id.includes("gpt") || id.includes("codex");
+}
+
 const RULES: Rule[] = [
   {
-    match: (m) => m.provider === "anthropic",
-    text: ANTHROPIC_GUIDANCE,
+    match: (m) => m.provider.toLowerCase() === "anthropic" || isOpenAiOrGptFamily(m),
+    text: CONCISE_STYLE_GUIDANCE,
   },
   // Example: target a specific model id instead of a whole provider:
   // {

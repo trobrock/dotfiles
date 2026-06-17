@@ -10,8 +10,15 @@ type ToolResultMessage = AgentMessage & {
 };
 
 const MAX_OLD_TOOL_RESULT_CHARS = 3_000;
-const MAX_RECENT_TOOL_RESULT_CHARS = 12_000;
+const MAX_RECENT_TOOL_RESULT_CHARS = 8_000;
 const RECENT_TOOL_RESULTS_TO_KEEP = 4;
+const MIN_NOISY_LINE_FILTER_CHARS = 6_000;
+const MIN_REPEATED_NOISY_LINE_RUN = 4;
+const COMPACTION_MARKER = "middle omitted for token efficiency";
+
+const ANSI_ESCAPE_PATTERN = /\u001b\[[0-9;?]*[ -/]*[@-~]/g;
+const DIAGNOSTIC_LINE_PATTERN = /\b(error|failed|failure|exception|traceback|panic|fatal|assert|expected|received|exit code|non-zero|segmentation fault|FAIL)\b|\b(?:npm|pnpm|yarn) ERR!|[✖✗❌]/i;
+const STACK_TRACE_LINE_PATTERN = /^\s+(at\s+\S+\s+\(|File "[^"]+", line \d+|from\s+\S+)/;
 
 function isTextBlock(block: unknown): block is TextBlock {
   return !!block && typeof block === "object" && (block as { type?: string }).type === "text" && typeof (block as { text?: unknown }).text === "string";
@@ -21,26 +28,134 @@ function isToolResult(message: AgentMessage): message is ToolResultMessage {
   return message.role === "toolResult" && Array.isArray((message as ToolResultMessage).content);
 }
 
-function compactText(text: string, maxChars: number, label: string): string {
-  if (text.length <= maxChars) return text;
+function looksLikeStructuredPayload(text: string): boolean {
+  const trimmed = text.trimStart();
+  return (trimmed.startsWith("{") || trimmed.startsWith("[")) && trimmed.slice(0, 1_000).includes('"');
+}
 
-  const headChars = Math.floor(maxChars * 0.6);
-  const tailChars = maxChars - headChars;
+function isDiagnosticLine(line: string): boolean {
+  return DIAGNOSTIC_LINE_PATTERN.test(line) || STACK_TRACE_LINE_PATTERN.test(line);
+}
+
+function noisyLineKey(line: string): string | undefined {
+  if (isDiagnosticLine(line)) return undefined;
+
+  const normalized = line
+    .replace(ANSI_ESCAPE_PATTERN, "")
+    .trim()
+    .replace(/\b\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?\b/g, "<timestamp>")
+    .replace(/\b\d{2}:\d{2}:\d{2}(?:\.\d+)?\b/g, "<time>")
+    .replace(/\b\d+(?:\.\d+)?\s?(?:ms|s|sec|secs|seconds|min|mins|m)\b/gi, "<duration>")
+    .replace(/\b\d+%\b/g, "<percent>")
+    .replace(/\s+/g, " ");
+
+  if (normalized.length < 8) return undefined;
+  return normalized;
+}
+
+function collapseRepeatedNoisyLines(text: string): string {
+  if (text.length < MIN_NOISY_LINE_FILTER_CHARS || looksLikeStructuredPayload(text)) return text;
+
+  const lines = text.split("\n");
+  const output: string[] = [];
+  let changed = false;
+
+  for (let i = 0; i < lines.length;) {
+    const key = noisyLineKey(lines[i]);
+    if (!key) {
+      output.push(lines[i]);
+      i += 1;
+      continue;
+    }
+
+    let end = i + 1;
+    while (end < lines.length && noisyLineKey(lines[end]) === key) end += 1;
+
+    const runLength = end - i;
+    if (runLength >= MIN_REPEATED_NOISY_LINE_RUN) {
+      output.push(lines[i], lines[i + 1]);
+      output.push(`[omitted ${(runLength - 3).toLocaleString()} repeated similar non-diagnostic log lines]`);
+      output.push(lines[end - 1]);
+      changed = true;
+    } else {
+      output.push(...lines.slice(i, end));
+    }
+
+    i = end;
+  }
+
+  if (!changed) return text;
+
+  const collapsed = output.join("\n");
+  return collapsed.length <= text.length * 0.9 ? collapsed : text;
+}
+
+function diagnosticExcerpt(text: string, maxChars: number): string {
+  const lines = text.split("\n");
+  const selected = new Set<number>();
+
+  for (let i = 0; i < lines.length; i++) {
+    if (!isDiagnosticLine(lines[i])) continue;
+    if (i > 0) selected.add(i - 1);
+    selected.add(i);
+    if (i + 1 < lines.length) selected.add(i + 1);
+  }
+
+  if (selected.size === 0) return "";
+
+  const ordered = [...selected].sort((a, b) => a - b);
+  const excerpt: string[] = [];
+  let last = -1;
+  let used = 0;
+
+  for (const index of ordered) {
+    const gap = last >= 0 && index > last + 1 ? "..." : undefined;
+    const line = lines[index];
+    const addition = `${gap ? `${gap}\n` : ""}${line}`;
+    if (used + addition.length > maxChars) {
+      excerpt.push("[additional diagnostic lines omitted]");
+      break;
+    }
+    if (gap) excerpt.push(gap);
+    excerpt.push(line);
+    used += addition.length;
+    last = index;
+  }
+
+  return excerpt.join("\n").trim();
+}
+
+function compactText(text: string, maxChars: number, label: string): string {
+  if (text.length <= maxChars || text.includes(COMPACTION_MARKER)) return text;
+
+  const collapsed = collapseRepeatedNoisyLines(text);
+  if (collapsed.length <= maxChars) return collapsed;
+
+  const diagnostics = diagnosticExcerpt(collapsed, Math.floor(maxChars * 0.2));
+  const diagnosticsSection = diagnostics ? `\n\nImportant diagnostic lines preserved:\n${diagnostics}` : "";
+  const marker = `\n\n[${label}: ${text.length.toLocaleString()} chars total${collapsed.length < text.length ? `; reduced to ${collapsed.length.toLocaleString()} chars after repeated-log filtering` : ""}; middle omitted for token efficiency]`;
+  const remainingChars = Math.max(1_000, maxChars - marker.length - diagnosticsSection.length);
+  const headChars = Math.floor(remainingChars * 0.6);
+  const tailChars = remainingChars - headChars;
+
   return [
-    text.slice(0, headChars).trimEnd(),
-    `\n\n[${label}: ${text.length.toLocaleString()} chars total; middle omitted for token efficiency]`,
-    text.slice(-tailChars).trimStart(),
-  ].join("\n");
+    collapsed.slice(0, headChars).trimEnd(),
+    marker,
+    diagnosticsSection.trimEnd(),
+    collapsed.slice(-tailChars).trimStart(),
+  ].filter(Boolean).join("\n");
 }
 
 function compactToolResult(message: ToolResultMessage, maxChars: number): ToolResultMessage {
   let changed = false;
   const content = message.content.map((block) => {
     if (!isTextBlock(block) || block.text.length <= maxChars) return block;
+    const text = compactText(block.text, maxChars, `${message.toolName} tool result compacted in live context`);
+    if (text === block.text) return block;
     changed = true;
     return {
       ...block,
-      text: compactText(block.text, maxChars, `${message.toolName} tool result compacted in live context`),
+      text,
     };
   });
 
