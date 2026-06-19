@@ -2,7 +2,9 @@
 description: Commit, push, open a PR, wait for checks, and merge
 ---
 
-Ship the current branch through to merge. The user has pre-authorized every git/gh action in this workflow — do not ask for confirmation before committing, pushing, creating, or merging the PR. Do not stop after an intermediate milestone like creating a branch, committing, pushing, or opening a PR; continue automatically through checks and merge unless a guardrail below explicitly says to stop and ask.
+Ship the current branch through to merge. The user has pre-authorized every git/gh action in this workflow — do not ask for confirmation before committing, pushing, creating, or merging the PR. Do not stop after an intermediate milestone like creating a branch, committing, pushing, opening a PR, or seeing checks pending; continue automatically through checks and merge unless a guardrail below explicitly says to stop and ask.
+
+Use project-specific judgment for tests, PR wording, merge strategy, and failure diagnosis. This prompt is guidance, not a rigid state machine. Keep the non-negotiable guardrails, and avoid known mechanical retry loops.
 
 ## Preflight
 
@@ -27,30 +29,40 @@ Ship the current branch through to merge. The user has pre-authorized every git/
 
 ## 3. Open or find the PR
 
-- `gh pr view --json number,url,state,isDraft` — if a PR already exists for this branch, use it.
-- Otherwise `gh pr create` against the repo's default branch. Title < 70 chars. Body has a `## Summary` bullet list and a `## Test plan` checklist. Derive both from the actual diff across all commits on the branch (not just the latest).
+- Do not run `gh pr view` until you have a PR number/URL. Before a PR exists it often fails and causes wasted retries.
+- Discover existing PRs by current branch first: `gh pr list --head "$(git branch --show-current)" --state all --json number,url,state,isDraft,title`.
+  - If there is an open PR for this branch, use it.
+  - If the only PR is closed/merged, diagnose whether this branch was already shipped before creating anything new.
+  - If more than one plausible PR appears, stop and ask.
+- If no PR exists, create one against the repo's default branch. Title < 70 chars. Body has a `## Summary` bullet list and a `## Test plan` checklist. Derive both from the actual diff across all commits on the branch (not just the latest).
 
 ## 4. Wait for checks
 
-- `gh pr checks --watch --fail-fast=false` to block until all checks settle.
-- Checks can take a while. That's expected — let the command run.
+- Prefer the `monitor_github_pr_checks` tool over manual `gh pr checks` polling. Start one monitor for the PR and wait for Pi to be woken when checks finish or fail.
+- If the monitor reports no checks yet, queued, pending, or another transient non-final state, keep waiting with the monitor/check rollup rather than polling repeatedly in chat.
+- If no CI is configured for the repo, continue to merge after confirming the PR/check rollup says there are no required checks.
 
 ## 5. Handle results
 
-**If all checks pass:**
-- Merge. Pick the style matching the repo's recent merged PRs (`gh pr list --state merged --limit 5 --json title,mergeCommit`). Default to `gh pr merge --squash --delete-branch`. Add `--auto` only if required checks aren't all green yet (they should be, since we just waited).
-- **Worktree caveat:** if the current checkout is a non-primary worktree (check with `git rev-parse --git-common-dir` ≠ `.git`, or `git worktree list` shows the current path is not the main one), `--delete-branch` will fail with `'main' is already used by worktree at ...` because gh tries to switch the local checkout to the default branch. Run the merge without `--delete-branch` instead, then delete the remote branch explicitly: `gh pr merge --merge` (or `--squash`/`--rebase`) followed by `git push origin --delete <branch>` (or rely on GitHub's "automatically delete head branches" repo setting). Verify the merge with `gh pr view <num> --json state,mergeCommit` afterward. Do **not** try to switch this worktree off its branch — leave local cleanup to the user, who can run `git worktree remove <path>` from the primary checkout when convenient.
+**If all checks pass (or no required checks exist):**
+- Merge with an allowed method that fits the project. Infer the project preference from repo settings, branch protection, and recent merged PRs when possible; do not assume a merge style without checking. If multiple allowed styles remain plausible and the repo has no obvious convention, choose the conservative project-appropriate default once (commonly squash for small feature branches) and do not enter a retry loop of merge methods.
+- Add `--auto` only when GitHub says the PR is mergeable but still waiting on required checks or queueing; otherwise merge directly.
+- Branch cleanup must be conditional and idempotent:
+  - In a normal checkout, use GitHub's branch deletion support only when safe for the repo/worktree.
+  - In a non-primary worktree (`git rev-parse --git-common-dir` is not `.git`, or `git worktree list` shows this path is not the main checkout), avoid `--delete-branch` if it would make `gh` switch the worktree and fail. Merge without local branch deletion, then delete only the remote head if it still exists.
+  - Before explicit remote deletion, check that the remote branch still exists (for example, `git ls-remote --exit-code origin refs/heads/<branch>`). If GitHub already deleted it, do not retry deletion.
+- Verify the final state with a PR identifier you already have (for example, `gh pr view <num> --json state,mergeCommit`). Do not switch this worktree off its branch just for cleanup; leave local worktree removal to the user.
 
 **If any check failed:**
-- `gh pr checks` to see which ones, then `gh run view <run-id> --log-failed` for the failing job.
-- Diagnose the root cause and fix it in code. Do not bypass with `--no-verify`, skip tests, or disable lints to make a check pass.
-- Commit the fix with a message describing what broke and what you changed. Push. Return to step 4.
+- Use the monitor wakeup output to identify the failing check. Then inspect only the relevant details (`gh pr checks`, `gh run view <run-id> --log-failed`, provider logs, or project-specific commands as appropriate).
+- Diagnose the root cause and fix it in code. Keep the LLM responsible for project-specific strategy and failure diagnosis. Do not bypass with `--no-verify`, skip tests, or disable lints to make a check pass.
+- Commit the fix with a message describing what broke and what you changed. Push. Return to step 4 and start a fresh check monitor.
 - If two fix attempts in a row don't resolve it, or the failure looks unrelated to the diff (flaky infra, external outage), stop and summarize for the user.
 
 ## Continuation rule
 
-- Creating a branch, making a commit, pushing, opening/finding a PR, or seeing checks pending is not a stopping point. Keep going through the next numbered step until the PR is merged or a guardrail requires asking the user.
-- If a command returns a transient/non-final state (for example, `gh pr checks` initially says no checks are reported, or checks are queued/pending), inspect the PR/check rollup and keep waiting rather than stopping.
+- Creating a branch, making a commit, pushing, opening/finding a PR, or seeing checks pending is not a stopping point. Keep going until the PR is merged or a guardrail requires asking the user.
+- If a command returns a transient/non-final state, inspect the PR/check rollup and continue with the appropriate wait/fix/merge path rather than stopping.
 
 ## Guardrails (repeat — do not break these)
 

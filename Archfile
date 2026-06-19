@@ -149,7 +149,9 @@ zoxide
 zsh
 
 # [shared] Dev
+libheif
 libvips
 mariadb-clients
 openslide
+poppler-glib
 stripe-cli-bin
