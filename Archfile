@@ -75,6 +75,7 @@ brightnessctl
 
 # [shared] CLI
 age
+ansible
 asciinema
 base-devel
 bat
