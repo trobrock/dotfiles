@@ -2,7 +2,7 @@
 Version=1.0
 Name=Claude
 Comment=Claude web app
-Exec=/opt/google/chrome/chrome --class=Claude --app=https://claude.ai/
+Exec=webapp-launch https://claude.ai/ --class=Claude
 Terminal=false
 Type=Application
 Icon=/home/trobrock/.local/share/applications/icons/Claude.png

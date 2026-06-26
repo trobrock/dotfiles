@@ -2,7 +2,7 @@
 Version=1.0
 Name=ChatGPT
 Comment=ChatGPT web app
-Exec=/opt/google/chrome/chrome --class=ChatGPT --app=https://chatgpt.com/
+Exec=webapp-launch https://chatgpt.com/ --class=ChatGPT
 Terminal=false
 Type=Application
 Icon=/home/trobrock/.local/share/applications/icons/ChatGPT.png
