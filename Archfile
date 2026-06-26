@@ -38,6 +38,7 @@ wireplumber
 wl-clipboard
 wtype
 xdg-desktop-portal-hyprland
+xdg-utils
 xorg-xhost
 xournalpp
 
@@ -64,7 +65,6 @@ qalculate-gtk
 slack-desktop-wayland
 streamdeck-ui
 telegram-desktop
-zoom
 
 # [desktop] CLI
 bluetuith

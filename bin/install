@@ -605,6 +605,21 @@ install_pacman_hooks() {
   sudo cp "$REPO_DIR/hooks/"*.hook /etc/pacman.d/hooks/
 }
 
+register_desktop_protocol_handlers() {
+  if ! command -v xdg-mime >/dev/null 2>&1; then
+    log_error "xdg-mime not found; skipping desktop protocol handler registration."
+    return
+  fi
+
+  log "Registering Zoom web app protocol handlers..."
+  xdg-mime default Zoom.desktop x-scheme-handler/zoommtg
+  xdg-mime default Zoom.desktop x-scheme-handler/zoomus
+
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
+  fi
+}
+
 setup_voxtype_gpu() {
   if command -v voxtype >/dev/null 2>&1; then
     log "Ensuring VoxType GPU acceleration is enabled..."
@@ -661,6 +676,7 @@ if [ "$(uname)" = "Linux" ]; then
 
   if is_desktop_profile; then
     install_pacman_hooks
+    register_desktop_protocol_handlers
     setup_laptop_sleep
     setup_voxtype_gpu
     allow_fingerprint_usage
