@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=Claude
+Comment=Claude web app
+Exec=/opt/google/chrome/chrome --class=Claude --app=https://claude.ai/
+Terminal=false
+Type=Application
+Icon=claude
+Categories=Network;InstantMessaging;
+StartupNotify=true
+StartupWMClass=Claude
