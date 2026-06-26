@@ -5,7 +5,7 @@ Comment=ChatGPT web app
 Exec=/opt/google/chrome/chrome --class=ChatGPT --app=https://chatgpt.com/
 Terminal=false
 Type=Application
-Icon=chatgpt
+Icon=/home/trobrock/.local/share/applications/icons/ChatGPT.png
 Categories=Network;InstantMessaging;
 StartupNotify=true
 StartupWMClass=ChatGPT
