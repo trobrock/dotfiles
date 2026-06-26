@@ -636,6 +636,36 @@ setup_voxtype_gpu() {
   fi
 }
 
+setup_voxtype_service() {
+  if ! command -v voxtype >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! command -v systemctl >/dev/null 2>&1; then
+    log_error "systemctl not found; skipping VoxType user service setup."
+    return
+  fi
+
+  if ! systemctl --user show-environment >/dev/null 2>&1; then
+    log_error "No user systemd session available; skipping VoxType user service setup."
+    return
+  fi
+
+  systemctl --user daemon-reload || true
+
+  # Stowed user units show up as "linked" before they are enabled. Treat
+  # only the literal "enabled" state as autostart-enabled; otherwise systemd
+  # will know about the unit but won't create graphical-session.target.wants.
+  if [ "$(systemctl --user is-enabled voxtype.service 2>/dev/null || true)" != "enabled" ]; then
+    log "Enabling VoxType user service..."
+    systemctl --user enable voxtype.service \
+      || log_error "Could not enable voxtype.service."
+  fi
+
+  systemctl --user start voxtype.service \
+    || log_error "Could not start voxtype.service."
+}
+
 setup_laptop_sleep() {
   if compgen -G "/sys/class/power_supply/BAT*" >/dev/null; then
     log "Configuring laptop sleep/hibernate..."
@@ -679,6 +709,7 @@ if [ "$(uname)" = "Linux" ]; then
     register_desktop_protocol_handlers
     setup_laptop_sleep
     setup_voxtype_gpu
+    setup_voxtype_service
     allow_fingerprint_usage
     setup_auto_login
     setup_hyprshot_cleanup_cron

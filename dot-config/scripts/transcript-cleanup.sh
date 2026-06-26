@@ -1,16 +1,37 @@
 #!/usr/bin/env bash
 
 TRANSCRIPT=$(cat)
+CLEANUP_INPUT=$(printf '%s' "$TRANSCRIPT" | perl -0pe 's/^.*\b(?:no actually|I mean)\b\s*//is')
 
-CLEANED_TRANSCRIPT=$(ollama run llama3.2:1b \
-  --system "You are a helpful assistant that cleans up transcripts by removing filler words, stutters, unnecessary repetitions, and self-corrections while preserving the original meaning and context. When the speaker corrects themselves (e.g., 'Tuesday. No, actually, I mean Wednesday'), keep only the correction ('Wednesday')." \
-  --prompt "Clean up the following transcript by:
-1. Removing filler words (like 'um', 'uh', 'like')
-2. Removing stutters and unnecessary repetitions
-3. Handling self-corrections - when the speaker says something then corrects themselves (e.g., 'Tuesday, no actually Wednesday' or 'I mean Wednesday'), keep only the final corrected version
-4. Preserve the original meaning and context
+SYSTEM_PROMPT='You clean dictation transcripts. Return JSON only: {"text":"..."}.'
+
+USER_PROMPT=$(cat <<EOF
+Rules:
+- Remove filler words like "um", "uh", and "like".
+- Remove stutters and unnecessary repetitions.
+- For corrections, delete everything before the correction phrase and keep the corrected text. Correction phrases include "no actually", "actually", and "I mean".
+- Preserve the original meaning and context.
+
+Examples:
+Input: Tuesday no actually Wednesday
+Output: {"text":"Wednesday"}
+Input: um I I need the like report
+Output: {"text":"I need the report"}
 
 Transcript:
-$TRANSCRIPT") || exit $?
+$CLEANUP_INPUT
+EOF
+)
 
-printf '%s' "$CLEANED_TRANSCRIPT"
+REQUEST=$(jq -n \
+  --arg system "$SYSTEM_PROMPT" \
+  --arg user "$USER_PROMPT" \
+  '{model:"llama3.2:1b", stream:false, format:"json", options:{temperature:0}, messages:[{role:"system", content:$system}, {role:"user", content:$user}]}')
+RESPONSE=$(curl -fsS -H 'Content-Type: application/json' http://127.0.0.1:11434/api/chat -d "$REQUEST") || exit $?
+CLEANED_TRANSCRIPT=$(printf '%s' "$RESPONSE" | jq -r '.message.content | fromjson? | .text // empty')
+
+if [ -n "$CLEANED_TRANSCRIPT" ]; then
+  printf '%s' "$CLEANED_TRANSCRIPT"
+else
+  printf '%s' "$TRANSCRIPT"
+fi
