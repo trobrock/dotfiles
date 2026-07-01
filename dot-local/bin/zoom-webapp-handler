@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+url="${1:-}"
+web_url="https://app.zoom.us/wc/home"
+
+query_value() {
+  local key="$1"
+  local input="$2"
+
+  printf '%s\n' "$input" | sed -n "s/.*[?&]${key}=\([^&#]*\).*/\1/p"
+}
+
+join_url() {
+  local meeting_id="$1"
+  local password="${2:-}"
+  local result="https://app.zoom.us/wc/join/$meeting_id"
+
+  if [ -n "$password" ]; then
+    result="$result?pwd=$password"
+  fi
+
+  printf '%s\n' "$result"
+}
+
+if [[ "$url" =~ ^zoom(mtg|us):// ]]; then
+  meeting_id="$(query_value confno "$url")"
+  password="$(query_value pwd "$url")"
+
+  if [ -n "$meeting_id" ]; then
+    web_url="$(join_url "$meeting_id" "$password")"
+  fi
+elif [[ "$url" =~ ^https?://([^/]+\.)?zoom\.us/j/([0-9]+) ]]; then
+  meeting_id="${BASH_REMATCH[2]}"
+  password="$(query_value pwd "$url")"
+  web_url="$(join_url "$meeting_id" "$password")"
+elif [[ "$url" =~ ^https?://([^/]+\.)?zoom\.us/ ]]; then
+  web_url="$url"
+elif [ -n "$url" ] && [ "$url" != "%u" ]; then
+  web_url="$url"
+fi
+
+exec webapp-launch "$web_url"
