@@ -13,8 +13,8 @@ Include ~/.orbstack/ssh/config
 Include ~/.ssh/config.local
 Include ~/.ssh/config.d/*.conf
 
-# Defaults applied to every host. AddKeysToAgent re-adds the key on first
-# use if for some reason the agent unlock service didn't already load it.
+# Defaults applied to every host. AddKeysToAgent is harmless on servers and
+# lets desktop/macOS sessions re-add keys if the local agent is available.
 Host *
   AddKeysToAgent yes
   ServerAliveInterval 60
@@ -22,9 +22,10 @@ Host *
 
 # -- Agent forwarding ------------------------------------------------------
 #
-# Dotfiles do not enable ForwardAgent by default. Git signing should use the
-# fixed local agent on the machine creating the commit; forwarding is too
-# fragile for automatic signing and lets the remote host talk to your local
-# agent for the duration of the session.
+# Dotfiles do not enable ForwardAgent by default. Signing should use local
+# machine state: the fixed local agent on desktops/macOS, or the server-local
+# private key file in the server profile. Forwarding is too fragile for commit
+# signing and lets the remote host talk to your local agent for the duration of
+# the session.
 #
 # If a specific host still needs forwarding, opt in from ~/.ssh/config.local.

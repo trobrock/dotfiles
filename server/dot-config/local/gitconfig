@@ -4,8 +4,15 @@
 [credential "https://gist.github.com"]
 	helper = 
 	helper = !/usr/bin/gh auth git-credential
-# Signing works on servers via the local fixed-socket ssh-agent managed by
-# ssh-agent.service + ssh-agent-unlock.service. Do not rely on forwarded agents:
-# the unlock service decrypts the sops-encrypted key into the server's agent.
+# Servers sign with a private key that lives on the server, not a forwarded
+# workstation agent and not the dotfiles-managed fixed-socket ssh-agent.
+# Keep the private key out of this public repo; create/copy it locally at
+# ~/.ssh/id_ed25519 and register the matching public key with GitHub.
+[user]
+  signingkey = ~/.ssh/id_ed25519
+
+[gpg "ssh"]
+  program = /usr/bin/ssh-keygen
+
 [commit]
   gpgsign = true

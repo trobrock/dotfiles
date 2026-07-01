@@ -2,21 +2,23 @@
 
 SSH keys and git commit signing used to live in the 1Password SSH agent + `op-ssh-sign`. That worked but biometric prompted on every operation, didn't work headless, and tied auth + signing to a GUI app.
 
-The current flow uses a single Ed25519 key, stored sops-encrypted in the private secrets repo, loaded into a plain `ssh-agent` on login. Same key everywhere. Zero prompts after login.
+Current split:
 
-## How it works
+- Desktop Linux/macOS use a dotfiles-managed local `ssh-agent` at `~/.ssh/agent.sock`.
+- Headless servers sign with a private key file that lives on that server, currently `~/.ssh/id_ed25519`.
+- Repo-managed SSH config does not enable `ForwardAgent`; forwarding is opt-in only from `~/.ssh/config.local` for exceptional cases.
+
+## Desktop/macOS flow
 
 - The private key lives sops-encrypted at `~/.config/dotfiles-secrets/ssh/id_ed25519`.
-- On login, a small script (`~/.config/scripts/ssh-agent-unlock`) decrypts it with sops/age and pipes it straight into `ssh-add -`. The decrypted key never touches disk.
-- Linux desktop and server profiles: a user systemd unit (`ssh-agent.service`) runs `ssh-agent` on the fixed socket `~/.ssh/agent.sock`; a oneshot `ssh-agent-unlock.service` loads the key after it.
-- macOS: a LaunchAgent (`com.trobrock.ssh-agent`) runs `ssh-agent` on the same fixed socket; `com.trobrock.ssh-agent-unlock` loads the key after it.
-- Git signing uses native `gpg.format = ssh` with a tiny `~/.config/scripts/git-ssh-sign` wrapper around `ssh-keygen`. Git's SSH signing code reads `$SSH_AUTH_SOCK` directly and does not honor `IdentityAgent`, so the wrapper forces signing through `~/.ssh/agent.sock` when that socket exists.
-- Platform/profile overlays stow an `IdentityAgent ~/.ssh/agent.sock` config so normal `ssh` uses the same fixed local agent. Avoid OpenSSH-only tokens such as `%i` here; Ruby Net::SSH/Kamal reads this config but does not expand those tokens.
-- Headless servers load their own local agent from the same sops-encrypted key. Repo-managed SSH config does not enable `ForwardAgent`; forwarding is opt-in only from `~/.ssh/config.local` for exceptional cases and is not part of normal git signing.
+- On login, `~/.config/scripts/ssh-agent-unlock` decrypts it with sops/age and pipes it into `ssh-add -`. The decrypted key never touches disk.
+- Linux desktop: user systemd units run `ssh-agent.service` on `~/.ssh/agent.sock` and `ssh-agent-unlock.service` loads the key.
+- macOS: LaunchAgents `com.trobrock.ssh-agent` and `com.trobrock.ssh-agent-unlock` do the same.
+- Git signing uses native `gpg.format = ssh` with `~/.config/scripts/git-ssh-sign`, which forces signing through `~/.ssh/agent.sock` when that socket exists.
 
 Security boundary: the per-machine age private key at `~/.config/sops/age/keys.txt`. Anyone who can read that file can decrypt the SSH key. Same trust model the rest of the secrets workflow already relies on.
 
-## One-time migration (per identity, not per machine)
+## Desktop/macOS one-time migration
 
 1. Export the private key from 1Password. Either via the GUI (Edit item → reveal private key → copy) or, if the item has a private-key field exposed:
    ```sh
@@ -52,15 +54,15 @@ Security boundary: the per-machine age private key at `~/.config/sops/age/keys.t
 
 5. Disable the 1Password SSH agent so it stops fighting for `$SSH_AUTH_SOCK`:
    - 1Password → Settings → Developer → uncheck **Use the SSH agent**.
-   - Also remove any `~/.config/1Password/ssh/agent.toml` if you set one up.
-   - If 1Password (or any prior setup) wrote `~/.ssh/config`, move it aside before re-running stow so `dot-ssh/config` can land cleanly:
+   - Remove any `~/.config/1Password/ssh/agent.toml` if you set one up.
+   - If 1Password wrote `~/.ssh/config`, move it aside before re-running stow:
      ```sh
      [ -f ~/.ssh/config ] && [ ! -L ~/.ssh/config ] && mv ~/.ssh/config ~/.ssh/config.pre-dotfiles
      ```
 
-6. Re-run `bin/install` (or just enable the services by hand):
+6. Re-run `bin/install` or enable the services by hand:
    ```sh
-   # Linux:
+   # Linux desktop:
    systemctl --user daemon-reload
    systemctl --user enable --now ssh-agent.service ssh-agent-unlock.service
 
@@ -71,13 +73,58 @@ Security boundary: the per-machine age private key at `~/.config/sops/age/keys.t
 
 7. Verify:
    ```sh
-   ssh-add -l                # should list the key
-   ssh -T git@github.com     # should auth as you, no prompt
+   ssh-add -l
+   ssh -T git@github.com
    git commit --allow-empty -m "test sign"
-   git log --show-signature -1   # "Good signature" via allowed_signers
+   git log --show-signature -1
    ```
 
-## Troubleshooting
+## Headless server setup
+
+Servers do not use the dotfiles-managed ssh-agent. The server profile overrides Git to sign directly with a private key file:
+
+```ini
+[user]
+  signingkey = ~/.ssh/id_ed25519
+
+[gpg "ssh"]
+  program = /usr/bin/ssh-keygen
+```
+
+On a server:
+
+```sh
+bin/install --profile server
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519 -C trobrock@gmail.com
+ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
+chmod 600 ~/.ssh/id_ed25519
+chmod 644 ~/.ssh/id_ed25519.pub
+```
+
+Register `~/.ssh/id_ed25519.pub` with GitHub as an SSH signing key, and as an authentication key if this server also needs to push/pull over SSH.
+
+Verify:
+
+```sh
+git config --get user.signingkey       # ~/.ssh/id_ed25519
+git config --get gpg.ssh.program       # /usr/bin/ssh-keygen
+git commit --allow-empty -m "test sign"
+```
+
+For local `git log --show-signature` verification, add the server public key to `~/.config/git/allowed_signers` or use a private `~/.config/local/gitconfig` override for `gpg.ssh.allowedSignersFile`.
+
+If a workstation needs private connection details for a server alias, keep only those details in `~/.ssh/config.local`:
+
+```sshconfig
+Host trobrock-home
+  HostName <private hostname or IP>
+```
+
+Do not add `ForwardAgent yes` for normal git signing. If an exceptional workflow still needs forwarding, opt in per-host from `~/.ssh/config.local` and remember that root on the remote box can talk to your forwarded agent for the duration of the session.
+
+## Troubleshooting desktop/macOS agent signing
 
 If `git commit` fails with `Couldn't get agent socket?`, check:
 
@@ -100,35 +147,7 @@ tmux set-environment -gu SSH_AUTH_SOCK
 tmux set-environment -gu SSH_AGENT_PID
 ```
 
-## Headless server setup
+## Rotating keys
 
-Servers sign locally. The server profile stows the same fixed-socket systemd user units as Linux desktops plus `~/.ssh/config.d/00-agent.conf`, so git signing does not depend on a workstation SSH session or a forwarded agent socket.
-
-On a server:
-
-```sh
-# Seed the age key first if this is a fresh host, then:
-bin/install --profile server
-systemctl --user daemon-reload
-systemctl --user enable --now ssh-agent.service ssh-agent-unlock.service
-ssh-add -l
-```
-
-`ssh-add -l` should list the signing key from `~/.config/dotfiles-secrets/ssh/id_ed25519`. If it does not, check that the private secrets repo exists and the server's age key can decrypt it. `~/.ssh/id_ed25519.pub` is optional, but lets the unlock script skip re-adding an already-loaded key.
-
-If a workstation needs private connection details for a server alias, keep only those details in `~/.ssh/config.local`:
-
-```
-Host trobrock-home
-  HostName <private hostname or IP>
-```
-
-Do not add `ForwardAgent yes` for normal git signing. If an exceptional workflow still needs forwarding, opt in per-host from `~/.ssh/config.local` and remember that root on the remote box can talk to your forwarded agent for the duration of the session.
-
-## Rotating the key
-
-1. Generate fresh: `ssh-keygen -t ed25519 -N '' -f /tmp/id_ed25519 -C trobrock@gmail.com`
-2. Update GitHub (Settings → SSH and GPG keys, replace both Authentication and Signing entries).
-3. Update `signingkey` in `dot-gitconfig` and the line in `dot-config/git/allowed_signers`.
-4. Re-encrypt into the secrets repo (step 3 above) and push.
-5. On each machine: pull the secrets repo, `systemctl --user restart ssh-agent-unlock.service` (Linux) or `launchctl kickstart -k "gui/$(id -u)/com.trobrock.ssh-agent-unlock"` (macOS).
+- Desktop/macOS shared key: generate a fresh key, update GitHub, update `dot-gitconfig` and `dot-config/git/allowed_signers`, re-encrypt into the secrets repo, then restart the unlock service/LaunchAgent.
+- Server local key: generate/replace `~/.ssh/id_ed25519` on that server and update GitHub with the new public key. Do not commit the private key.

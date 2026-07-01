@@ -531,6 +531,24 @@ setup_ssh_agent_linux() {
     || log_error "Could not restart ssh-agent-unlock.service (is the sops-encrypted key in place?)."
 }
 
+cleanup_server_ssh_agent_linux() {
+  if ! command -v systemctl >/dev/null 2>&1; then
+    return
+  fi
+  if ! systemctl --user show-environment >/dev/null 2>&1; then
+    return
+  fi
+
+  systemctl --user daemon-reload || true
+
+  for unit in ssh-agent-unlock.service ssh-agent.service ssh-agent.socket; do
+    if systemctl --user list-unit-files "$unit" --no-legend 2>/dev/null | grep -q .; then
+      log "Disabling $unit for server profile..."
+      systemctl --user disable --now "$unit" >/dev/null 2>&1 || true
+    fi
+  done
+}
+
 setup_ssh_agent_darwin() {
   local uid
   uid="$(id -u)"
@@ -702,9 +720,9 @@ install_secrets || log_error "Continuing despite secrets install failure; re-run
 if [ "$(uname)" = "Linux" ]; then
   setup_firewall
   setup_syncthing
-  setup_ssh_agent_linux
 
   if is_desktop_profile; then
+    setup_ssh_agent_linux
     install_pacman_hooks
     register_desktop_protocol_handlers
     setup_laptop_sleep
@@ -713,6 +731,8 @@ if [ "$(uname)" = "Linux" ]; then
     allow_fingerprint_usage
     setup_auto_login
     setup_hyprshot_cleanup_cron
+  else
+    cleanup_server_ssh_agent_linux
   fi
 elif [ "$(uname)" = "Darwin" ]; then
   setup_power_management

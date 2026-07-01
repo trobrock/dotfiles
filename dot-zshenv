@@ -22,20 +22,16 @@ if [ "${_dotfiles_profile:-desktop}" != "server" ]; then
   export OP_BIOMETRIC_UNLOCK_ENABLED=true
 fi
 
-# Point shells at the dotfiles-managed fixed-socket ssh-agent. Keep this boring:
-# git signing and normal SSH auth use the local per-machine agent at one stable
-# path instead of whatever tmux, sshd, or a GUI app last exported. If a one-off
-# workflow needs a forwarded agent, override SSH_AUTH_SOCK manually in that shell.
-case "$(uname)" in
-  Linux)
-    export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
-    ;;
-  Darwin)
-    if [ "${_dotfiles_profile:-desktop}" != "server" ]; then
+# Point desktop/macOS shells at the dotfiles-managed fixed-socket ssh-agent.
+# Server profile signs with a server-local key file instead, so leave
+# SSH_AUTH_SOCK alone there unless a shell/session sets it explicitly.
+if [ "${_dotfiles_profile:-desktop}" != "server" ]; then
+  case "$(uname)" in
+    Linux|Darwin)
       export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
-    fi
-    ;;
-esac
+      ;;
+  esac
+fi
 
 unset _dotfiles_profile _dotfiles_profile_file
 
