@@ -67,7 +67,6 @@ cask "font-caskaydia-cove-nerd-font"
 # Casks
 cask "1password"
 cask "1password-cli"
-cask "basecamp"
 cask "garmin-express"
 cask "ghostty"
 cask "google-drive"
