@@ -1,8 +1,18 @@
 sketchybar --add event aerospace_workspace_change \
            --add event aerospace_window_moved
 
+# sketchybar can be started (by its launchd agent) before the aerospace CLI
+# is ready. If we query too early, list-workspaces returns nothing and no
+# space items get created. Retry briefly until aerospace responds.
+workspaces=""
+for _ in $(seq 1 30); do
+  workspaces=$(aerospace list-workspaces --all 2>/dev/null)
+  [ -n "$workspaces" ] && break
+  sleep 1
+done
+
 space_commands=()
-for sid in $(aerospace list-workspaces --all); do
+for sid in $workspaces; do
   space_commands+=(--add item space.$sid left \
              --set space.$sid \
              label="$sid" \
