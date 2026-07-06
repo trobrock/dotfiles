@@ -45,7 +45,8 @@ for ((i=1; i<${#lines[@]} && events_found<4; i++)); do
     if [[ "${event_data[5]}" =~ ^https?:// ]]; then
       conference_url="${event_data[5]}"
     else
-      if [[ "${event_data[6]}" =~ (https?://([A-Za-z0-9.-]+\.)?zoom\.us/[^[:space:]<>"]+) ]]; then # description contains zoom link
+      zoom_re='(https?://([A-Za-z0-9.-]+\.)?zoom\.us/[^[:space:]<>"]+)'
+      if [[ "${event_data[6]}" =~ $zoom_re ]]; then # description contains zoom link
         conference_url="${BASH_REMATCH[1]}"
       else
         conference_url=""
