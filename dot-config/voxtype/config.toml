@@ -98,16 +98,6 @@ paste_keys = "ctrl+shift+v"  # Terminal-friendly paste shortcut
 #   post_output_command = "hyprctl dispatch submap reset"
 # See troubleshooting docs for the required Hyprland submap configuration.
 
-# Post-processing command (optional)
-# Pipe transcribed text through an external command for cleanup before output.
-# The command receives text on stdin and outputs processed text on stdout.
-# Useful for LLM-based text cleanup, grammar correction, filler word removal.
-# On any failure (timeout, error), falls back to original transcription.
-#
-[output.post_process]
-command = "~/.config/scripts/transcript-cleanup.sh"
-timeout_ms = 30000  # 30 second timeout (generous for LLM)
-
 [output.notification]
 # Show notification when recording starts (hotkey pressed)
 on_recording_start = false
