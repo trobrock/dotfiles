@@ -6,7 +6,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/voxtype daemon
+ExecStart=/usr/bin/zsh -lc 'source "$HOME/.zsh_secrets" 2>/dev/null || true; exec /usr/local/bin/voxtype daemon'
 Restart=on-failure
 RestartSec=5
 

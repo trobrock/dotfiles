@@ -638,24 +638,14 @@ register_desktop_protocol_handlers() {
   fi
 }
 
-setup_voxtype_gpu() {
-  if command -v voxtype >/dev/null 2>&1; then
-    log "Ensuring VoxType GPU acceleration is enabled..."
-
-    local output
-    if output="$(sudo voxtype setup gpu --enable 2>&1)"; then
-      [ -n "$output" ] && echo "$output"
-    elif echo "$output" | grep -qi "already enabled"; then
-      log "VoxType GPU backend already enabled."
-    else
-      [ -n "$output" ] && echo "$output" >&2
-      log_error "VoxType GPU setup failed; continuing."
-    fi
-  fi
+setup_voxtype_soniox() {
+  log "Building custom VoxType with Soniox support..."
+  "$SCRIPT_DIR/build-voxtype-soniox"
 }
 
 setup_voxtype_service() {
-  if ! command -v voxtype >/dev/null 2>&1; then
+  if [ ! -x /usr/local/bin/voxtype ]; then
+    log_error "Custom VoxType binary not found at /usr/local/bin/voxtype; skipping service setup."
     return
   fi
 
@@ -726,7 +716,7 @@ if [ "$(uname)" = "Linux" ]; then
     install_pacman_hooks
     register_desktop_protocol_handlers
     setup_laptop_sleep
-    setup_voxtype_gpu
+    setup_voxtype_soniox || log_error "Custom VoxType Soniox build failed; continuing."
     setup_voxtype_service
     allow_fingerprint_usage
     setup_auto_login

@@ -3,6 +3,10 @@
 # Location: ~/.config/voxtype/config.toml
 # All settings can be overridden via CLI flags
 
+# Transcription engine: "whisper", "soniox", "cohere", etc.
+# Soniox is a paid cloud backend; keep SONIOX_API_KEY outside this public repo.
+engine = "soniox"
+
 # State file for external integrations (Waybar, polybar, etc.)
 # Use "auto" for default location ($XDG_RUNTIME_DIR/voxtype/state),
 # a custom path, or "disabled" to turn off. The daemon writes state
@@ -25,7 +29,8 @@ modifiers = []
 # Activation mode: "push_to_talk" or "toggle"
 # - push_to_talk: Hold hotkey to record, release to transcribe (default)
 # - toggle: Press hotkey once to start recording, press again to stop
-# mode = "push_to_talk"
+# Soniox realtime streaming requires toggle mode.
+mode = "toggle"
 
 # Enable built-in hotkey detection (default: true)
 # Set to false when using compositor keybindings (Hyprland, Sway) instead
@@ -78,6 +83,15 @@ gpu_isolation = true
 
 # Number of CPU threads for inference (omit for auto-detection)
 # threads = 4
+
+[soniox]
+# API key is read from SONIOX_API_KEY; do not store it in this public repo.
+language_hints = ["en"]
+language_hints_strict = true
+streaming = true
+type_partials = true
+context = "Software development dictation and desktop control."
+terms = ["Ruby on Rails", "Comfortly", "Channex", "rezStream", "Stripe", "ViewComponent", "Flipper", "Sentry", "PagerDuty", "Hyprland", "Waybar", "VoxType", "Claude Code", "Arch Linux", "Neovim"]
 
 [output]
 # Primary output mode: "type", "clipboard", "paste", or "file"

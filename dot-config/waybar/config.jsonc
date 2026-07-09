@@ -46,7 +46,7 @@
         }
     },
     "custom/voxtype": {
-      "exec": "voxtype status --follow --format json",
+      "exec": "/usr/local/bin/voxtype status --follow --format json",
       "return-type": "json",
       "format": "{}",
       "tooltip": true,

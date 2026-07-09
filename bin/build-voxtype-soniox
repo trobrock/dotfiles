@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/logging.sh"
+
+VOXTYPE_VERSION="${VOXTYPE_VERSION:-v0.7.5}"
+VOXTYPE_REPO="${VOXTYPE_REPO:-https://github.com/peteonrails/voxtype.git}"
+VOXTYPE_FEATURES="${VOXTYPE_FEATURES:-gpu-vulkan,soniox}"
+VOXTYPE_INSTALL_ROOT="${VOXTYPE_INSTALL_ROOT:-$HOME/.local/opt/voxtype-soniox}"
+VOXTYPE_BIN="${VOXTYPE_BIN:-/usr/local/bin/voxtype}"
+
+require_command() {
+  local command_name="$1"
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    log_error "$command_name is required to build VoxType."
+    return 1
+  fi
+}
+
+main() {
+  require_command cargo
+  require_command sudo
+  require_command cmake
+  require_command clang
+  require_command pkg-config
+
+  if [[ ",$VOXTYPE_FEATURES," == *,gpu-vulkan,* ]] && [ ! -f /usr/include/vulkan/vulkan.h ]; then
+    log_error "Vulkan headers are required for VOXTYPE_FEATURES=$VOXTYPE_FEATURES."
+    log_error "Install them with: yay -S --needed vulkan-headers"
+    return 1
+  fi
+
+  log "Building VoxType $VOXTYPE_VERSION with features: $VOXTYPE_FEATURES"
+  cargo install \
+    --git "$VOXTYPE_REPO" \
+    --tag "$VOXTYPE_VERSION" \
+    --locked \
+    --bin voxtype \
+    --features "$VOXTYPE_FEATURES" \
+    --root "$VOXTYPE_INSTALL_ROOT" \
+    --force \
+    voxtype
+
+  log "Installing custom VoxType binary to $VOXTYPE_BIN"
+  sudo install -Dm755 "$VOXTYPE_INSTALL_ROOT/bin/voxtype" "$VOXTYPE_BIN"
+
+  log "Installed: $($VOXTYPE_BIN --version)"
+}
+
+main "$@"
