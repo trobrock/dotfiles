@@ -25,10 +25,38 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh notification",
+            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting",
             "type": "command"
           }
-        ]
+        ],
+        "matcher": "permission_prompt"
+      },
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting",
+            "type": "command"
+          }
+        ],
+        "matcher": "agent_needs_input"
+      },
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh notification_idle",
+            "type": "command"
+          }
+        ],
+        "matcher": "idle_prompt"
+      },
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh notification_idle",
+            "type": "command"
+          }
+        ],
+        "matcher": "agent_completed"
       }
     ],
     "PermissionRequest": [
