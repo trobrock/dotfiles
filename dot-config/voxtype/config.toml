@@ -86,19 +86,21 @@ gpu_isolation = true
 
 [soniox]
 # API key is read from SONIOX_API_KEY; do not store it in this public repo.
+model = "stt-rt-v5"
 language_hints = ["en"]
 language_hints_strict = true
 streaming = true
 type_partials = true
-context = "Software development dictation and desktop control."
-terms = ["Ruby on Rails", "Comfortly", "Channex", "rezStream", "Stripe", "ViewComponent", "Flipper", "Sentry", "PagerDuty", "Hyprland", "Waybar", "VoxType", "Claude Code", "Arch Linux", "Neovim"]
+context = "Software development dictation for terminal commands, Git workflows, code review, issue comments, Rails applications, DevOps, Linux desktop configuration, and AI coding agents."
+terms = ["Ruby on Rails", "Comfortly", "Channex", "rezStream", "Stripe", "ViewComponent", "Flipper", "Sentry", "PagerDuty", "Hyprland", "Waybar", "VoxType", "Claude Code", "Arch Linux", "Neovim", "Developerly", "Worktrunk", "OpenAPI", "GitHub Actions", "Docker Buildx", "Kamal", "Terraform", "Grafana", "MySQL", "PostgreSQL", "Redis", "Sidekiq", "ActiveRecord", "Stimulus", "Turbo", "Hotwire", "Tailwind", "Cloudflare", "Tailscale", "systemd", "zsh", "tmux", "mise", "sops", "stow", "yay", "pacman", "Hyprshot", "Walker", "Elephant", "Quickshell", "MIGraphX", "Vulkan", "ONNX", "Cohere", "Whisper", "Parakeet", "Soniox", "SuperWhisper", "Pi", "CLI", "CLI deploy", "deploy", "deployment"]
 
 [output]
 # Primary output mode: "type", "clipboard", "paste", or "file"
 # - paste: Copies text to clipboard, then simulates a paste keystroke
 #          at the cursor (requires wl-copy plus wtype/dotool/ydotool)
-mode = "paste"
-paste_keys = "ctrl+shift+v"  # Terminal-friendly paste shortcut
+# Soniox streaming works better with direct typing; paste mode mutates clipboard.
+mode = "type"
+# paste_keys = "ctrl+shift+v"  # Terminal-friendly paste shortcut
 
 # Automatically submit (send Enter key) after outputting transcribed text
 # Useful for chat applications, command lines, or forms where you want
