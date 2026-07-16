@@ -1,15 +1,17 @@
 ---
 name: notify
-description: Send mobile push notifications through ntfy. Use when the user asks to be notified, will be away, starts a long-running command or monitor, or wants completion/failure alerts. For monitor_command jobs, wrap the command with run-and-notify so notification delivery does not depend on Pi remaining active.
+description: Send mobile push notifications through ntfy, but only when the user explicitly asks to be notified. Do not notify merely because the user will be away or a command, build, test, monitor, or other task may take a long time.
 ---
 
 # ntfy notifications
 
 Send notifications using the scripts in this skill directory. Configuration is private and stored outside the dotfiles repository under `~/.config/pi-notify/`.
 
+Only send or arrange a notification when the user explicitly requests one. Never infer that a notification is wanted from the task duration, the use of a monitor, or the user saying they will be away.
+
 ## Long-running commands
 
-When starting a long-running command with `monitor_command`, wrap the actual command so it sends its own completion notification:
+When the user explicitly requests a notification for a long-running command started with `monitor_command`, wrap the actual command so it sends its own completion notification:
 
 ```bash
 ~/.pi/agent/skills/notify/run-and-notify --title "Build" -- command arg1 arg2
@@ -35,7 +37,7 @@ printf '%s\n' "Multiline message" | ~/.pi/agent/skills/notify/notify --title "Pi
 
 Priorities: `min`, `low`, `default`, `high`, `max`, or numeric `1` through `5`.
 
-For a monitor that cannot be wrapped, such as `monitor_github_pr_checks`, call `notify` immediately when the monitor wakes. Wrapping is preferred because it can notify while Pi is idle.
+When the user explicitly requests a notification for a monitor that cannot be wrapped, such as `monitor_github_pr_checks`, call `notify` immediately when the monitor wakes. Wrapping is preferred because it can notify while Pi is idle.
 
 ## Configuration
 
