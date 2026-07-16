@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config_dir="${PI_NOTIFY_CONFIG_DIR:-$HOME/.config/pi-notify}"
+server="${NTFY_SERVER:-}"
+topic="${NTFY_TOPIC:-}"
+token="${NTFY_TOKEN:-}"
+title="Pi"
+priority="default"
+tags="computer"
+message=""
+
+read_config_value() {
+  local name="$1"
+  local path="$config_dir/$name"
+  if [[ -f "$path" ]]; then
+    IFS= read -r REPLY < "$path" || true
+  else
+    REPLY=""
+  fi
+}
+
+usage() {
+  cat <<'EOF'
+Usage: notify [--title TITLE] [--priority PRIORITY] [--tags TAGS] [MESSAGE]
+
+If MESSAGE is omitted, it is read from standard input.
+EOF
+}
+
+while (($#)); do
+  case "$1" in
+    --title)
+      (($# >= 2)) || { echo "notify: --title requires a value" >&2; exit 2; }
+      title="$2"
+      shift 2
+      ;;
+    --priority)
+      (($# >= 2)) || { echo "notify: --priority requires a value" >&2; exit 2; }
+      priority="$2"
+      shift 2
+      ;;
+    --tags)
+      (($# >= 2)) || { echo "notify: --tags requires a value" >&2; exit 2; }
+      tags="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      message="${*:-}"
+      break
+      ;;
+    -*)
+      echo "notify: unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      message="$*"
+      break
+      ;;
+  esac
+done
+
+if [[ -z "$server" ]]; then
+  read_config_value server
+  server="$REPLY"
+fi
+if [[ -z "$topic" ]]; then
+  read_config_value topic
+  topic="$REPLY"
+fi
+if [[ -z "$token" ]]; then
+  read_config_value token
+  token="$REPLY"
+fi
+
+server="${server:-https://ntfy.sh}"
+server="${server%/}"
+
+if [[ -z "$topic" ]]; then
+  echo "notify: not configured; run ~/.pi/agent/skills/notify/setup" >&2
+  exit 2
+fi
+if [[ ! "$topic" =~ ^[-_A-Za-z0-9]{1,64}$ ]]; then
+  echo "notify: invalid topic; use 1-64 letters, numbers, underscores, or dashes" >&2
+  exit 2
+fi
+case "$priority" in
+  min|low|default|high|max|1|2|3|4|5) ;;
+  *) echo "notify: invalid priority: $priority" >&2; exit 2 ;;
+esac
+if [[ "$title$tags" == *$'\n'* || "$title$tags" == *$'\r'* ]]; then
+  echo "notify: title and tags may not contain newlines" >&2
+  exit 2
+fi
+if [[ -z "$message" ]]; then
+  if [[ -t 0 ]]; then
+    echo "notify: a message is required" >&2
+    exit 2
+  fi
+  message="$(cat)"
+fi
+
+curl_args=(
+  --fail-with-body
+  --silent
+  --show-error
+  --retry 2
+  --retry-all-errors
+  --connect-timeout 5
+  --max-time 20
+  --header "Title: $title"
+  --header "Priority: $priority"
+  --header "Tags: $tags"
+  --data-binary @-
+  "$server/$topic"
+)
+
+if [[ -n "$token" ]]; then
+  curl --config <(printf 'header = "Authorization: Bearer %s"\n' "$token") \
+    "${curl_args[@]}" <<< "$message" >/dev/null
+else
+  curl "${curl_args[@]}" <<< "$message" >/dev/null
+fi

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+title="Pi task"
+
+usage() {
+  cat <<'EOF'
+Usage: run-and-notify [--title TITLE] -- COMMAND [ARG ...]
+EOF
+}
+
+while (($#)); do
+  case "$1" in
+    --title)
+      (($# >= 2)) || { echo "run-and-notify: --title requires a value" >&2; exit 2; }
+      title="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      echo "run-and-notify: expected -- before command" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+(($#)) || { echo "run-and-notify: command is required" >&2; exit 2; }
+
+started=$SECONDS
+"$@"
+status=$?
+elapsed=$((SECONDS - started))
+
+if ((elapsed >= 3600)); then
+  duration="$((elapsed / 3600))h $(((elapsed % 3600) / 60))m $((elapsed % 60))s"
+elif ((elapsed >= 60)); then
+  duration="$((elapsed / 60))m $((elapsed % 60))s"
+else
+  duration="${elapsed}s"
+fi
+
+notify="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/notify"
+if ((status == 0)); then
+  "$notify" --title "$title completed" --priority default --tags heavy_check_mark \
+    "Succeeded in $duration." || echo "run-and-notify: notification failed" >&2
+else
+  "$notify" --title "$title failed" --priority high --tags warning \
+    "Exited with status $status after $duration." || echo "run-and-notify: notification failed" >&2
+fi
+
+exit "$status"
