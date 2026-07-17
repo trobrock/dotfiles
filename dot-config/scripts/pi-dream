@@ -1,0 +1,1420 @@
+#!/usr/bin/env node
+"use strict";
+
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const crypto = require("node:crypto");
+const { spawn, spawnSync } = require("node:child_process");
+
+const VERSION = 1;
+const DEFAULT_MAX_CANDIDATES = 5;
+const DEFAULT_TIMEOUT_SECONDS = 900;
+const STATUS_DIRS = ["inbox", "accepted", "ticketed", "in_progress", "rejected", "archive"];
+const RECIPE_DESCRIPTIONS = {
+  general: "Find high-confidence, low-risk maintenance opportunities with evidence.",
+  tests: "Prioritize skipped, flaky, failing, or under-specified tests.",
+  docs: "Prioritize docs, README, examples, setup, and command drift.",
+  todos: "Prioritize TODO/FIXME/HACK comments that are local, actionable, and recent.",
+  config: "Prioritize stale or inconsistent config, scripts, and automation.",
+};
+
+const EXCLUDE_GLOBS = [
+  "**/.git/**",
+  "**/node_modules/**",
+  "**/vendor/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/coverage/**",
+  "**/.next/**",
+  "**/.turbo/**",
+  "**/tmp/**",
+  "**/log/**",
+  "*.lock",
+  ".env",
+  ".env.*",
+  "**/.env",
+  "**/.env.*",
+  "**/*secret*",
+  "**/*Secret*",
+  "**/*credential*",
+  "**/*Credential*",
+  "**/*.pem",
+  "**/*.key",
+  "**/.ssh/**",
+  "**/.gnupg/**",
+  "dot-pi/agent/auth.json",
+  "dot-pi/agent/mcp-oauth/**",
+];
+
+function main() {
+  const [command = "help", ...args] = process.argv.slice(2);
+
+  switch (command) {
+    case "help":
+    case "--help":
+    case "-h":
+      printHelp();
+      return;
+    case "doctor":
+      return cmdDoctor(args);
+    case "scout":
+      return cmdScout(args);
+    case "inbox":
+    case "list":
+      return cmdList(args);
+    case "show":
+      return cmdShow(args);
+    case "accept":
+      return cmdMove(args, "accepted");
+    case "ticket":
+      return cmdDeveloperly(args, "ticket");
+    case "implement":
+      return cmdDeveloperly(args, "implement");
+    case "reject":
+      return cmdMove(args, "rejected");
+    case "archive":
+      return cmdMove(args, "archive");
+    case "paths":
+      return cmdPaths(args);
+    default:
+      throw new Error(`Unknown command: ${command}. Run: pi-dream help`);
+  }
+}
+
+function printHelp() {
+  console.log(`pi-dream: unattended Pi codebase scout
+
+Usage:
+  pi-dream scout [--repo PATH] [--recipe general|tests|docs|todos|config] [--max-candidates N]
+  pi-dream scout --mock [--repo PATH]
+  pi-dream inbox [--status inbox|accepted|rejected|archive] [--json]
+  pi-dream show <id> [--json]
+  pi-dream accept <id>
+  pi-dream ticket <id> <candidate-id> [--dry-run]
+  pi-dream implement <id> <candidate-id> [--dry-run]
+  pi-dream reject <id> [--reason TEXT]
+  pi-dream archive <id>
+  pi-dream doctor [--json]
+  pi-dream paths [--json]
+
+Scout options:
+  --model MODEL              Override pi model, e.g. anthropic/claude-haiku-4-5
+  --timeout SECONDS          Max pi run time (default: ${DEFAULT_TIMEOUT_SECONDS})
+  --dry-run                  Print the generated prompt without invoking pi
+  --mock                     Generate deterministic local-signal candidates without invoking pi
+  --include-context-files    Allow pi to load repo AGENTS.md/CLAUDE.md files (default: disabled)
+  --state-dir PATH           Override state root (default: $PI_DREAM_HOME or XDG state)
+
+Developerly options for ticket/implement:
+  --project ID_OR_NAME        Developerly project (default: match repo from projects list)
+  --kind KIND                 feature, bug_fix, pr_feedback, pr_assist, slack_prompt
+  --no-sync                   Create local Developerly task/work item only
+  --agent pi|claude|shell     Agent for implement (default: pi)
+  --base BRANCH               Base branch for implement (default: report branch or main)
+  --plan / --no-plan          Start quickstart in planning mode (default: --plan)
+  --dry-run                   Print intended Developerly command without creating anything
+
+Generated reports are stored outside the repo by default:
+  ${stateRoot()}/inbox
+`);
+}
+
+function parseArgs(args) {
+  const options = {};
+  const positional = [];
+
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === "--") {
+      positional.push(...args.slice(i + 1));
+      break;
+    }
+    if (!arg.startsWith("--")) {
+      positional.push(arg);
+      continue;
+    }
+
+    const withoutPrefix = arg.slice(2);
+    if (withoutPrefix.startsWith("no-")) {
+      options[withoutPrefix.slice(3)] = false;
+      continue;
+    }
+
+    const eq = withoutPrefix.indexOf("=");
+    if (eq >= 0) {
+      options[withoutPrefix.slice(0, eq)] = withoutPrefix.slice(eq + 1);
+      continue;
+    }
+
+    const next = args[i + 1];
+    if (next !== undefined && !next.startsWith("--")) {
+      options[withoutPrefix] = next;
+      i += 1;
+    } else {
+      options[withoutPrefix] = true;
+    }
+  }
+
+  return { options, positional };
+}
+
+function resolveHome(input) {
+  if (!input) return input;
+  if (input === "~") return os.homedir();
+  if (input.startsWith("~/")) return path.join(os.homedir(), input.slice(2));
+  return input;
+}
+
+function stateRoot(override) {
+  const root = override || process.env.PI_DREAM_HOME || path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), ".local", "state"), "pi-dream");
+  return path.resolve(resolveHome(root));
+}
+
+function ensureStateDirs(root) {
+  fs.mkdirSync(root, { recursive: true });
+  for (const dir of STATUS_DIRS) fs.mkdirSync(path.join(root, dir), { recursive: true });
+  fs.mkdirSync(path.join(root, "logs"), { recursive: true });
+}
+
+function cmdPaths(args) {
+  const { options } = parseArgs(args);
+  const root = stateRoot(options["state-dir"]);
+  const paths = Object.fromEntries(STATUS_DIRS.map((status) => [status, path.join(root, status)]));
+  const result = { stateRoot: root, ...paths, logs: path.join(root, "logs") };
+  if (options.json) console.log(JSON.stringify(result, null, 2));
+  else {
+    for (const [key, value] of Object.entries(result)) console.log(`${key}: ${value}`);
+  }
+}
+
+function cmdDoctor(args) {
+  const { options } = parseArgs(args);
+  const root = stateRoot(options["state-dir"]);
+  ensureStateDirs(root);
+
+  const checks = [
+    checkCommand("pi", ["--version"]),
+    checkCommand("git", ["--version"]),
+    checkCommand("rg", ["--version"], true),
+    checkCommand("developerly", ["--version"], true),
+    { name: "stateRoot", ok: canWriteDir(root), detail: root },
+  ];
+
+  const result = { ok: checks.every((check) => check.ok || check.optional), checks, stateRoot: root };
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  for (const check of checks) {
+    const marker = check.ok ? "ok" : check.optional ? "optional-missing" : "missing";
+    console.log(`${marker.padEnd(17)} ${check.name}${check.detail ? ` (${check.detail})` : ""}`);
+  }
+  if (!result.ok) process.exitCode = 1;
+}
+
+function checkCommand(name, args = ["--version"], optional = false) {
+  const result = spawnSync(name, args, { encoding: "utf8", timeout: 10_000, maxBuffer: 256 * 1024 });
+  return {
+    name,
+    ok: result.status === 0,
+    optional,
+    detail: result.status === 0 ? firstLine(result.stdout || result.stderr) : result.error?.message || firstLine(result.stderr) || `exit ${result.status}`,
+  };
+}
+
+function canWriteDir(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const probe = path.join(dir, `.write-test-${process.pid}`);
+    fs.writeFileSync(probe, "ok");
+    fs.unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function firstLine(text) {
+  return String(text || "").split(/\r?\n/).find(Boolean) || "";
+}
+
+function cmdScout(args) {
+  const { options, positional } = parseArgs(args);
+  const repo = path.resolve(resolveHome(options.repo || positional[0] || process.env.PI_DREAM_REPO || process.cwd()));
+  if (!fs.existsSync(repo) || !fs.statSync(repo).isDirectory()) throw new Error(`Repo path is not a directory: ${repo}`);
+
+  const root = stateRoot(options["state-dir"]);
+  ensureStateDirs(root);
+
+  const recipe = String(options.recipe || process.env.PI_DREAM_RECIPE || "general");
+  if (!RECIPE_DESCRIPTIONS[recipe]) throw new Error(`Unknown recipe: ${recipe}. Expected one of: ${Object.keys(RECIPE_DESCRIPTIONS).join(", ")}`);
+
+  const maxCandidates = clampInt(options["max-candidates"] || process.env.PI_DREAM_MAX_CANDIDATES, 1, 10, DEFAULT_MAX_CANDIDATES);
+  const timeoutSeconds = clampInt(options.timeout || process.env.PI_DREAM_TIMEOUT_SECONDS, 30, 7200, DEFAULT_TIMEOUT_SECONDS);
+  const signals = collectLocalSignals(repo);
+  const systemPrompt = buildSystemPrompt();
+  const userPrompt = buildUserPrompt({ repo, recipe, maxCandidates, signals });
+
+  if (options["dry-run"]) {
+    const payload = { systemPrompt, userPrompt, signals };
+    if (options.json) console.log(JSON.stringify(payload, null, 2));
+    else {
+      console.log("--- system prompt ---");
+      console.log(systemPrompt);
+      console.log("\n--- user prompt ---");
+      console.log(userPrompt);
+    }
+    return;
+  }
+
+  const startedAt = new Date().toISOString();
+  let scout;
+  if (options.mock) {
+    scout = mockScout({ repo, recipe, maxCandidates, signals });
+  } else {
+    scout = runPiScout({
+      repo,
+      recipe,
+      maxCandidates,
+      systemPrompt,
+      userPrompt,
+      timeoutSeconds,
+      model: options.model || process.env.PI_DREAM_MODEL,
+      includeContextFiles: Boolean(options["include-context-files"]),
+    });
+  }
+
+  const report = buildReport({
+    repo,
+    recipe,
+    maxCandidates,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    mode: options.mock ? "mock" : "pi",
+    signals,
+    scout,
+  });
+
+  const paths = writeDreamReport(root, report);
+  if (options.json) console.log(JSON.stringify({ id: report.id, paths, report }, null, 2));
+  else {
+    console.log(`Created dream report: ${paths.json}`);
+    console.log(`Markdown report:      ${paths.markdown}`);
+    console.log(`Candidates:           ${report.candidates.length}`);
+    if (report.summary) console.log(`Summary:              ${report.summary}`);
+  }
+}
+
+function clampInt(value, min, max, fallback) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function collectLocalSignals(repo) {
+  const gitRoot = runSync("git", ["-C", repo, "rev-parse", "--show-toplevel"], { allowFailure: true }).stdout.trim();
+  const root = gitRoot || repo;
+  const isGit = Boolean(gitRoot);
+  const files = isGit ? gitFiles(root) : walkFiles(root, 500);
+  const recentFiles = isGit ? uniqueLines(runSync("git", ["-C", root, "log", "--name-only", "--pretty=format:", "-n", "20"], { allowFailure: true }).stdout).filter(Boolean).slice(0, 80) : [];
+  const status = isGit ? runSync("git", ["-C", root, "status", "--short"], { allowFailure: true }).stdout.trim() : "";
+  const manifests = readManifests(root);
+
+  const findings = {
+    todos: rgMatches(root, "\\b(TODO|FIXME|XXX|HACK)\\b", 80),
+    skippedTests: rgMatches(root, "\\b(describe|it|test)\\.(skip|only)\\b|\\b(xdescribe|xit|xtest)\\s*\\(|\\bpending\\s*\\(", 80),
+    disabledChecks: rgMatches(root, "eslint-disable|ts-ignore|type:\\s*ignore|rubocop:disable|noqa", 80),
+    markdownLinks: rgMatches(root, "\\[[^\\]]+\\]\\([^)]*(TODO|FIXME|localhost|example\\.com|#)" , 60),
+  };
+
+  return {
+    generatedAt: new Date().toISOString(),
+    repoPath: root,
+    git: isGit ? {
+      branch: runSync("git", ["-C", root, "branch", "--show-current"], { allowFailure: true }).stdout.trim(),
+      head: runSync("git", ["-C", root, "rev-parse", "--short", "HEAD"], { allowFailure: true }).stdout.trim(),
+      dirty: status.length > 0,
+      status: status.split(/\r?\n/).filter(Boolean).slice(0, 80),
+      recentFiles,
+    } : null,
+    files: {
+      count: files.length,
+      sample: files.slice(0, 250),
+    },
+    manifests,
+    validationCommands: guessValidationCommands(manifests),
+    findings,
+  };
+}
+
+function gitFiles(root) {
+  const tracked = uniqueLines(runSync("git", ["-C", root, "ls-files"], { allowFailure: true }).stdout);
+  const untracked = uniqueLines(runSync("git", ["-C", root, "ls-files", "--others", "--exclude-standard"], { allowFailure: true }).stdout);
+  return [...tracked, ...untracked].filter((file) => file && !isExcludedPath(file)).slice(0, 1_000);
+}
+
+function walkFiles(root, max) {
+  const output = [];
+  function visit(dir, rel = "") {
+    if (output.length >= max) return;
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (output.length >= max) break;
+      const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+      if (isExcludedPath(childRel)) continue;
+      if (entry.isDirectory()) visit(path.join(dir, entry.name), childRel);
+      else if (entry.isFile()) output.push(childRel);
+    }
+  }
+  visit(root);
+  return output;
+}
+
+function isExcludedPath(file) {
+  const normalized = file.replace(/\\/g, "/");
+  if (/(^|\/)\.git(\/|$)/.test(normalized)) return true;
+  if (/^(.env|.*\.pem|.*\.key)$/.test(path.basename(normalized))) return true;
+  if (/(^|\/)(node_modules|vendor|dist|build|coverage|\.next|\.turbo|tmp|log)(\/|$)/.test(normalized)) return true;
+  if (/(^|\/)(auth\.json|mcp-oauth)(\/|$)/.test(normalized)) return true;
+  if (/(secret|credential)/i.test(normalized)) return true;
+  return false;
+}
+
+function rgMatches(root, pattern, limit) {
+  if (!commandExists("rg")) return [];
+  const args = ["--line-number", "--no-heading", "--color", "never", "--hidden", "-g", "*"];
+  for (const glob of EXCLUDE_GLOBS) args.push("-g", `!${glob}`);
+  // Explicitly pass "." because child_process gives rg a non-TTY stdin;
+  // without a path, rg searches stdin instead of the repository.
+  args.push(pattern, ".");
+  const result = spawnSync("rg", args, { cwd: root, encoding: "utf8", timeout: 10_000, maxBuffer: 512 * 1024 });
+  if (result.status !== 0 && result.status !== 1) return [];
+  return String(result.stdout || "")
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .slice(0, limit)
+    .map((line) => {
+      const match = line.match(/^([^:]+):(\d+):(.*)$/);
+      if (!match) return { line };
+      return { file: match[1], line: Number(match[2]), text: match[3].trim().slice(0, 220) };
+    })
+    .filter((match) => !match.file || !isExcludedPath(match.file));
+}
+
+function readManifests(root) {
+  const names = ["package.json", "pyproject.toml", "Cargo.toml", "Gemfile", "go.mod", "Makefile", "justfile", "mise.toml", "README.md"];
+  const manifests = [];
+  for (const name of names) {
+    const file = path.join(root, name);
+    if (!fs.existsSync(file) || !fs.statSync(file).isFile()) continue;
+    const manifest = { path: name };
+    try {
+      const content = fs.readFileSync(file, "utf8");
+      if (name === "package.json") {
+        const parsed = JSON.parse(content);
+        manifest.scripts = parsed.scripts ? Object.keys(parsed.scripts).sort() : [];
+        manifest.packageManager = parsed.packageManager;
+        manifest.type = parsed.type;
+      } else if (name === "Makefile" || name === "justfile") {
+        manifest.targets = content.split(/\r?\n/)
+          .map((line) => line.match(/^([A-Za-z0-9_.-]+)\s*:/)?.[1])
+          .filter(Boolean)
+          .slice(0, 40);
+      } else if (name === "README.md") {
+        manifest.summary = content.split(/\r?\n/).filter(Boolean).slice(0, 12).join("\n").slice(0, 1_200);
+      } else {
+        manifest.present = true;
+      }
+    } catch (error) {
+      manifest.error = error.message;
+    }
+    manifests.push(manifest);
+  }
+  return manifests;
+}
+
+function guessValidationCommands(manifests) {
+  const commands = [];
+  const pkg = manifests.find((manifest) => manifest.path === "package.json");
+  if (pkg?.scripts) {
+    for (const script of ["test", "lint", "typecheck", "check", "format:check"]) {
+      if (pkg.scripts.includes(script)) commands.push(`npm run ${script}`);
+    }
+  }
+  const make = manifests.find((manifest) => manifest.path === "Makefile");
+  if (make?.targets?.includes("test")) commands.push("make test");
+  if (make?.targets?.includes("lint")) commands.push("make lint");
+  const just = manifests.find((manifest) => manifest.path === "justfile");
+  if (just?.targets?.includes("test")) commands.push("just test");
+  if (manifests.some((manifest) => manifest.path === "Cargo.toml")) commands.push("cargo test");
+  if (manifests.some((manifest) => manifest.path === "go.mod")) commands.push("go test ./...");
+  if (manifests.some((manifest) => manifest.path === "pyproject.toml")) commands.push("pytest");
+  return [...new Set(commands)].slice(0, 12);
+}
+
+function buildSystemPrompt() {
+  return `You are Pi Dream Scout, an unattended read-only maintenance scout for a codebase.
+
+Mission: identify high-confidence, low-risk, genuinely useful work items that a human or later agent could choose to do. You are not here to make changes.
+
+Hard rules:
+- Read-only only. Never edit, write, delete, install, commit, push, or run deploy-like commands.
+- Do not request secrets or read secret-looking files: .env*, credential*, secret*, auth.json, private keys, .ssh, .gnupg.
+- Prefer evidence from existing tests, docs, config, git signals, TODO/FIXME comments, and nearby source.
+- A candidate is only useful if it has specific evidence, exact files, a plausible fix path, and a local validation command or clear check.
+- Reject vague chores like "improve code quality" or "add tests" unless tied to concrete files and evidence.
+- Small, local, testable work beats broad refactors.
+- If evidence is weak, either omit the candidate or mark confidence low.
+
+Return ONLY valid JSON with this shape:
+{
+  "summary": "one-sentence scout summary",
+  "candidates": [
+    {
+      "title": "specific work item",
+      "kind": "test-health|docs-drift|dead-code|config-drift|todo-triage|maintenance|bug-risk",
+      "confidence": "high|medium|low",
+      "impact": "high|medium|low",
+      "risk": "low|medium|high",
+      "evidence": ["path:line concrete observation"],
+      "files": ["relative/path"],
+      "proposed_work": "minimal path to resolve or investigate",
+      "validation": ["local command or exact manual check"],
+      "estimated_diff": "none|<20 lines|<80 lines|unknown",
+      "autonomous_patch_allowed": false,
+      "score": 0
+    }
+  ]
+}
+
+Score candidates from 0-100. Only use autonomous_patch_allowed=true for deterministic typo/format/unused-import/link fixes with low risk and clear validation.`;
+}
+
+function buildUserPrompt({ repo, recipe, maxCandidates, signals }) {
+  return `Scout this repository for dream candidates.
+
+Repository: ${repo}
+Recipe: ${recipe} - ${RECIPE_DESCRIPTIONS[recipe]}
+Maximum candidates: ${maxCandidates}
+
+You may inspect files with the read/search/list tools, but keep exploration focused. Use the local signals below as starting points; verify before proposing.
+
+Local signals:
+${JSON.stringify(signals, null, 2)}
+
+Return JSON only. Do not wrap it in markdown.`;
+}
+
+function runPiScout({ repo, systemPrompt, userPrompt, timeoutSeconds, model, includeContextFiles }) {
+  const safetyExtension = writeSafetyExtension();
+  const args = [];
+  if (model) args.push("--model", model);
+  args.push("--mode", "json");
+  args.push("-p");
+  args.push("--thinking", "off");
+  args.push("--no-session");
+  args.push("--no-skills");
+  args.push("--no-prompt-templates");
+  if (!includeContextFiles) args.push("--no-context-files");
+  args.push("--no-extensions", "-e", safetyExtension);
+  args.push("--tools", "read,grep,find,ls");
+  args.push("--name", `dream scout ${path.basename(repo)}`);
+  args.push("--system-prompt", systemPrompt);
+  args.push(userPrompt);
+
+  try {
+    const result = runCapture("pi", args, {
+      cwd: repo,
+      timeoutMs: timeoutSeconds * 1000,
+      env: { ...process.env, PI_DREAM_SAFETY: "1" },
+    });
+
+    const piOutput = parsePiOutputFile(result.stdoutPath);
+
+    if (result.code !== 0) {
+      const logPath = writeFailureLog(repo, result, piOutput);
+      throw new Error(`pi exited with ${result.code}${result.timedOut ? " after timeout" : ""}. Failure log: ${logPath}\n${firstLine(result.stderr)}`);
+    }
+
+    const assistantText = piOutput.assistantTexts.at(-1) || "";
+    const parsed = extractJsonObject(assistantText);
+    if (!parsed) {
+      const logPath = writeFailureLog(repo, result, piOutput);
+      throw new Error(`Could not parse scout JSON from pi output. Failure log: ${logPath}`);
+    }
+
+    return normalizeScoutResult(parsed, { rawAssistantText: assistantText, sessionId: piOutput.sessionId, toolCalls: piOutput.toolCalls, piExitCode: result.code });
+  } finally {
+    try { fs.unlinkSync(safetyExtension); } catch {}
+  }
+}
+
+function writeSafetyExtension() {
+  const file = path.join(os.tmpdir(), `pi-dream-safety-${process.pid}-${crypto.randomBytes(4).toString("hex")}.ts`);
+  const source = `
+const FORBIDDEN = [
+  /(^|[\\/])\\.env(\\.|[\\/]|$)/i,
+  /(^|[\\/])(?:credential|credentials|secret|secrets)([\\/._-]|$)/i,
+  /(^|[\\/])auth\\.json$/i,
+  /(^|[\\/])mcp-oauth([\\/]|$)/i,
+  /(^|[\\/])\\.(?:ssh|gnupg)([\\/]|$)/i,
+  /\\.(?:pem|key)$/i,
+  /(^|[\\/])node_modules([\\/]|$)/i,
+  /(^|[\\/])\\.git([\\/]|$)/i,
+];
+
+function collectStrings(value: unknown, output: string[] = []): string[] {
+  if (typeof value === "string") output.push(value);
+  else if (Array.isArray(value)) value.forEach((item) => collectStrings(item, output));
+  else if (value && typeof value === "object") Object.values(value as Record<string, unknown>).forEach((item) => collectStrings(item, output));
+  return output;
+}
+
+export default function(pi: any) {
+  pi.on("tool_call", async (event: any) => {
+    if (process.env.PI_DREAM_SAFETY !== "1") return;
+    const strings = collectStrings(event.input);
+    const cwd = process.cwd();
+    for (const value of strings) {
+      const normalized = value.replace(/\\\\/g, "/");
+      if (FORBIDDEN.some((pattern) => pattern.test(normalized))) {
+        return { block: true, reason: "pi-dream safety blocked forbidden path or generated directory" };
+      }
+      if (normalized.startsWith("/") && normalized !== cwd && !normalized.startsWith(cwd + "/")) {
+        return { block: true, reason: "pi-dream safety blocks absolute paths outside the target repo" };
+      }
+    }
+  });
+}
+`;
+  fs.writeFileSync(file, source, { mode: 0o600 });
+  return file;
+}
+
+function parsePiOutputFile(stdoutPath) {
+  const summary = {
+    stdoutPath,
+    eventCount: 0,
+    parseErrors: 0,
+    sessionId: undefined,
+    toolCalls: [],
+    assistantTexts: [],
+    relevantEvents: [],
+  };
+
+  let text = "";
+  try {
+    text = fs.readFileSync(stdoutPath, "utf8");
+  } catch (error) {
+    summary.parseErrors += 1;
+    summary.relevantEvents.push({ type: "read_stdout_error", error: error.message });
+    return summary;
+  }
+
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    summary.eventCount += 1;
+
+    let event;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      summary.parseErrors += 1;
+      continue;
+    }
+
+    if (event.type === "session") {
+      summary.sessionId = event.id;
+      summary.relevantEvents.push({ type: "session", id: event.id, cwd: event.cwd });
+      continue;
+    }
+
+    if (event.type === "tool_execution_start") {
+      const toolCall = { toolName: event.toolName, args: event.args };
+      summary.toolCalls.push(toolCall);
+      summary.relevantEvents.push({ type: "tool_execution_start", ...toolCall });
+      continue;
+    }
+
+    if (event.type === "tool_execution_end" && event.isError) {
+      summary.relevantEvents.push({ type: "tool_execution_end", toolName: event.toolName, isError: true });
+      continue;
+    }
+
+    if (event.type === "message_end" && event.message?.role === "assistant") {
+      const assistantText = messageText(event.message).trim();
+      if (assistantText) summary.assistantTexts.push(assistantText);
+      summary.relevantEvents.push({
+        type: "message_end",
+        messageRole: "assistant",
+        text: excerpt(assistantText, 2_000),
+      });
+    }
+  }
+
+  return summary;
+}
+
+function messageText(message) {
+  const content = message.content;
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.map((block) => {
+    if (typeof block === "string") return block;
+    if (block?.type === "text" && typeof block.text === "string") return block.text;
+    return "";
+  }).join("");
+}
+
+function extractJsonObject(text) {
+  const trimmed = String(text || "").trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidate = fenced ? fenced[1].trim() : trimmed;
+  try { return JSON.parse(candidate); } catch {}
+
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(candidate.slice(start, end + 1)); } catch {}
+  }
+  return null;
+}
+
+function normalizeScoutResult(input, metadata = {}) {
+  const candidates = Array.isArray(input?.candidates) ? input.candidates : [];
+  const normalized = candidates.map((candidate, index) => normalizeCandidate(candidate, index)).filter(Boolean);
+  normalized.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+  return {
+    summary: typeof input?.summary === "string" ? input.summary.trim() : "",
+    candidates: normalized,
+    raw: metadata,
+  };
+}
+
+function normalizeCandidate(candidate, index) {
+  if (!candidate || typeof candidate !== "object") return null;
+  const title = stringField(candidate.title, `Candidate ${index + 1}`);
+  const evidence = arrayOfStrings(candidate.evidence).slice(0, 8);
+  const files = arrayOfStrings(candidate.files).filter((file) => !isExcludedPath(file)).slice(0, 12);
+  const confidence = enumField(candidate.confidence, ["high", "medium", "low"], "medium");
+  const impact = enumField(candidate.impact, ["high", "medium", "low"], "medium");
+  const risk = enumField(candidate.risk, ["low", "medium", "high"], "medium");
+  const validation = arrayOfStrings(candidate.validation).slice(0, 6);
+  const score = Number.isFinite(candidate.score) && candidate.score > 0
+    ? Math.max(0, Math.min(100, Math.round(candidate.score)))
+    : scoreCandidate({ confidence, impact, risk, evidence, files, validation });
+
+  return {
+    id: `C${index + 1}`,
+    title,
+    kind: stringField(candidate.kind, "maintenance"),
+    confidence,
+    impact,
+    risk,
+    evidence,
+    files,
+    proposed_work: stringField(candidate.proposed_work || candidate.proposedWork, "Investigate and make the smallest safe change if evidence holds."),
+    validation,
+    estimated_diff: stringField(candidate.estimated_diff || candidate.estimatedDiff, "unknown"),
+    autonomous_patch_allowed: Boolean(candidate.autonomous_patch_allowed || candidate.autonomousPatchAllowed) && risk === "low" && confidence === "high",
+    score,
+  };
+}
+
+function scoreCandidate({ confidence, impact, risk, evidence, files, validation }) {
+  const confidenceScore = { high: 35, medium: 22, low: 8 }[confidence] || 0;
+  const impactScore = { high: 30, medium: 20, low: 10 }[impact] || 0;
+  const riskScore = { low: 20, medium: 8, high: -15 }[risk] || 0;
+  const evidenceScore = Math.min(10, evidence.length * 3);
+  const localityScore = files.length > 0 && files.length <= 4 ? 5 : 0;
+  const validationScore = validation.length > 0 ? 5 : 0;
+  return Math.max(0, Math.min(100, confidenceScore + impactScore + riskScore + evidenceScore + localityScore + validationScore));
+}
+
+function stringField(value, fallback) {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, 1_000) : fallback;
+}
+
+function enumField(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback;
+}
+
+function arrayOfStrings(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => typeof item === "string" ? item.trim() : JSON.stringify(item)).filter(Boolean);
+}
+
+function mockScout({ recipe, maxCandidates, signals }) {
+  const candidates = [];
+  const validation = signals.validationCommands.length > 0 ? signals.validationCommands.slice(0, 2) : ["Review the referenced files and run the repo's normal test/lint command."];
+
+  if ((recipe === "general" || recipe === "tests") && signals.findings.skippedTests.length > 0) {
+    const matches = signals.findings.skippedTests.slice(0, 5);
+    candidates.push({
+      title: "Triage skipped or focused tests found in the suite",
+      kind: "test-health",
+      confidence: "high",
+      impact: "medium",
+      risk: "low",
+      evidence: matches.map(formatMatchEvidence),
+      files: unique(matches.map((match) => match.file).filter(Boolean)),
+      proposed_work: "Inspect each skipped/focused test, confirm whether it is still needed, and either re-enable with a minimal fix or document why it remains skipped.",
+      validation,
+      estimated_diff: "<80 lines",
+      autonomous_patch_allowed: false,
+    });
+  }
+
+  if ((recipe === "general" || recipe === "todos") && signals.findings.todos.length > 0) {
+    const matches = signals.findings.todos.slice(0, 6);
+    candidates.push({
+      title: "Triage actionable TODO/FIXME comments with concrete file references",
+      kind: "todo-triage",
+      confidence: "medium",
+      impact: "medium",
+      risk: "low",
+      evidence: matches.map(formatMatchEvidence),
+      files: unique(matches.map((match) => match.file).filter(Boolean)),
+      proposed_work: "Group the referenced TODO/FIXME comments, remove stale ones, and turn surviving actionable items into explicit work with validation steps.",
+      validation: ["Review referenced files", ...validation].slice(0, 4),
+      estimated_diff: "none|<20 lines",
+      autonomous_patch_allowed: false,
+    });
+  }
+
+  if ((recipe === "general" || recipe === "config") && signals.findings.disabledChecks.length > 0) {
+    const matches = signals.findings.disabledChecks.slice(0, 5);
+    candidates.push({
+      title: "Review local lint/type suppression comments for stale disables",
+      kind: "config-drift",
+      confidence: "medium",
+      impact: "low",
+      risk: "low",
+      evidence: matches.map(formatMatchEvidence),
+      files: unique(matches.map((match) => match.file).filter(Boolean)),
+      proposed_work: "For each suppression, verify whether the underlying warning still exists and remove stale disables only when validation passes.",
+      validation,
+      estimated_diff: "<20 lines",
+      autonomous_patch_allowed: false,
+    });
+  }
+
+  if ((recipe === "general" || recipe === "docs") && signals.manifests.some((manifest) => manifest.path === "README.md") && signals.validationCommands.length > 0) {
+    candidates.push({
+      title: "Check README/setup instructions against detected validation commands",
+      kind: "docs-drift",
+      confidence: "medium",
+      impact: "medium",
+      risk: "low",
+      evidence: [
+        "README.md exists",
+        `Detected validation commands: ${signals.validationCommands.join(", ")}`,
+      ],
+      files: ["README.md", ...signals.manifests.filter((manifest) => manifest.path !== "README.md").map((manifest) => manifest.path)].slice(0, 8),
+      proposed_work: "Compare documented setup/test commands with manifest scripts and update stale docs only when command names clearly disagree.",
+      validation: signals.validationCommands.slice(0, 3),
+      estimated_diff: "<80 lines",
+      autonomous_patch_allowed: false,
+    });
+  }
+
+  if (candidates.length === 0 && signals.git?.recentFiles?.length) {
+    candidates.push({
+      title: "Inspect recently changed files for missing validation notes",
+      kind: "maintenance",
+      confidence: "low",
+      impact: "low",
+      risk: "low",
+      evidence: signals.git.recentFiles.slice(0, 6).map((file) => `recently changed: ${file}`),
+      files: signals.git.recentFiles.slice(0, 6),
+      proposed_work: "Use a real Pi scout run to inspect these files and identify concrete maintenance opportunities.",
+      validation,
+      estimated_diff: "unknown",
+      autonomous_patch_allowed: false,
+    });
+  }
+
+  const normalized = normalizeScoutResult({
+    summary: `Mock scout generated ${Math.min(candidates.length, maxCandidates)} candidate(s) from local signals.`,
+    candidates: candidates.slice(0, maxCandidates),
+  }, { mock: true });
+  return normalized;
+}
+
+function formatMatchEvidence(match) {
+  if (match.file && match.line) return `${match.file}:${match.line} ${match.text || ""}`.trim();
+  return match.line || JSON.stringify(match);
+}
+
+function buildReport({ repo, recipe, maxCandidates, startedAt, finishedAt, mode, signals, scout }) {
+  const repoName = path.basename(signals.repoPath || repo);
+  const id = `${compactTimestamp(startedAt)}-${safeSlug(repoName)}-${crypto.randomBytes(3).toString("hex")}`;
+  return {
+    version: VERSION,
+    id,
+    status: "inbox",
+    createdAt: startedAt,
+    updatedAt: finishedAt,
+    mode,
+    recipe,
+    maxCandidates,
+    repo: {
+      path: signals.repoPath || repo,
+      name: repoName,
+      branch: signals.git?.branch || null,
+      head: signals.git?.head || null,
+      dirty: Boolean(signals.git?.dirty),
+    },
+    summary: scout.summary || "",
+    candidates: scout.candidates || [],
+    raw: scout.raw || {},
+    localSignals: signals,
+  };
+}
+
+function writeDreamReport(root, report) {
+  const dir = path.join(root, report.status);
+  fs.mkdirSync(dir, { recursive: true });
+  const jsonPath = path.join(dir, `${report.id}.json`);
+  const mdPath = path.join(dir, `${report.id}.md`);
+  fs.writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
+  fs.writeFileSync(mdPath, formatMarkdownReport(report));
+  return { json: jsonPath, markdown: mdPath };
+}
+
+function formatMarkdownReport(report) {
+  const lines = [];
+  lines.push(`# Pi Dream Report: ${report.id}`);
+  lines.push("");
+  lines.push(`- Status: ${report.status}`);
+  lines.push(`- Repo: ${report.repo.path}`);
+  lines.push(`- Branch: ${report.repo.branch || "unknown"}`);
+  lines.push(`- Head: ${report.repo.head || "unknown"}`);
+  lines.push(`- Dirty at scout time: ${report.repo.dirty ? "yes" : "no"}`);
+  lines.push(`- Recipe: ${report.recipe}`);
+  lines.push(`- Mode: ${report.mode}`);
+  lines.push(`- Created: ${report.createdAt}`);
+  if (report.rejectionReason) lines.push(`- Rejection reason: ${report.rejectionReason}`);
+  lines.push("");
+  lines.push("## Summary");
+  lines.push("");
+  lines.push(report.summary || "No summary provided.");
+  lines.push("");
+  lines.push("## Candidates");
+  lines.push("");
+  if (!report.candidates.length) {
+    lines.push("No candidates found.");
+  }
+  if (Array.isArray(report.developerlyActions) && report.developerlyActions.length > 0) {
+    lines.push("## Developerly Actions");
+    lines.push("");
+    for (const action of report.developerlyActions) {
+      lines.push(`- ${action.createdAt}: ${action.type} ${action.candidateId} -> ${action.project} (${action.kind})`);
+      if (action.title) lines.push(`  - Title: ${action.title}`);
+      if (action.result?.json?.id) lines.push(`  - Developerly ID: ${action.result.json.id}`);
+      else if (action.result?.json?.work_item?.id) lines.push(`  - Developerly ID: ${action.result.json.work_item.id}`);
+    }
+    lines.push("");
+  }
+
+  for (const candidate of report.candidates) {
+    lines.push(`### ${candidate.id}: ${candidate.title}`);
+    lines.push("");
+    lines.push(`- Kind: ${candidate.kind}`);
+    lines.push(`- Score: ${candidate.score}`);
+    lines.push(`- Confidence: ${candidate.confidence}`);
+    lines.push(`- Impact: ${candidate.impact}`);
+    lines.push(`- Risk: ${candidate.risk}`);
+    lines.push(`- Estimated diff: ${candidate.estimated_diff}`);
+    lines.push(`- Autonomous patch allowed: ${candidate.autonomous_patch_allowed ? "yes" : "no"}`);
+    lines.push("");
+    lines.push("Evidence:");
+    if (candidate.evidence.length) candidate.evidence.forEach((item) => lines.push(`- ${item}`));
+    else lines.push("- none supplied");
+    lines.push("");
+    lines.push("Files:");
+    if (candidate.files.length) candidate.files.forEach((file) => lines.push(`- ${file}`));
+    else lines.push("- none supplied");
+    lines.push("");
+    lines.push("Proposed work:");
+    lines.push(candidate.proposed_work);
+    lines.push("");
+    lines.push("Validation:");
+    if (candidate.validation.length) candidate.validation.forEach((command) => lines.push(`- ${command}`));
+    else lines.push("- none supplied");
+    lines.push("");
+  }
+  lines.push("## Local Signals");
+  lines.push("");
+  lines.push(`- Files considered: ${report.localSignals.files.count}`);
+  lines.push(`- TODO/FIXME matches: ${report.localSignals.findings.todos.length}`);
+  lines.push(`- Skipped/focused test matches: ${report.localSignals.findings.skippedTests.length}`);
+  lines.push(`- Disabled check matches: ${report.localSignals.findings.disabledChecks.length}`);
+  if (report.localSignals.validationCommands.length) {
+    lines.push("- Validation commands:");
+    report.localSignals.validationCommands.forEach((command) => lines.push(`  - ${command}`));
+  }
+  lines.push("");
+  return `${lines.join("\n")}\n`;
+}
+
+function cmdList(args) {
+  const { options } = parseArgs(args);
+  const root = stateRoot(options["state-dir"]);
+  ensureStateDirs(root);
+  const status = options.status || "inbox";
+  const reports = listReports(root, status);
+  if (options.json) {
+    console.log(JSON.stringify(reports, null, 2));
+    return;
+  }
+  if (!reports.length) {
+    console.log(`No ${status} dream reports.`);
+    return;
+  }
+  for (const report of reports) {
+    const top = report.candidates[0];
+    console.log(`${report.id}  ${report.repo.name}  ${report.recipe}  candidates=${report.candidates.length}${top ? `  top=${top.score}:${top.title}` : ""}`);
+  }
+}
+
+function cmdShow(args) {
+  const { options, positional } = parseArgs(args);
+  const id = positional[0];
+  if (!id) throw new Error("Usage: pi-dream show <id>");
+  const root = stateRoot(options["state-dir"]);
+  const found = findReport(root, id);
+  if (!found) throw new Error(`Dream report not found: ${id}`);
+  if (options.json) console.log(JSON.stringify(found.report, null, 2));
+  else console.log(formatMarkdownReport(found.report));
+}
+
+function cmdMove(args, targetStatus) {
+  const { options, positional } = parseArgs(args);
+  const id = positional[0];
+  if (!id) throw new Error(`Usage: pi-dream ${targetStatus} <id>`);
+  const root = stateRoot(options["state-dir"]);
+  ensureStateDirs(root);
+  const found = findReport(root, id);
+  if (!found) throw new Error(`Dream report not found: ${id}`);
+
+  const report = found.report;
+  report.status = targetStatus;
+  report.updatedAt = new Date().toISOString();
+  if (targetStatus === "rejected") report.rejectionReason = options.reason || positional.slice(1).join(" ") || "No reason recorded.";
+
+  const targetDir = path.join(root, targetStatus);
+  fs.mkdirSync(targetDir, { recursive: true });
+  const jsonPath = path.join(targetDir, `${report.id}.json`);
+  const mdPath = path.join(targetDir, `${report.id}.md`);
+  fs.writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
+  fs.writeFileSync(mdPath, formatMarkdownReport(report));
+  for (const oldPath of [found.jsonPath, found.mdPath]) {
+    if (oldPath && fs.existsSync(oldPath) && path.resolve(oldPath) !== path.resolve(jsonPath) && path.resolve(oldPath) !== path.resolve(mdPath)) {
+      fs.unlinkSync(oldPath);
+    }
+  }
+  console.log(`${report.id} -> ${targetStatus}`);
+}
+
+function cmdDeveloperly(args, mode) {
+  const { options, positional } = parseArgs(args);
+  const id = positional[0];
+  const candidateId = positional[1];
+  if (!id || !candidateId) throw new Error(`Usage: pi-dream ${mode} <report-id> <candidate-id> [--dry-run]`);
+
+  const root = stateRoot(options["state-dir"]);
+  ensureStateDirs(root);
+  const found = findReport(root, id);
+  if (!found) throw new Error(`Dream report not found: ${id}`);
+
+  const candidate = findCandidate(found.report, candidateId);
+  if (!candidate) throw new Error(`Candidate not found: ${candidateId}. Available: ${found.report.candidates.map((item) => item.id).join(", ")}`);
+
+  const project = resolveDeveloperlyProject(found.report, options.project);
+  if (!project) throw new Error("Could not resolve Developerly project. Pass --project ID_OR_NAME.");
+
+  const kind = String(options.kind || inferDeveloperlyKind(candidate));
+  const title = String(options.title || candidate.title).slice(0, 180);
+  const description = buildDeveloperlyDescription(found.report, candidate, found.mdPath);
+  const prompt = buildImplementationPrompt(found.report, candidate, found.mdPath);
+  const command = mode === "ticket"
+    ? buildTicketCommand({ project, kind, title, description, options })
+    : buildImplementCommand({ report: found.report, project, kind, title, prompt, options });
+
+  const action = {
+    type: mode,
+    candidateId: candidate.id,
+    createdAt: new Date().toISOString(),
+    project,
+    kind,
+    title,
+    cwd: found.report.repo.path,
+    dryRun: Boolean(options["dry-run"]),
+    command: sanitizeDeveloperlyCommand(command.args),
+  };
+
+  if (options["dry-run"]) {
+    const payload = { action, fullCommand: ["developerly", ...command.args], description, prompt };
+    if (options.json) console.log(JSON.stringify(payload, null, 2));
+    else {
+      console.log(`Developerly ${mode} dry run`);
+      console.log(`cwd: ${command.cwd}`);
+      console.log(`command: developerly ${shellJoin(action.command)}`);
+      console.log("\nDescription/prompt preview:\n");
+      console.log(mode === "ticket" ? description : prompt);
+    }
+    return;
+  }
+
+  const result = runDeveloperly(command.args, { cwd: command.cwd });
+  action.result = result;
+
+  const report = found.report;
+  report.status = mode === "ticket" ? "ticketed" : "in_progress";
+  report.updatedAt = action.createdAt;
+  report.developerlyActions = [...(Array.isArray(report.developerlyActions) ? report.developerlyActions : []), action];
+  report.candidates = report.candidates.map((item) => item.id === candidate.id ? {
+    ...item,
+    developerly: {
+      ...(item.developerly || {}),
+      [mode === "ticket" ? "ticketedAt" : "implementationStartedAt"]: action.createdAt,
+      project,
+      kind,
+      title,
+      result: result.json ?? result.stdout,
+    },
+  } : item);
+
+  persistMovedReport(root, found, report, report.status);
+
+  const output = {
+    reportId: report.id,
+    status: report.status,
+    candidateId: candidate.id,
+    action,
+    developerly: result.json ?? result.stdout,
+  };
+
+  if (options.json) console.log(JSON.stringify(output, null, 2));
+  else {
+    console.log(`${report.id} ${candidate.id} -> ${report.status}`);
+    if (result.stdout) console.log(result.stdout.trim());
+  }
+}
+
+function findCandidate(report, candidateId) {
+  const wanted = String(candidateId).toLowerCase();
+  return report.candidates.find((candidate) => String(candidate.id).toLowerCase() === wanted)
+    ?? report.candidates.find((candidate) => String(candidate.title).toLowerCase().includes(wanted));
+}
+
+function resolveDeveloperlyProject(report, explicitProject) {
+  if (explicitProject) return String(explicitProject);
+  if (process.env.PI_DREAM_DEVELOPERLY_PROJECT) return process.env.PI_DREAM_DEVELOPERLY_PROJECT;
+
+  const result = runSync("developerly", ["projects", "list", "--json"], { allowFailure: true, timeoutMs: 20_000, maxBuffer: 2 * 1024 * 1024 });
+  if (result.code !== 0 || !result.stdout.trim()) return undefined;
+
+  let projects;
+  try { projects = JSON.parse(result.stdout); } catch { return undefined; }
+  if (!Array.isArray(projects)) return undefined;
+
+  const repoPath = path.resolve(report.repo.path);
+  const match = projects.find((project) => {
+    const projectRepo = project.repo || project.repository;
+    return typeof projectRepo === "string" && path.resolve(resolveHome(projectRepo)) === repoPath;
+  });
+
+  if (!match) return undefined;
+  return String(match.developerly_project_id || match.id || match.name);
+}
+
+function inferDeveloperlyKind(candidate) {
+  const text = `${candidate.kind || ""} ${candidate.title || ""}`.toLowerCase();
+  if (text.includes("feature") && !text.includes("feature flag") && !text.includes("feature config")) return "feature";
+  return "bug_fix";
+}
+
+function buildTicketCommand({ project, kind, title, description, options }) {
+  const args = ["work-items", "create", "--project", project, "--kind", kind, "--title", title, "--description", description, "--json"];
+  if (options.sync !== false) args.push("--sync");
+  return { args, cwd: process.cwd() };
+}
+
+function buildImplementCommand({ report, project, kind, title, prompt, options }) {
+  const args = ["quickstart", "--project", project, "--agent", String(options.agent || "pi"), "--kind", kind, "--title", title, "--prompt", prompt, "--base", String(options.base || report.repo.branch || "main"), "--json"];
+  if (options.sync === false) args.push("--no-sync");
+  if (options.plan === false) args.push("--plan=false");
+  else args.push("--plan");
+  for (const flag of ["branch", "model", "effort", "machine"]) {
+    if (options[flag]) args.push(`--${flag}`, String(options[flag]));
+  }
+  return { args, cwd: report.repo.path };
+}
+
+function buildDeveloperlyDescription(report, candidate, markdownPath) {
+  return [
+    `Pi Dream candidate ${report.id} ${candidate.id}`,
+    "",
+    `Repo: ${report.repo.path}`,
+    `Branch/head at scout time: ${report.repo.branch || "unknown"} @ ${report.repo.head || "unknown"}`,
+    `Scout recipe: ${report.recipe}`,
+    `Report: ${markdownPath}`,
+    "",
+    `Kind: ${candidate.kind}`,
+    `Score: ${candidate.score}`,
+    `Confidence: ${candidate.confidence}`,
+    `Impact: ${candidate.impact}`,
+    `Risk: ${candidate.risk}`,
+    `Estimated diff: ${candidate.estimated_diff}`,
+    "",
+    "Evidence:",
+    ...bulletLines(candidate.evidence),
+    "",
+    "Files:",
+    ...bulletLines(candidate.files),
+    "",
+    "Proposed work:",
+    candidate.proposed_work,
+    "",
+    "Validation:",
+    ...bulletLines(candidate.validation),
+    "",
+    "Guardrails:",
+    "- Keep the change scoped to this candidate.",
+    "- Do not read or modify secrets (.env*, credentials, private keys, .ssh, .gnupg).",
+    "- Stop and ask for review if the fix becomes broader than the evidence supports.",
+  ].join("\n");
+}
+
+function buildImplementationPrompt(report, candidate, markdownPath) {
+  return [
+    "Implement this accepted Pi Dream candidate in the new Developerly worktree.",
+    "",
+    buildDeveloperlyDescription(report, candidate, markdownPath),
+    "",
+    "Implementation instructions:",
+    "1. Inspect the cited files and verify the evidence before editing.",
+    "2. Make the smallest safe change that resolves the candidate.",
+    "3. Add or update tests only where directly relevant.",
+    "4. Run the listed validation commands when possible.",
+    "5. Leave a concise final summary with changed files, validation results, and any follow-up risks.",
+    "6. Do not merge, deploy, push, or access secret material.",
+  ].join("\n");
+}
+
+function bulletLines(items) {
+  return Array.isArray(items) && items.length ? items.map((item) => `- ${item}`) : ["- none supplied"];
+}
+
+function runDeveloperly(args, options = {}) {
+  const result = spawnSync("developerly", args, {
+    cwd: options.cwd,
+    env: process.env,
+    encoding: "utf8",
+    timeout: 120_000,
+    maxBuffer: 4 * 1024 * 1024,
+  });
+
+  const output = {
+    code: result.status ?? (result.signal ? 128 : 1),
+    signal: result.signal,
+    stdout: result.stdout || "",
+    stderr: result.stderr || "",
+    json: undefined,
+  };
+
+  if (output.stdout.trim()) {
+    try { output.json = JSON.parse(output.stdout); } catch {}
+  }
+
+  if (output.code !== 0) {
+    throw new Error(`developerly ${args[0]} failed with ${output.code}: ${firstLine(output.stderr) || firstLine(output.stdout) || result.error?.message || "unknown error"}`);
+  }
+
+  return output;
+}
+
+function persistMovedReport(root, found, report, targetStatus) {
+  const targetDir = path.join(root, targetStatus);
+  fs.mkdirSync(targetDir, { recursive: true });
+  const jsonPath = path.join(targetDir, `${report.id}.json`);
+  const mdPath = path.join(targetDir, `${report.id}.md`);
+  fs.writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
+  fs.writeFileSync(mdPath, formatMarkdownReport(report));
+  for (const oldPath of [found.jsonPath, found.mdPath]) {
+    if (oldPath && fs.existsSync(oldPath) && path.resolve(oldPath) !== path.resolve(jsonPath) && path.resolve(oldPath) !== path.resolve(mdPath)) {
+      fs.unlinkSync(oldPath);
+    }
+  }
+}
+
+function sanitizeDeveloperlyCommand(args) {
+  const sanitized = [];
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    sanitized.push(arg);
+    if ((arg === "--description" || arg === "--prompt") && i + 1 < args.length) {
+      sanitized.push(`<${arg.slice(2)}: ${String(args[i + 1]).length} chars>`);
+      i += 1;
+    }
+  }
+  return sanitized;
+}
+
+function shellJoin(args) {
+  return args.map((arg) => /[\s"']/.test(String(arg)) ? shellQuote(arg) : String(arg)).join(" ");
+}
+
+function listReports(root, status = "inbox") {
+  const statuses = status === "all" ? STATUS_DIRS : [status];
+  const reports = [];
+  for (const statusDir of statuses) {
+    const dir = path.join(root, statusDir);
+    if (!fs.existsSync(dir)) continue;
+    for (const entry of fs.readdirSync(dir)) {
+      if (!entry.endsWith(".json")) continue;
+      try {
+        const report = JSON.parse(fs.readFileSync(path.join(dir, entry), "utf8"));
+        reports.push(report);
+      } catch {}
+    }
+  }
+  reports.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return reports;
+}
+
+function findReport(root, id) {
+  const candidates = [];
+  for (const status of STATUS_DIRS) {
+    const dir = path.join(root, status);
+    if (!fs.existsSync(dir)) continue;
+    for (const entry of fs.readdirSync(dir)) {
+      if (!entry.endsWith(".json")) continue;
+      if (!entry.startsWith(id) && !entry.includes(id)) continue;
+      const jsonPath = path.join(dir, entry);
+      try {
+        const report = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+        if (report.id === id || report.id.startsWith(id)) {
+          candidates.push({ report, jsonPath, mdPath: path.join(dir, `${report.id}.md`) });
+        }
+      } catch {}
+    }
+  }
+  if (candidates.length > 1) throw new Error(`Ambiguous dream id '${id}': ${candidates.map((candidate) => candidate.report.id).join(", ")}`);
+  return candidates[0] || null;
+}
+
+function runSync(command, args, options = {}) {
+  const result = spawnSync(command, args, {
+    cwd: options.cwd,
+    encoding: "utf8",
+    timeout: options.timeoutMs || 10_000,
+    maxBuffer: options.maxBuffer || 1024 * 1024,
+  });
+  if (!options.allowFailure && result.status !== 0) throw new Error(`${command} ${args.join(" ")} failed: ${result.stderr || result.error?.message || result.status}`);
+  return { stdout: result.stdout || "", stderr: result.stderr || "", code: result.status ?? 1 };
+}
+
+function runCapture(command, args, options = {}) {
+  const captureId = `${process.pid}-${crypto.randomBytes(4).toString("hex")}`;
+  const stdoutPath = path.join(os.tmpdir(), `pi-dream-${captureId}.stdout.jsonl`);
+  const stderrPath = path.join(os.tmpdir(), `pi-dream-${captureId}.stderr.log`);
+  const stdoutFd = fs.openSync(stdoutPath, "w");
+  const stderrFd = fs.openSync(stderrPath, "w");
+  let proc;
+
+  try {
+    proc = spawnSync(command, args, {
+      cwd: options.cwd,
+      env: options.env || process.env,
+      timeout: options.timeoutMs,
+      stdio: ["ignore", stdoutFd, stderrFd],
+    });
+  } finally {
+    fs.closeSync(stdoutFd);
+    fs.closeSync(stderrFd);
+  }
+
+  const stdoutBytes = fileSize(stdoutPath);
+  const stderrBytes = fileSize(stderrPath);
+  const stderr = readFileExcerpt(stderrPath, 12_000);
+
+  return {
+    stdoutPath,
+    stderrPath,
+    stdoutBytes,
+    stderrBytes,
+    stderr,
+    code: proc.status ?? (proc.signal ? 128 : 1),
+    signal: proc.signal,
+    timedOut: Boolean(proc.error && proc.error.code === "ETIMEDOUT"),
+    error: proc.error?.message,
+  };
+}
+
+function fileSize(file) {
+  try { return fs.statSync(file).size; } catch { return 0; }
+}
+
+function readFileExcerpt(file, maxChars) {
+  let text = "";
+  try { text = fs.readFileSync(file, "utf8"); } catch { return ""; }
+  return excerpt(text, maxChars);
+}
+
+function excerpt(text, maxChars) {
+  text = String(text || "");
+  if (text.length <= maxChars) return text;
+  const keep = Math.max(500, Math.floor((maxChars - 120) / 2));
+  return `${text.slice(0, keep)}\n\n[... ${text.length - keep * 2} chars omitted ...]\n\n${text.slice(-keep)}`;
+}
+
+function writeFailureLog(repo, result, piOutput) {
+  const root = stateRoot();
+  const dir = path.join(root, "logs");
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `${compactTimestamp(new Date().toISOString())}-${safeSlug(path.basename(repo))}-failure.json`);
+  fs.writeFileSync(file, JSON.stringify({ repo, result, piOutput }, null, 2));
+  return file;
+}
+
+function commandExists(command) {
+  const result = spawnSync("sh", ["-c", `command -v ${shellQuote(command)} >/dev/null 2>&1`], { encoding: "utf8" });
+  return result.status === 0;
+}
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, `'"'"'`)}'`;
+}
+
+function uniqueLines(text) {
+  return unique(String(text || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+}
+
+function unique(values) {
+  return [...new Set(values)];
+}
+
+function safeSlug(value) {
+  return String(value || "repo").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "repo";
+}
+
+function compactTimestamp(value) {
+  return new Date(value).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+try {
+  main();
+} catch (error) {
+  console.error(`pi-dream: ${error.message}`);
+  process.exitCode = 1;
+}
