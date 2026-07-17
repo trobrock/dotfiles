@@ -86,3 +86,10 @@ _cache_eval wt wt command wt config shell init zsh
 
 # zoxide
 _cache_eval zoxide zoxide zoxide init --cmd cd zsh
+
+# Unlock login keychain on interactive SSH sessions (for docker ECR creds)
+if [[ "$OSTYPE" == darwin* && -n "$SSH_CONNECTION" && -o interactive ]]; then
+  if ! security show-keychain-info login.keychain 2>/dev/null; then
+    security unlock-keychain login.keychain
+  fi
+fi
