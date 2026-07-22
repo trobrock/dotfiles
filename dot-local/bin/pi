@@ -8,7 +8,6 @@ set -euo pipefail
 # PI_DEFAULT_* env overrides regardless of the cwd's pinned Node version.
 pi_install_dir="${PI_INSTALL_DIR:-$HOME/.local/share/pi-cli}"
 pi_bin="$pi_install_dir/bin/pi"
-pi_package="npm:@earendil-works/pi-coding-agent"
 pi_auto_update_state_dir="${PI_AUTO_UPDATE_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/pi-wrapper}"
 pi_auto_update_stamp="$pi_auto_update_state_dir/last-auto-update"
 pi_auto_update_lock="$pi_auto_update_state_dir/auto-update.lock"
@@ -96,15 +95,36 @@ mark_pi_auto_update_attempted() {
 }
 
 cleanup_pi_auto_update_lock() {
+  rm -f "$pi_auto_update_lock/pid"
   rmdir "$pi_auto_update_lock" 2>/dev/null || true
+}
+
+acquire_pi_auto_update_lock() {
+  local lock_pid
+
+  if ! mkdir "$pi_auto_update_lock" 2>/dev/null; then
+    lock_pid=""
+    if [ -r "$pi_auto_update_lock/pid" ]; then
+      IFS= read -r lock_pid < "$pi_auto_update_lock/pid" || lock_pid=""
+    fi
+
+    # A lock without a live owner was left by an interrupted update.
+    if [[ "$lock_pid" =~ ^[0-9]+$ ]] && kill -0 "$lock_pid" 2>/dev/null; then
+      return 1
+    fi
+    rm -rf "$pi_auto_update_lock"
+    mkdir "$pi_auto_update_lock" 2>/dev/null || return 1
+  fi
+
+  printf '%s\n' "$$" > "$pi_auto_update_lock/pid"
 }
 
 auto_update_pi() {
   pi_auto_update_due "$@" || return 0
   mkdir -p "$pi_auto_update_state_dir" || return 0
 
-  # Avoid multiple shells trying to update the shared install at once.
-  mkdir "$pi_auto_update_lock" 2>/dev/null || return 0
+  # Avoid concurrent updates and recover locks left by interrupted processes.
+  acquire_pi_auto_update_lock || return 0
   trap cleanup_pi_auto_update_lock EXIT
   trap 'cleanup_pi_auto_update_lock; exit 130' INT
   trap 'cleanup_pi_auto_update_lock; exit 143' TERM
@@ -144,14 +164,12 @@ fi
 if [ -n "$node_dir" ] && [ -x "$pi_bin" ]; then
   export PATH="$node_dir/bin:$PATH"
   auto_update_pi "$@"
+  if [ ! -x "$pi_bin" ]; then
+    echo "pi: auto-update left the isolated install incomplete. Run bin/install from the dotfiles repo." >&2
+    exit 127
+  fi
   exec "$pi_bin" "${flags[@]}" "$@"
 fi
 
-# Fallback: pi isn't installed at the expected prefix yet (e.g. first run
-# before bin/install). Let mise fetch and run it transiently.
-if command -v mise >/dev/null 2>&1; then
-  exec mise exec -C "$HOME" "$pi_package" -- pi "${flags[@]}" "$@"
-fi
-
-echo "pi: not found at $pi_bin and mise is unavailable. Run bin/install." >&2
+echo "pi: not found at $pi_bin. Run bin/install from the dotfiles repo." >&2
 exit 127
