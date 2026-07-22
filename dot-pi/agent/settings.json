@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.80.7",
+  "lastChangelogVersion": "0.81.1",
   "packages": [
     "npm:@benvargas/pi-firecrawl",
     "npm:pi-mcp-adapter"
