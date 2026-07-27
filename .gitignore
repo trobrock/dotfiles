@@ -12,3 +12,4 @@ dot-config/systemd/user/*.target.wants/
 /dot-local/bin/__pycache__
 /dot-pi/agent/trust.json
 /dot-pi/agent/mcp-npx-cache.json
+/dot-pi/agent/models-store.json
