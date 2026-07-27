@@ -100,6 +100,10 @@ terms = ["Ruby on Rails", "Comfortly", "Channex", "rezStream", "Stripe", "ViewCo
 #          at the cursor (requires wl-copy plus wtype/dotool/ydotool)
 # Soniox streaming works better with direct typing; paste mode mutates clipboard.
 mode = "type"
+# Chromium/Electron apps can drop the first character of each wtype burst. Soniox
+# streams words in separate bursts, where that first character is often a space.
+wtype_shift_prefix = true
+type_delay_ms = 10
 # paste_keys = "ctrl+shift+v"  # Terminal-friendly paste shortcut
 
 # Automatically submit (send Enter key) after outputting transcribed text
