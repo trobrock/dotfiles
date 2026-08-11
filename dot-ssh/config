@@ -29,3 +29,5 @@ Host *
 # the session.
 #
 # If a specific host still needs forwarding, opt in from ~/.ssh/config.local.
+Host comfortly-us-east-1
+  HostName 40.160.72.12
