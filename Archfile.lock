@@ -83,6 +83,7 @@ noto-fonts-emoji
 npm
 obsidian
 ollama-rocm
+openai-codex-bin
 openslide
 pipewire
 polkit-gnome

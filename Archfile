@@ -122,6 +122,7 @@ neovim
 nodejs
 npm
 ollama-rocm
+openai-codex-bin
 openssh
 power-profiles-daemon
 restic
