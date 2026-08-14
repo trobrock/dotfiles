@@ -1,0 +1,10 @@
+[Unit]
+Description=Pi Dream read-only codebase scout
+Documentation=file:%h/dotfiles/docs/pi-dream.md
+
+[Service]
+Type=oneshot
+Environment=PI_DREAM_REPO=%h/dotfiles
+Environment=PI_DREAM_RECIPE=general
+Environment=PI_DREAM_MAX_CANDIDATES=5
+ExecStart=%h/dotfiles/dot-config/scripts/pi-dream scout --repo ${PI_DREAM_REPO} --recipe ${PI_DREAM_RECIPE} --max-candidates ${PI_DREAM_MAX_CANDIDATES}
