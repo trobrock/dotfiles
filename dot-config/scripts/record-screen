@@ -6,7 +6,7 @@
 # Omarchy-inspired workflow using gpu-screen-recorder for capture and an
 # ffplay/v4l2 webcam preview window as an overlay. Re-running the command while
 # a recording is active stops it. Supports MP4, optional GIF conversion,
-# desktop/microphone audio, a Walker menu, and a Waybar indicator signal.
+# desktop/microphone audio, a Walker menu, and a polled bar status indicator.
 #
 # Usage:
 #   record-screen menu
@@ -89,10 +89,6 @@ notify() {
 
 notify_critical() {
     notify-send -u critical "Screen recording" "$@" 2>/dev/null || true
-}
-
-signal_waybar() {
-    pkill -RTMIN+8 waybar 2>/dev/null || true
 }
 
 recording_active() {
@@ -430,8 +426,7 @@ start_recording() {
     fi
 
     echo "$mode" >"$modefile"
-    signal_waybar
-    notify "Recording (${mode}) — re-press hotkey or click Waybar icon to stop"
+    notify "Recording (${mode}) — re-press hotkey or click the bar indicator to stop"
 }
 
 stop_recording() {
@@ -454,7 +449,6 @@ stop_recording() {
 
     cleanup_webcam
     rm -f "$pidfile" "$modefile"
-    signal_waybar
 
     if [[ ! -f "$videofile" ]]; then
         notify_critical "No recording file was written. See $logfile"

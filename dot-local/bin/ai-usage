@@ -1,0 +1,817 @@
+#!/usr/bin/env python3
+"""Collect, retain, and aggregate AI provider usage records for Quickshell."""
+
+from __future__ import annotations
+
+import argparse
+import concurrent.futures
+import datetime as dt
+import json
+import math
+import os
+import re
+import socket
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+from typing import Any
+
+SCHEMA_VERSION = 1
+KNOWN_PROVIDERS = ("claude", "codex", "fireworks")
+SAFE_ID = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
+SAFE_DEVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
+SAFE_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,94}\.json$")
+DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+MAX_COUNT = (1 << 63) - 1
+MAX_MODELS = 512
+MAX_ACTIVE_DATES = 32768
+MAX_SYNC_FILES = 256
+MAX_SNAPSHOT_BYTES = 1024 * 1024
+MAX_SYNC_BYTES = 16 * 1024 * 1024
+TOKEN_FIELDS = (
+    "inputTokens", "outputTokens", "cacheReadInputTokens",
+    "cacheCreationInputTokens",
+)
+STAT_FIELDS = (
+    "todayPrompts", "todaySessions", "todayTotalTokens", "todayTokensByModel",
+    "recentDays", "totalPrompts", "totalSessions", "activeDays", "activeDates",
+    "modelUsage", "hasLocalStats", "hasPromptStats", "ready",
+)
+
+
+def strict_json(raw: str) -> Any:
+    def bad_constant(value: str) -> Any:
+        raise ValueError("non-finite JSON number")
+    return json.loads(raw, parse_constant=bad_constant)
+
+
+def clean_string(value: Any, limit: int, *, default: str = "") -> str:
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        raise ValueError("invalid string")
+    # Never pass terminal escapes or hidden newlines from collectors/snapshots.
+    cleaned = "".join(" " if ord(char) < 32 or 127 <= ord(char) < 160 else char for char in value)
+    return " ".join(cleaned.split())[:limit]
+
+
+def safe_help(value: Any, provider_id: str) -> str:
+    text = clean_string(value, 512)
+    if not text:
+        return ""
+    # These are static collector-owned messages. Anything else may be an
+    # exception containing a response body, filesystem path, or credential.
+    allowed = {
+        "claude": {
+            "Waiting for auth", "Sign-in expired", "Claude limits unavailable",
+            "Run `claude auth login` to restore authoritative usage.",
+            "Claude Code's saved sign-in expired. Start Claude Code, or run `claude auth login`, to refresh it.",
+            "Claude Code's saved sign-in expired — showing the last known limits. Start Claude Code, or run `claude auth login`, to refresh it.",
+            "Couldn't reach Anthropic's usage endpoint. Retrying shortly. Local Claude Code stats are still shown.",
+            "Anthropic's usage endpoint returned no limits. Local Claude Code stats are still shown.",
+        },
+        "codex": {
+            "Codex unavailable", "Codex limits unavailable",
+            "Run `codex login` to authenticate.", "codex not found in PATH",
+        },
+        "fireworks": {
+            "Fireworks unavailable", "Balance unavailable",
+            "Fireworks usage scan failed",
+            "Set FIREWORKS_API_KEY, run `firectl set-api-key`, or sign in to Fireworks in opencode.",
+        },
+    }
+    if text in allowed.get(provider_id, set()):
+        return text
+    return f"{provider_id.title()} usage details are unavailable."
+
+
+def count(value: Any) -> int:
+    if type(value) is not int or value < 0 or value > MAX_COUNT:
+        raise ValueError("invalid count")
+    return value
+
+
+def checked_add(left: int, right: int) -> int:
+    left, right = count(left), count(right)
+    if left > MAX_COUNT - right:
+        raise OverflowError("usage count overflow")
+    return left + right
+
+
+def finite_nonnegative(value: Any) -> int | float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+        raise ValueError("invalid nonnegative number")
+    return value
+
+
+def valid_date(value: Any) -> str:
+    if not isinstance(value, str) or not DATE.fullmatch(value):
+        raise ValueError("invalid date")
+    try:
+        if dt.date.fromisoformat(value).isoformat() != value:
+            raise ValueError("invalid date")
+    except Exception as error:
+        raise ValueError("invalid date") from error
+    return value
+
+
+def utc_timestamp(value: Any) -> tuple[str, dt.datetime]:
+    text = clean_string(value, 64)
+    if not text or not (text.endswith("Z") or re.search(r"[+-]00:00$", text)):
+        raise ValueError("timestamp is not UTC")
+    try:
+        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except Exception as error:
+        raise ValueError("invalid timestamp") from error
+    if parsed.tzinfo is None or parsed.utcoffset() != dt.timedelta(0):
+        raise ValueError("timestamp is not UTC")
+    return parsed.astimezone(dt.timezone.utc).isoformat(), parsed
+
+
+def model_id(value: Any) -> str:
+    text = clean_string(value, 128)
+    if not text:
+        raise ValueError("empty model id")
+    return text
+
+
+def sanitize_stats(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("invalid stats")
+    out: dict[str, Any] = {}
+    for field in ("todayPrompts", "todaySessions", "todayTotalTokens", "totalPrompts", "totalSessions", "activeDays"):
+        if field in value:
+            out[field] = count(value[field])
+    for field in ("ready", "hasLocalStats", "hasPromptStats"):
+        if field in value:
+            if type(value[field]) is not bool:
+                raise ValueError("invalid boolean")
+            out[field] = value[field]
+
+    by_model = value.get("todayTokensByModel", {})
+    if not isinstance(by_model, dict) or len(by_model) > MAX_MODELS:
+        raise ValueError("invalid model totals")
+    clean_models: dict[str, int] = {}
+    for raw_model, raw_count in by_model.items():
+        name = model_id(raw_model)
+        amount = count(raw_count)
+        clean_models[name] = checked_add(clean_models.get(name, 0), amount)
+    if "todayTokensByModel" in value:
+        out["todayTokensByModel"] = clean_models
+
+    usage = value.get("modelUsage", {})
+    if not isinstance(usage, dict) or len(usage) > MAX_MODELS:
+        raise ValueError("invalid model usage")
+    clean_usage: dict[str, dict[str, int]] = {}
+    for raw_model, raw_bucket in usage.items():
+        if not isinstance(raw_bucket, dict):
+            raise ValueError("invalid token bucket")
+        name = model_id(raw_model)
+        bucket = clean_usage.setdefault(name, {})
+        for field in TOKEN_FIELDS:
+            if field in raw_bucket:
+                bucket[field] = checked_add(bucket.get(field, 0), count(raw_bucket[field]))
+    if "modelUsage" in value:
+        out["modelUsage"] = clean_usage
+
+    recent = value.get("recentDays", [])
+    if not isinstance(recent, list) or len(recent) > 31:
+        raise ValueError("invalid recent usage")
+    clean_recent: dict[str, int] = {}
+    for day in recent:
+        if not isinstance(day, dict):
+            raise ValueError("invalid recent usage")
+        date = valid_date(day.get("date"))
+        clean_recent[date] = checked_add(clean_recent.get(date, 0), count(day.get("messageCount")))
+    if "recentDays" in value:
+        out["recentDays"] = [{"date": day, "messageCount": clean_recent[day]} for day in sorted(clean_recent)]
+
+    active = value.get("activeDates", [])
+    if not isinstance(active, list) or len(active) > MAX_ACTIVE_DATES:
+        raise ValueError("invalid active dates")
+    if "activeDates" in value:
+        out["activeDates"] = sorted({valid_date(day) for day in active})
+    return out
+
+
+def validate_record(record: Any, expected_id: str | None = None) -> dict[str, Any]:
+    if not isinstance(record, dict) or type(record.get("schemaVersion")) is not int or record.get("schemaVersion") != SCHEMA_VERSION:
+        raise ValueError("unsupported provider record")
+    provider_id = record.get("id")
+    if not isinstance(provider_id, str) or not SAFE_ID.fullmatch(provider_id):
+        raise ValueError("invalid provider id")
+    if expected_id is not None and provider_id != expected_id:
+        raise ValueError("provider id mismatch")
+    out: dict[str, Any] = {"schemaVersion": SCHEMA_VERSION, "id": provider_id}
+    for field, limit in (("name", 96), ("tierLabel", 96)):
+        if field in record:
+            out[field] = clean_string(record[field], limit)
+    for field in ("usageStatusText", "authHelpText"):
+        if field in record:
+            out[field] = safe_help(record[field], provider_id)
+    if "updatedAt" in record:
+        out["updatedAt"] = utc_timestamp(record["updatedAt"])[0]
+    scope = clean_string(record.get("scope", "device"), 16)
+    if scope not in ("device", "account"):
+        raise ValueError("invalid scope")
+    out["scope"] = scope
+    out.update(sanitize_stats(record))
+
+    limits = record.get("limits", [])
+    if not isinstance(limits, list) or len(limits) > 32:
+        raise ValueError("invalid limits")
+    clean_limits = []
+    for item in limits:
+        if not isinstance(item, dict):
+            raise ValueError("invalid limit")
+        percent = item.get("percent")
+        if isinstance(percent, bool) or not isinstance(percent, (int, float)) or not math.isfinite(percent) or not 0 <= percent <= 1:
+            raise ValueError("invalid limit percent")
+        entry = {"percent": percent}
+        for field in ("label", "title"):
+            if field in item:
+                entry[field] = clean_string(item[field], 128)
+        if "resetsAt" in item:
+            entry["resetsAt"] = clean_string(item["resetsAt"], 128)
+        clean_limits.append(entry)
+    out["limits"] = clean_limits
+
+    if "balance" in record:
+        balance = record["balance"]
+        if not isinstance(balance, dict):
+            raise ValueError("invalid balance")
+        clean_balance: dict[str, Any] = {}
+        for field in ("remaining", "funded", "spent"):
+            if field in balance:
+                clean_balance[field] = finite_nonnegative(balance[field])
+        if "currency" in balance:
+            clean_balance["currency"] = clean_string(balance["currency"], 12)
+        if "estimated" in balance:
+            if type(balance["estimated"]) is not bool:
+                raise ValueError("invalid balance")
+            clean_balance["estimated"] = balance["estimated"]
+        out["balance"] = clean_balance
+    return out
+
+
+def xdg_path(env_name: str, fallback: Path) -> Path:
+    raw = os.environ.get(env_name)
+    return Path(os.path.expandvars(os.path.expanduser(raw))) if raw else fallback
+
+
+def private_dir(path: Path) -> Path:
+    """Create the final private path without accepting a symlink as it."""
+    if path.is_symlink():
+        raise OSError("private directory is a symlink")
+    path.mkdir(parents=True, mode=0o700, exist_ok=True)
+    if not path.is_dir() or path.is_symlink():
+        raise OSError("private path is not a directory")
+    path.chmod(0o700)
+    return path
+
+
+def state_dir() -> Path:
+    base = xdg_path("XDG_STATE_HOME", Path.home() / ".local" / "state")
+    quickshell = private_dir(base / "quickshell")
+    agents = private_dir(quickshell / "agents")
+    return private_dir(agents / "usage")
+
+
+def provider_dir() -> Path:
+    override = os.environ.get("AI_USAGE_PROVIDER_DIR")
+    if override:
+        return Path(os.path.expandvars(os.path.expanduser(override)))
+    # resolve() follows the stow link (~/.local/bin/ai-usage) back into the
+    # repository, while also working for a copied installation under .local.
+    return Path(__file__).resolve().parent.parent / "lib" / "ai-usage" / "providers"
+
+
+def enabled_ids() -> tuple[list[str], list[dict[str, str]]]:
+    raw = os.environ.get("AI_USAGE_PROVIDERS")
+    if raw is None:
+        return list(KNOWN_PROVIDERS), []
+    values = []
+    errors = []
+    for item in raw.split(","):
+        provider_id = item.strip()
+        if not provider_id:
+            continue
+        if provider_id not in KNOWN_PROVIDERS:
+            errors.append({"id": provider_id[:64] or "provider", "message": "Unknown provider"})
+        elif provider_id not in values:
+            values.append(provider_id)
+    return values, errors
+
+
+def read_records(root: Path, allowed: set[str]) -> tuple[dict[str, dict[str, Any]], list[dict[str, str]]]:
+    records: dict[str, dict[str, Any]] = {}
+    errors: list[dict[str, str]] = []
+    for provider_id in sorted(allowed):
+        path = root / f"{provider_id}.json"
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            errors.append({"id": provider_id, "message": "Stored usage record is unavailable"})
+            continue
+        if not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):
+            errors.append({"id": provider_id, "message": "Stored usage record is unsafe"})
+            continue
+        try:
+            if info.st_size > 8 * 1024 * 1024:
+                raise ValueError("record too large")
+            record = strict_json(path.read_text(encoding="utf-8"))
+            records[provider_id] = validate_record(record, provider_id)
+        except Exception:
+            errors.append({"id": provider_id, "message": "Stored usage record is invalid"})
+    return records, errors
+
+
+def atomic_json(path: Path, payload: dict[str, Any]) -> None:
+    try:
+        info = path.lstat()
+        if not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):
+            raise OSError("unsafe destination")
+    except FileNotFoundError:
+        pass
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.stem}.", suffix=".tmp", dir=path.parent)
+    tmp = Path(temporary)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, separators=(",", ":"), sort_keys=True, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
+        path.chmod(0o600, follow_symlinks=False)
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def provider_environment(provider_id: str) -> dict[str, str]:
+    """Return a deny-by-default environment for one collector."""
+    exact = {
+        "HOME", "PATH", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME",
+        "XDG_STATE_HOME", "XDG_RUNTIME_DIR", "LANG", "LANGUAGE", "TZ",
+        "LC_ALL", "LC_CTYPE", "LC_NUMERIC", "LC_TIME", "LC_COLLATE",
+        "LC_MONETARY", "LC_MESSAGES", "LC_PAPER", "LC_NAME", "LC_ADDRESS",
+        "LC_TELEPHONE", "LC_MEASUREMENT", "LC_IDENTIFICATION",
+        "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE",
+        "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
+        "http_proxy", "https_proxy", "all_proxy", "no_proxy",
+    }
+    provider_vars = {
+        "claude": {"CLAUDE_CONFIG_DIR"},
+        "codex": {"CODEX_HOME"},
+        "fireworks": {
+            "FIREWORKS_API_KEY", "FIREWORKS_ACCOUNT_ID", "FIREWORKS_AUTH_PATH",
+            "FIREWORKS_CONFIG_PATH",
+        },
+    }
+    exact.update(provider_vars.get(provider_id, set()))
+    return {name: os.environ[name] for name in exact if name in os.environ}
+
+
+def collect_one(provider_id: str, flags: list[str]) -> tuple[str, dict[str, Any] | None, str | None]:
+    executable = provider_dir() / provider_id
+    if not executable.is_file():
+        return provider_id, None, "Provider collector is unavailable"
+    try:
+        timeout = float(os.environ.get("AI_USAGE_COLLECTOR_TIMEOUT", "60"))
+        if not math.isfinite(timeout) or timeout <= 0:
+            timeout = 60
+        completed = subprocess.run(
+            [str(executable), *flags], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=min(timeout, 300), check=False,
+            env=provider_environment(provider_id),
+        )
+    except subprocess.TimeoutExpired:
+        return provider_id, None, "Provider collector timed out"
+    except Exception:
+        return provider_id, None, "Provider collector could not start"
+    if completed.returncode != 0:
+        return provider_id, None, "Provider collector failed"
+    try:
+        if len(completed.stdout.encode("utf-8")) > 8 * 1024 * 1024:
+            raise ValueError("too large")
+        parsed = strict_json(completed.stdout)
+        return provider_id, validate_record(parsed, provider_id), None
+    except Exception:
+        return provider_id, None, "Provider collector returned invalid data"
+
+
+def recent_dates() -> list[str]:
+    today = dt.datetime.now().date()
+    return [(today - dt.timedelta(days=offset)).isoformat() for offset in range(6, -1, -1)]
+
+
+def safe_device_id(raw: str) -> str:
+    value = re.sub(r"[^A-Za-z0-9_.-]+", "-", raw.strip())
+    value = re.sub(r"^[._-]+|[._-]+$", "", value)[:80]
+    return value or "device"
+
+
+def safe_sync_dir(raw: str) -> Path:
+    expanded = os.path.expandvars(os.path.expanduser(raw.strip()))
+    path = Path(expanded)
+    if not path.is_absolute() or ".." in path.parts:
+        raise OSError("unsafe sync directory")
+    # Do not cross symlinks while reaching a directory used for private writes.
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        current /= part
+        try:
+            if stat.S_ISLNK(current.lstat().st_mode):
+                raise OSError("unsafe sync directory")
+        except FileNotFoundError:
+            break
+    if path.is_symlink():
+        raise OSError("unsafe sync directory")
+    path.mkdir(parents=True, mode=0o700, exist_ok=True)
+    if not path.is_dir() or path.is_symlink():
+        raise OSError("unsafe sync directory")
+    path.chmod(0o700)
+    return path
+
+
+def provider_snapshot(record: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "providerId": record["id"],
+        "providerName": clean_string(record.get("name") or record["id"], 96),
+        "scope": record.get("scope", "device"),
+    }
+    out.update(sanitize_stats(record))
+    return out
+
+
+def valid_snapshot(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or type(value.get("schemaVersion")) is not int or value.get("schemaVersion") != 1:
+        raise ValueError("invalid snapshot")
+    device = value.get("deviceId")
+    if not isinstance(device, str) or not SAFE_DEVICE.fullmatch(device):
+        raise ValueError("invalid snapshot device")
+    updated, parsed = utc_timestamp(value.get("updatedAt"))
+    local_date = valid_date(value.get("localDate"))
+    providers = value.get("providers")
+    if not isinstance(providers, dict) or len(providers) > len(KNOWN_PROVIDERS):
+        raise ValueError("invalid snapshot providers")
+    clean_providers: dict[str, dict[str, Any]] = {}
+    for provider_id, raw_stats in providers.items():
+        if not isinstance(provider_id, str) or not SAFE_ID.fullmatch(provider_id) or not isinstance(raw_stats, dict):
+            raise ValueError("invalid snapshot provider")
+        if raw_stats.get("providerId") != provider_id:
+            raise ValueError("snapshot provider mismatch")
+        scope = raw_stats.get("scope")
+        if scope not in ("device", "account"):
+            raise ValueError("invalid snapshot scope")
+        stats = {
+            "providerId": provider_id,
+            "providerName": clean_string(raw_stats.get("providerName", provider_id), 96),
+            "scope": scope,
+        }
+        stats.update(sanitize_stats(raw_stats))
+        clean_providers[provider_id] = stats
+    return {
+        "schemaVersion": 1, "deviceId": device, "updatedAt": updated,
+        "_updated": parsed, "localDate": local_date, "providers": clean_providers,
+    }
+
+
+def zero_stale_today(stats: dict[str, Any], local_date: str, today: str) -> dict[str, Any]:
+    copied = dict(stats)
+    if local_date != today:
+        for field in ("todayPrompts", "todaySessions", "todayTotalTokens"):
+            copied[field] = 0
+        copied["todayTokensByModel"] = {}
+    recent = []
+    for day in stats.get("recentDays", []):
+        amount = day["messageCount"]
+        if day["date"] == today and local_date != today:
+            amount = 0
+        recent.append({"date": day["date"], "messageCount": amount})
+    if "recentDays" in stats:
+        copied["recentDays"] = recent
+    return copied
+
+
+def normalized_stats(stats: dict[str, Any], local_date: str, dates: list[str]) -> dict[str, Any]:
+    stats = zero_stale_today(stats, local_date, dates[-1])
+    recent = {day: 0 for day in dates}
+    for row in stats.get("recentDays", []):
+        if row["date"] in recent:
+            recent[row["date"]] = row["messageCount"]
+    out = {
+        "providerName": stats.get("providerName", ""),
+        "ready": stats.get("ready", False),
+        "hasLocalStats": stats.get("hasLocalStats", False),
+        "hasPromptStats": stats.get("hasPromptStats", False),
+        "todayPrompts": stats.get("todayPrompts", 0),
+        "todaySessions": stats.get("todaySessions", 0),
+        "todayTotalTokens": stats.get("todayTotalTokens", 0),
+        "todayTokensByModel": dict(stats.get("todayTokensByModel", {})),
+        "recentDays": [{"date": day, "messageCount": recent[day]} for day in dates],
+        "totalPrompts": stats.get("totalPrompts", 0),
+        "totalSessions": stats.get("totalSessions", 0),
+        "activeDates": list(stats.get("activeDates", [])),
+        "modelUsage": {model: dict(bucket) for model, bucket in stats.get("modelUsage", {}).items()},
+    }
+    out["activeDays"] = max(stats.get("activeDays", 0), len(out["activeDates"]))
+    return out
+
+
+def aggregate_snapshots(snapshots: list[dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], list[str], list[str]]:
+    # A device identity is the unit of aggregation, not a filename.
+    newest: dict[str, dict[str, Any]] = {}
+    for snapshot in snapshots:
+        old = newest.get(snapshot["deviceId"])
+        if old is None or snapshot["_updated"] > old["_updated"]:
+            newest[snapshot["deviceId"]] = snapshot
+    selected = list(newest.values())
+    devices = sorted(newest)
+    dates = recent_dates()
+    provider_entries: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
+    for snapshot in selected:
+        for provider_id, stats in snapshot["providers"].items():
+            provider_entries.setdefault(provider_id, []).append((snapshot, stats))
+
+    output: dict[str, dict[str, Any]] = {}
+    statuses: list[str] = []
+    for provider_id, entries in provider_entries.items():
+        scopes = {stats["scope"] for _, stats in entries}
+        if len(scopes) != 1:
+            statuses.append(f"Ignored conflicting scope for {provider_id}")
+            continue
+        scope = next(iter(scopes))
+        provider_devices = sorted(snapshot["deviceId"] for snapshot, _ in entries)
+        if scope == "device":
+            try:
+                totals: dict[tuple[str, str], int] = {}
+                for snapshot, stats in entries:
+                    stats = zero_stale_today(stats, snapshot["localDate"], dates[-1])
+                    for field in ("todayPrompts", "todaySessions", "todayTotalTokens", "totalPrompts", "totalSessions"):
+                        key = (field, "")
+                        totals[key] = checked_add(totals.get(key, 0), stats.get(field, 0))
+                    for model, amount in stats.get("todayTokensByModel", {}).items():
+                        key = ("today", model)
+                        totals[key] = checked_add(totals.get(key, 0), amount)
+                    for row in stats.get("recentDays", []):
+                        if row["date"] in dates:
+                            key = ("recent", row["date"])
+                            totals[key] = checked_add(totals.get(key, 0), row["messageCount"])
+                    for model, bucket in stats.get("modelUsage", {}).items():
+                        for field in TOKEN_FIELDS:
+                            if field in bucket:
+                                key = (model, field)
+                                totals[key] = checked_add(totals.get(key, 0), bucket[field])
+            except (ValueError, OverflowError):
+                statuses.append(f"Ignored overflowing usage for {provider_id}")
+                continue
+        if scope == "account":
+            snapshot, stats = max(entries, key=lambda item: item[0]["_updated"])
+            acc = normalized_stats(stats, snapshot["localDate"], dates)
+        else:
+            acc = {
+                "providerName": "", "ready": False, "hasLocalStats": False,
+                "hasPromptStats": False, "todayPrompts": 0, "todaySessions": 0,
+                "todayTotalTokens": 0, "todayTokensByModel": {},
+                "recentDays": [{"date": day, "messageCount": 0} for day in dates],
+                "totalPrompts": 0, "totalSessions": 0, "activeDates": [],
+                "modelUsage": {},
+            }
+            active: set[str] = set()
+            recent = {row["date"]: row for row in acc["recentDays"]}
+            for snapshot, raw_stats in entries:
+                stats = zero_stale_today(raw_stats, snapshot["localDate"], dates[-1])
+                if not acc["providerName"]:
+                    acc["providerName"] = stats.get("providerName", "")
+                for field in ("ready", "hasLocalStats", "hasPromptStats"):
+                    acc[field] = acc[field] or stats.get(field, False)
+                for field in ("todayPrompts", "todaySessions", "todayTotalTokens", "totalPrompts", "totalSessions"):
+                    acc[field] = checked_add(acc[field], stats.get(field, 0))
+                for model, amount in stats.get("todayTokensByModel", {}).items():
+                    acc["todayTokensByModel"][model] = checked_add(acc["todayTokensByModel"].get(model, 0), amount)
+                for row in stats.get("recentDays", []):
+                    if row["date"] in recent:
+                        recent[row["date"]]["messageCount"] = checked_add(recent[row["date"]]["messageCount"], row["messageCount"])
+                for model, bucket in stats.get("modelUsage", {}).items():
+                    target = acc["modelUsage"].setdefault(model, {})
+                    for field in TOKEN_FIELDS:
+                        if field in bucket:
+                            target[field] = checked_add(target.get(field, 0), bucket[field])
+                active.update(stats.get("activeDates", []))
+            acc["activeDates"] = sorted(active)
+            acc["activeDays"] = len(active)
+        acc["ready"] = acc["ready"] or bool(provider_devices)
+        acc["deviceCount"] = len(provider_devices)
+        acc["devices"] = provider_devices
+        output[provider_id] = acc
+    return output, devices, statuses
+
+
+def apply_sync(records: dict[str, dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    raw_dir = os.environ.get("AI_USAGE_SYNC_DIR", "").strip()
+    if not raw_dir:
+        return records, {"enabled": False, "deviceCount": 0, "devices": [], "status": ""}
+    try:
+        directory = safe_sync_dir(raw_dir)
+    except Exception:
+        return records, {"enabled": True, "deviceCount": 0, "devices": [], "status": "Usage sync directory is unsafe"}
+
+    hostname = safe_device_id(socket.gethostname() or "device")
+    device = safe_device_id(os.environ.get("AI_USAGE_SYNC_DEVICE_ID", "") or hostname)
+    configured_name = os.environ.get("AI_USAGE_SYNC_FILE_NAME", "").strip()
+    filename = configured_name or f"{hostname}.json"
+    if not SAFE_FILE.fullmatch(filename) or "/" in filename or "\\" in filename:
+        return records, {"enabled": True, "deviceCount": 0, "devices": [], "status": "Usage sync filename is unsafe"}
+
+    now = dt.datetime.now(dt.timezone.utc)
+    snapshot = {
+        "schemaVersion": 1,
+        "deviceId": device,
+        "updatedAt": now.isoformat(),
+        "localDate": dt.datetime.now().astimezone().date().isoformat(),
+        "providers": {provider_id: provider_snapshot(record) for provider_id, record in records.items()},
+    }
+    target = directory / filename
+    status_parts: list[str] = []
+    try:
+        atomic_json(target, snapshot)
+    except Exception:
+        status_parts.append("Local usage snapshot was not written")
+
+    snapshots: list[dict[str, Any]] = []
+    invalid = 0
+    total_bytes = 0
+    candidates: list[Path] = []
+    try:
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                if not entry.name.endswith(".json"):
+                    continue
+                if len(candidates) >= MAX_SYNC_FILES:
+                    status_parts.append("Usage snapshot file limit reached")
+                    break
+                candidates.append(Path(entry.path))
+    except OSError:
+        status_parts.append("Usage snapshots could not be read")
+    for path in candidates:
+        if not SAFE_FILE.fullmatch(path.name):
+            invalid += 1
+            continue
+        try:
+            before = path.lstat()
+            if not stat.S_ISREG(before.st_mode) or stat.S_ISLNK(before.st_mode):
+                raise ValueError("unsafe snapshot")
+            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+            fd = os.open(path, flags)
+            try:
+                info = os.fstat(fd)
+                if (
+                    (info.st_dev, info.st_ino) != (before.st_dev, before.st_ino)
+                    or not stat.S_ISREG(info.st_mode)
+                    or info.st_uid != os.getuid() or not (info.st_mode & stat.S_IRUSR)
+                    or info.st_size > MAX_SNAPSHOT_BYTES
+                    or total_bytes > MAX_SYNC_BYTES - info.st_size
+                ):
+                    raise ValueError("unsafe snapshot")
+                total_bytes += info.st_size
+                with os.fdopen(fd, "r", encoding="utf-8") as handle:
+                    fd = -1
+                    raw = handle.read(MAX_SNAPSHOT_BYTES + 1)
+                snapshots.append(valid_snapshot(strict_json(raw)))
+            finally:
+                if fd >= 0:
+                    os.close(fd)
+        except Exception:
+            invalid += 1
+    if invalid:
+        status_parts.append(f"Ignored {invalid} invalid usage snapshot" + ("s" if invalid != 1 else ""))
+
+    merged, devices, merge_status = aggregate_snapshots(snapshots)
+    status_parts.extend(merge_status)
+    result: dict[str, dict[str, Any]] = {key: dict(value) for key, value in records.items()}
+    for provider_id, stats in merged.items():
+        if provider_id in result:
+            record = result[provider_id]
+        else:
+            record = {
+                "schemaVersion": 1, "id": provider_id,
+                "name": stats.get("providerName") or provider_id,
+                "updatedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
+                "limits": [], "tierLabel": "", "usageStatusText": "", "authHelpText": "",
+            }
+            result[provider_id] = record
+        # Only usage statistics travel. Limits, balances, authentication and
+        # tier labels always remain those of this machine's local record.
+        for field in STAT_FIELDS:
+            if field in stats:
+                record[field] = stats[field]
+        record["syncEnabled"] = True
+        record["syncDeviceCount"] = stats["deviceCount"]
+        record["syncDevices"] = stats["devices"]
+        record["deviceCount"] = stats["deviceCount"]
+        record["devices"] = stats["devices"]
+    return result, {
+        "enabled": True, "deviceCount": len(devices), "devices": devices,
+        "status": "; ".join(status_parts),
+    }
+
+
+def payload(records: dict[str, dict[str, Any]], errors: list[dict[str, str]], allowed: set[str]) -> dict[str, Any]:
+    synced, sync = apply_sync(records)
+    synced = {provider_id: record for provider_id, record in synced.items() if provider_id in allowed}
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAt": int(time.time()),
+        "providers": [synced[key] for key in sorted(synced)],
+        "errors": errors,
+        "sync": sync,
+    }
+
+
+def parser() -> argparse.ArgumentParser:
+    root = argparse.ArgumentParser(prog="ai-usage", description="Collect and show AI provider usage")
+    sub = root.add_subparsers(dest="command")
+    update = sub.add_parser("update", help="update provider records")
+    update.add_argument("--force", action="store_true")
+    update.add_argument("--limits-only", action="store_true")
+    update.add_argument("--except", dest="excluded", action="append", default=[], metavar="ID")
+    update.add_argument("ids", nargs="*", metavar="ID")
+    sub.add_parser("show", help="show retained provider records")
+    limits = sub.add_parser("refresh-limits", help="refresh provider limits")
+    limits.add_argument("ids", nargs="*", metavar="ID")
+    return root
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parser().parse_args(argv)
+    if args.command is None:
+        parser().print_help()
+        return 0
+    enabled, env_errors = enabled_ids()
+    allowed = set(enabled)
+    try:
+        root = state_dir()
+    except Exception:
+        result = {
+            "schemaVersion": 1, "generatedAt": int(time.time()), "providers": [],
+            "errors": env_errors + [{"id": "storage", "message": "Private usage storage is unavailable"}],
+            "sync": {"enabled": bool(os.environ.get("AI_USAGE_SYNC_DIR", "").strip()), "deviceCount": 0, "devices": [], "status": ""},
+        }
+        print(json.dumps(result, separators=(",", ":"), allow_nan=False))
+        return 1
+
+    records, stored_errors = read_records(root, allowed)
+    errors = env_errors + stored_errors
+    failed = bool(env_errors)
+    if args.command in ("update", "refresh-limits"):
+        requested = list(args.ids)
+        unknown = sorted({item for item in requested if item not in KNOWN_PROVIDERS})
+        for provider_id in unknown:
+            errors.append({"id": provider_id[:64], "message": "Unknown provider"})
+        failed = failed or bool(unknown)
+        selected = [provider_id for provider_id in enabled if not requested or provider_id in requested]
+        if args.command == "update":
+            excluded = set(args.excluded)
+            for provider_id in sorted(excluded - set(KNOWN_PROVIDERS)):
+                errors.append({"id": provider_id[:64], "message": "Unknown provider"})
+                failed = True
+            selected = [provider_id for provider_id in selected if provider_id not in excluded]
+            flags = (["--force"] if args.force else []) + (["--limits-only"] if args.limits_only else [])
+        else:
+            flags = ["--limits-only"]
+        if selected:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(selected)) as pool:
+                futures = [pool.submit(collect_one, provider_id, flags) for provider_id in selected]
+                for future in concurrent.futures.as_completed(futures):
+                    provider_id, record, message = future.result()
+                    if record is None:
+                        errors.append({"id": provider_id, "message": message or "Provider collector failed"})
+                        failed = True
+                        continue
+                    try:
+                        atomic_json(root / f"{provider_id}.json", record)
+                        records[provider_id] = record
+                        # A successful replacement supersedes an error about
+                        # the old retained copy being malformed.
+                        errors = [error for error in errors if not (error["id"] == provider_id and error["message"].startswith("Stored "))]
+                    except Exception:
+                        errors.append({"id": provider_id, "message": "Provider record could not be stored"})
+                        failed = True
+    errors.sort(key=lambda item: (item["id"], item["message"]))
+    print(json.dumps(payload(records, errors, allowed), separators=(",", ":"), sort_keys=False, allow_nan=False))
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

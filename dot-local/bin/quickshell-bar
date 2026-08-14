@@ -1,0 +1,501 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: quickshell-bar [test|stop|self-test|help] [-- Quickshell arguments...]
+
+  (no command)  Run the bar in the foreground at the top with an exclusive zone.
+  test          Run at the bottom without reserving screen space.
+  stop          Stop the instance started by this launcher.
+  self-test     Test launcher lifecycle with a temporary mocked qs executable.
+  help          Show this help. Use `-- --help` to pass help to Quickshell.
+
+Configuration is resolved in this order:
+  1. $QUICKSHELL_BAR_CONFIG (a shell.qml file or its directory)
+  2. $XDG_CONFIG_HOME/quickshell (or ~/.config/quickshell)
+  3. the dotfiles checkout relative to this launcher's resolved symlink
+
+The launcher prefers `qs`, falls back to `quickshell`, and forwards remaining
+arguments unchanged. Daemonization (-d or --daemonize) is rejected because the
+launcher must own the foreground process.
+EOF
+}
+
+runtime_dir=
+statefile=
+lockfile=
+lock_fd=
+
+init_runtime() {
+  [[ -n $runtime_dir ]] && return 0
+
+  local base owner mode
+  base=${XDG_RUNTIME_DIR:-}
+  if [[ -n $base && -d $base && ! -L $base ]]; then
+    owner=$(stat -Lc %u -- "$base" 2>/dev/null || printf invalid)
+    mode=$(stat -Lc %a -- "$base" 2>/dev/null || printf 777)
+    if [[ $owner != "$UID" || ! $mode =~ ^[0-7]+$ ]] || (( (8#$mode) & 0022 )); then
+      base=
+    fi
+  else
+    base=
+  fi
+
+  if [[ -z $base ]]; then
+    base=/tmp
+    owner=$(stat -Lc %u -- "$base" 2>/dev/null || printf invalid)
+    mode=$(stat -Lc %a -- "$base" 2>/dev/null || printf invalid)
+    if [[ -L $base || ! -d $base || $owner != 0 || $mode != 1777 ]]; then
+      printf 'quickshell-bar: /tmp is not a safe sticky temporary directory\n' >&2
+      return 1
+    fi
+  fi
+
+  runtime_dir="$base/quickshell-bar-$UID"
+  if [[ -e $runtime_dir || -L $runtime_dir ]]; then
+    if [[ -L $runtime_dir || ! -d $runtime_dir ]]; then
+      printf 'quickshell-bar: unsafe runtime path: %s\n' "$runtime_dir" >&2
+      return 1
+    fi
+    owner=$(stat -Lc %u -- "$runtime_dir" 2>/dev/null || printf invalid)
+    [[ $owner == "$UID" ]] || {
+      printf 'quickshell-bar: runtime directory is not owned by uid %s: %s\n' "$UID" "$runtime_dir" >&2
+      return 1
+    }
+    chmod 700 -- "$runtime_dir"
+  else
+    (umask 077; mkdir -m 700 -- "$runtime_dir") || {
+      printf 'quickshell-bar: could not create runtime directory: %s\n' "$runtime_dir" >&2
+      return 1
+    }
+  fi
+
+  owner=$(stat -Lc %u -- "$runtime_dir" 2>/dev/null || printf invalid)
+  mode=$(stat -Lc %a -- "$runtime_dir" 2>/dev/null || printf invalid)
+  if [[ -L $runtime_dir || ! -d $runtime_dir || $owner != "$UID" || $mode != 700 ]]; then
+    printf 'quickshell-bar: runtime directory failed security checks: %s\n' "$runtime_dir" >&2
+    return 1
+  fi
+
+  statefile="$runtime_dir/state"
+  lockfile="$runtime_dir/lock"
+}
+
+acquire_lock() {
+  init_runtime
+  command -v flock >/dev/null 2>&1 || {
+    printf 'quickshell-bar: flock is required\n' >&2
+    return 127
+  }
+
+  if [[ ! -e $lockfile && ! -L $lockfile ]]; then
+    (umask 077; set -o noclobber; : > "$lockfile") 2>/dev/null || true
+  fi
+  if [[ -L $lockfile || ! -f $lockfile ]]; then
+    printf 'quickshell-bar: unsafe lock path: %s\n' "$lockfile" >&2
+    return 1
+  fi
+  local owner
+  owner=$(stat -Lc %u -- "$lockfile" 2>/dev/null || printf invalid)
+  if [[ $owner != "$UID" ]]; then
+    printf 'quickshell-bar: lock is not owned by uid %s: %s\n' "$UID" "$lockfile" >&2
+    return 1
+  fi
+  chmod 600 -- "$lockfile"
+  exec {lock_fd}<> "$lockfile"
+  flock -x "$lock_fd"
+}
+
+release_lock() {
+  [[ -n ${lock_fd:-} ]] || return 0
+  flock -u "$lock_fd" 2>/dev/null || true
+  exec {lock_fd}>&-
+  lock_fd=
+}
+
+# State is NUL-delimited so every valid Linux pathname can be represented.
+meta_pid= meta_start= meta_comm= meta_config= meta_bin= meta_launcher= meta_token=
+read_metadata() {
+  meta_pid= meta_start= meta_comm= meta_config= meta_bin= meta_launcher= meta_token=
+  [[ -f $statefile && ! -L $statefile ]] || return 1
+  [[ $(stat -Lc %u -- "$statefile" 2>/dev/null || printf invalid) == "$UID" ]] || return 1
+
+  local fd version extra
+  exec {fd}< "$statefile"
+  IFS= read -r -d '' version <&"$fd" &&
+    IFS= read -r -d '' meta_pid <&"$fd" &&
+    IFS= read -r -d '' meta_start <&"$fd" &&
+    IFS= read -r -d '' meta_comm <&"$fd" &&
+    IFS= read -r -d '' meta_config <&"$fd" &&
+    IFS= read -r -d '' meta_bin <&"$fd" &&
+    IFS= read -r -d '' meta_launcher <&"$fd" &&
+    IFS= read -r -d '' meta_token <&"$fd" || {
+      exec {fd}<&-
+      return 1
+    }
+  if IFS= read -r -n 1 extra <&"$fd"; then
+    exec {fd}<&-
+    return 1
+  fi
+  exec {fd}<&-
+  [[ $version == 1 && $meta_pid =~ ^[1-9][0-9]*$ && $meta_start =~ ^[0-9]+$ &&
+     -n $meta_comm && -n $meta_config && -n $meta_bin &&
+     $meta_launcher =~ ^[1-9][0-9]*$ && -n $meta_token ]]
+}
+
+write_metadata() {
+  local tmp
+  tmp=$(mktemp "$runtime_dir/.state.XXXXXXXX")
+  chmod 600 -- "$tmp"
+  printf '%s\0' 1 "$meta_pid" "$meta_start" "$meta_comm" "$meta_config" \
+    "$meta_bin" "$meta_launcher" "$meta_token" > "$tmp"
+  mv -Tf -- "$tmp" "$statefile"
+}
+
+proc_start_time() {
+  local pid=$1 stat_line tail
+  IFS= read -r stat_line < "/proc/$pid/stat" 2>/dev/null || return 1
+  [[ $stat_line == *') '* ]] || return 1
+  tail=${stat_line##*) }
+  # The tail starts at proc field 3; starttime is field 22 (tail field 20).
+  set -- $tail
+  [[ $# -ge 20 && ${20} =~ ^[0-9]+$ ]] || return 1
+  printf '%s\n' "${20}"
+}
+
+proc_comm() {
+  local value
+  IFS= read -r value < "/proc/$1/comm" 2>/dev/null || return 1
+  [[ -n $value ]] || return 1
+  printf '%s\n' "$value"
+}
+
+proc_command_matches() {
+  local pid=$1 expected_bin=$2 expected_config=$3 arg fd
+  local -a argv=()
+  if ! { exec {fd}< "/proc/$pid/cmdline"; } 2>/dev/null; then return 1; fi
+  while IFS= read -r -d '' arg <&"$fd"; do argv+=("$arg"); done
+  exec {fd}<&-
+  ((${#argv[@]})) || return 1
+
+  local i found_bin=0 found_config=0
+  for ((i = 0; i < ${#argv[@]}; i++)); do
+    [[ ${argv[i]} == "$expected_bin" ]] && found_bin=1
+    if [[ ${argv[i]} == -p && $((i + 1)) -lt ${#argv[@]} && ${argv[i + 1]} == "$expected_config" ]]; then
+      found_config=1
+    fi
+  done
+  ((found_bin && found_config))
+}
+
+match_reason=
+managed_process_matches() {
+  local actual_start actual_comm
+  if ! kill -0 "$meta_pid" 2>/dev/null; then
+    match_reason='process no longer exists'
+    return 1
+  fi
+  actual_start=$(proc_start_time "$meta_pid") || {
+    match_reason='cannot read process start time'
+    return 1
+  }
+  if [[ $actual_start != "$meta_start" ]]; then
+    match_reason='process start time changed'
+    return 1
+  fi
+  actual_comm=$(proc_comm "$meta_pid") || {
+    match_reason='cannot read process name'
+    return 1
+  }
+  if [[ $actual_comm != "$meta_comm" ]]; then
+    match_reason='process name changed'
+    return 1
+  fi
+  if ! proc_command_matches "$meta_pid" "$meta_bin" "$meta_config"; then
+    match_reason='process command line does not match the managed config'
+    return 1
+  fi
+  return 0
+}
+
+remove_matching_state() {
+  local launcher=$1 token=$2
+  if read_metadata && [[ $meta_launcher == "$launcher" && $meta_token == "$token" ]]; then
+    rm -f -- "$statefile"
+  fi
+}
+
+stop_bar() {
+  acquire_lock
+  if [[ ! -e $statefile && ! -L $statefile ]]; then
+    printf 'quickshell-bar: no managed instance is running\n' >&2
+    release_lock
+    return 0
+  fi
+  if ! read_metadata; then
+    rm -f -- "$statefile"
+    printf 'quickshell-bar: removed invalid managed state\n' >&2
+    release_lock
+    return 0
+  fi
+  if ! managed_process_matches; then
+    local pid=$meta_pid reason=$match_reason
+    rm -f -- "$statefile"
+    printf 'quickshell-bar: pid %s is not the managed instance (%s); refusing to signal it\n' "$pid" "$reason" >&2
+    release_lock
+    return 1
+  fi
+
+  local pid=$meta_pid launcher=$meta_launcher token=$meta_token
+  kill -TERM "$pid"
+  local i
+  for ((i = 0; i < 50; i++)); do
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  if kill -0 "$pid" 2>/dev/null; then
+    printf 'quickshell-bar: instance %s did not exit after SIGTERM\n' "$pid" >&2
+    release_lock
+    return 1
+  fi
+  remove_matching_state "$launcher" "$token"
+  release_lock
+}
+
+resolve_config() {
+  local candidate=${QUICKSHELL_BAR_CONFIG:-}
+  if [[ -n $candidate ]]; then
+    candidate=${candidate/#\~/$HOME}
+    [[ -d $candidate ]] && candidate="$candidate/shell.qml"
+    if [[ -f $candidate ]]; then readlink -f -- "$candidate"; return; fi
+    printf 'quickshell-bar: QUICKSHELL_BAR_CONFIG does not contain shell.qml: %s\n' "$candidate" >&2
+    return 1
+  fi
+
+  candidate="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
+  [[ -f $candidate/shell.qml ]] && { readlink -f -- "$candidate/shell.qml"; return; }
+
+  local launcher repo_candidate
+  launcher=$(readlink -f -- "${BASH_SOURCE[0]}")
+  repo_candidate=$(readlink -f -- "$(dirname -- "$launcher")/../../dot-config/quickshell/shell.qml")
+  [[ -f $repo_candidate ]] && { printf '%s\n' "$repo_candidate"; return; }
+
+  printf 'quickshell-bar: could not find shell.qml (see quickshell-bar help)\n' >&2
+  return 1
+}
+
+self_test() {
+  local launcher tmp mock_dir mock_log config rt hold out bg expected
+  launcher=$(readlink -f -- "${BASH_SOURCE[0]}")
+  tmp=$(mktemp -d)
+  mock_dir="$tmp/bin"
+  mkdir -p "$mock_dir"
+  cat > "$mock_dir/qs" <<'MOCK'
+#!/usr/bin/env bash
+{
+  printf 'test=%s\n' "${QUICKSHELL_BAR_TEST:-unset}"
+  printf 'pid=%s\n' "$$"
+  for arg in "$@"; do printf 'arg=%s\n' "$arg"; done
+} >> "$MOCK_LOG"
+if [[ -n ${MOCK_HOLD:-} ]]; then
+  trap 'printf "terminated=%s\n" "$$" >> "$MOCK_LOG"; exit 0' TERM INT HUP
+  while [[ -e $MOCK_HOLD ]]; do sleep 0.05; done
+fi
+MOCK
+  chmod +x "$mock_dir/qs"
+
+  self_test_tmp=$tmp
+  cleanup_self_test() {
+    local job
+    for job in $(jobs -pr); do kill -TERM "$job" 2>/dev/null || true; done
+    [[ -n ${self_test_tmp:-} ]] && rm -rf -- "$self_test_tmp"
+  }
+  trap cleanup_self_test EXIT
+
+  fail_test() { printf 'quickshell-bar self-test: %s\n' "$1" >&2; return 1; }
+  wait_for_log() {
+    local needle=$1 file=$2 i
+    for ((i = 0; i < 100; i++)); do
+      grep -Fqx -- "$needle" "$file" 2>/dev/null && return 0
+      sleep 0.05
+    done
+    return 1
+  }
+  assert_invocation() {
+    local file=$1 test_value=$2 qml=$3 extra=$4
+    grep -Fqx -- "test=$test_value" "$file" &&
+      grep -Fqx -- 'arg=-p' "$file" &&
+      grep -Fqx -- "arg=$qml" "$file" &&
+      grep -Fqx -- "arg=$extra" "$file" || fail_test "bad invocation in $file"
+  }
+
+  config="$tmp/custom shell.qml"
+  : > "$config"
+  expected=$(readlink -f -- "$config")
+  rt="$tmp/rt-normal"; mkdir -m 700 "$rt"
+  mock_log="$tmp/normal.log"
+  PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" QUICKSHELL_BAR_CONFIG="$config" MOCK_LOG="$mock_log" \
+    "$launcher" -- normal-arg
+  assert_invocation "$mock_log" 0 "$expected" normal-arg
+
+  rt="$tmp/rt-test"; mkdir -m 700 "$rt"
+  mock_log="$tmp/test.log"
+  PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" QUICKSHELL_BAR_CONFIG="$config" MOCK_LOG="$mock_log" \
+    "$launcher" test test-arg
+  assert_invocation "$mock_log" 1 "$expected" test-arg
+
+  mkdir -p "$tmp/xdg/quickshell"
+  : > "$tmp/xdg/quickshell/shell.qml"
+  expected=$(readlink -f -- "$tmp/xdg/quickshell/shell.qml")
+  rt="$tmp/rt-xdg"; mkdir -m 700 "$rt"
+  mock_log="$tmp/xdg.log"
+  PATH="$mock_dir:$PATH" HOME="$tmp/home" XDG_CONFIG_HOME="$tmp/xdg" XDG_RUNTIME_DIR="$rt" \
+    QUICKSHELL_BAR_CONFIG= MOCK_LOG="$mock_log" "$launcher" xdg-arg
+  assert_invocation "$mock_log" 0 "$expected" xdg-arg
+
+  expected=$(readlink -f -- "$(dirname -- "$launcher")/../../dot-config/quickshell/shell.qml")
+  rt="$tmp/rt-fallback"; mkdir -m 700 "$rt"
+  mock_log="$tmp/fallback.log"
+  PATH="$mock_dir:$PATH" HOME="$tmp/home" XDG_CONFIG_HOME="$tmp/missing" XDG_RUNTIME_DIR="$rt" \
+    QUICKSHELL_BAR_CONFIG= MOCK_LOG="$mock_log" "$launcher" fallback-arg
+  assert_invocation "$mock_log" 0 "$expected" fallback-arg
+
+  rt="$tmp/rt-stop"; mkdir -m 700 "$rt"
+  hold="$tmp/hold-stop"; : > "$hold"
+  mock_log="$tmp/stop.log"
+  PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" QUICKSHELL_BAR_CONFIG="$config" \
+    MOCK_LOG="$mock_log" MOCK_HOLD="$hold" "$launcher" stop-arg & bg=$!
+  wait_for_log 'arg=stop-arg' "$mock_log" || fail_test 'mock did not start for stop test'
+  PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" "$launcher" stop
+  wait "$bg"
+  grep -q '^terminated=' "$mock_log" || fail_test 'stop did not terminate the managed mock'
+  rm -f -- "$hold"
+
+  rt="$tmp/rt-concurrent"; mkdir -m 700 "$rt"
+  hold="$tmp/hold-concurrent"; : > "$hold"
+  mock_log="$tmp/concurrent.log"
+  PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" QUICKSHELL_BAR_CONFIG="$config" \
+    MOCK_LOG="$mock_log" MOCK_HOLD="$hold" "$launcher" first & bg=$!
+  wait_for_log 'arg=first' "$mock_log" || fail_test 'mock did not start for concurrency test'
+  out="$tmp/concurrent.err"
+  if PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" QUICKSHELL_BAR_CONFIG="$config" \
+      MOCK_LOG="$tmp/second.log" "$launcher" second 2> "$out"; then
+    fail_test 'concurrent launcher unexpectedly succeeded'
+  fi
+  grep -q 'managed instance already running' "$out" || fail_test "concurrent launcher gave the wrong error: $(cat "$out")"
+  PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" "$launcher" stop
+  wait "$bg"
+  rm -f -- "$hold"
+
+  rt="$tmp/rt-daemon"; mkdir -m 700 "$rt"
+  mock_log="$tmp/daemon.log"
+  if PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" QUICKSHELL_BAR_CONFIG="$config" MOCK_LOG="$mock_log" \
+      "$launcher" -- --daemonize 2> "$tmp/daemon.err"; then
+    fail_test '--daemonize unexpectedly succeeded'
+  fi
+  grep -q 'daemonization is not supported' "$tmp/daemon.err" || fail_test 'wrong daemon rejection error'
+  [[ ! -e $mock_log ]] || fail_test 'qs ran despite daemon rejection'
+  if PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" QUICKSHELL_BAR_CONFIG="$config" MOCK_LOG="$mock_log" \
+      "$launcher" test -d 2>/dev/null; then
+    fail_test '-d unexpectedly succeeded'
+  fi
+
+  trap - EXIT
+  cleanup_self_test
+  printf 'quickshell-bar self-test: PASS\n'
+}
+
+mode=normal
+case ${1:-} in
+  test) mode=test; shift ;;
+  stop) shift; stop_bar; exit $? ;;
+  self-test) shift; self_test; exit $? ;;
+  help|-h|--help) usage; exit 0 ;;
+  --) shift ;;
+esac
+
+for arg in "$@"; do
+  case $arg in
+    -d|--daemonize|--daemonize=*)
+      printf 'quickshell-bar: daemonization is not supported; foreground PID ownership is required\n' >&2
+      exit 2
+      ;;
+  esac
+done
+
+if command -v qs >/dev/null 2>&1; then
+  qs_bin=$(readlink -f -- "$(command -v qs)")
+elif command -v quickshell >/dev/null 2>&1; then
+  qs_bin=$(readlink -f -- "$(command -v quickshell)")
+else
+  printf 'quickshell-bar: neither qs nor quickshell is installed\n' >&2
+  exit 127
+fi
+
+shell_qml=$(resolve_config)
+acquire_lock
+if [[ -e $statefile || -L $statefile ]]; then
+  if read_metadata && managed_process_matches; then
+    printf 'quickshell-bar: managed instance already running (pid %s); run stop first\n' "$meta_pid" >&2
+    release_lock
+    exit 1
+  fi
+  rm -f -- "$statefile"
+fi
+
+export QUICKSHELL_BAR_TEST=$([[ $mode == test ]] && printf 1 || printf 0)
+# Close the lock descriptor in the child; the parent retains the lifecycle lock
+# until complete metadata has been published.
+(
+  exec {lock_fd}>&-
+  exec "$qs_bin" -p "$shell_qml" "$@"
+) &
+child=$!
+
+ready=0
+for _ in {1..100}; do
+  if proc_command_matches "$child" "$qs_bin" "$shell_qml"; then
+    ready=1
+    break
+  fi
+  kill -0 "$child" 2>/dev/null || break
+  sleep 0.01
+done
+if (( ! ready )); then
+  release_lock
+  set +e
+  wait "$child"
+  status=$?
+  set -e
+  exit "$status"
+fi
+
+meta_pid=$child
+meta_start=$(proc_start_time "$child")
+meta_comm=$(proc_comm "$child")
+meta_config=$shell_qml
+meta_bin=$qs_bin
+meta_launcher=$$
+meta_token="$$:$child:$RANDOM:$(date +%s%N)"
+write_metadata
+launcher_token=$meta_token
+release_lock
+
+cleanup() {
+  acquire_lock || return 0
+  # An interrupted launcher may finish waiting before a slow child exits. Keep
+  # valid metadata in that case so a later `stop` can still identify it.
+  if read_metadata && [[ $meta_launcher == "$$" && $meta_token == "$launcher_token" ]]; then
+    managed_process_matches || rm -f -- "$statefile"
+  fi
+  release_lock
+}
+forward_term() { kill -TERM "$child" 2>/dev/null || true; }
+trap cleanup EXIT
+trap forward_term INT TERM HUP
+set +e
+wait "$child"
+status=$?
+set -e
+exit "$status"

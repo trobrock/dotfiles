@@ -30,5 +30,5 @@ Use `pacman` only when `yay` cannot (e.g., inside scripts where AUR is irrelevan
 
 # Config changes
 
-- **Verify config keys against upstream docs** — for tools like VoxType, hypridle, waybar, hyprland, etc., fetch the actual docs or source before proposing a key/value. First-pass guesses have been wrong enough times to be worth the verification step.
+- **Verify config keys against upstream docs** — for tools like VoxType, hypridle, Quickshell, Hyprland, etc., fetch the actual docs or source before proposing a key/value. First-pass guesses have been wrong enough times to be worth the verification step.
 - **Broad-first for user-visible config** — for vocab lists, widget styling, status bars, and similar user-visible surfaces, propose the broader version and let the user narrow. Narrowing up from a minimal fix is tedious.

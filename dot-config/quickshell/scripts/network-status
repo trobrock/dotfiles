@@ -1,0 +1,286 @@
+#!/usr/bin/env bash
+# Credential-free iwd/network status for the Quickshell bar.
+set -euo pipefail
+
+fail() {
+  printf 'network-status self-test: %s\n' "$1" >&2
+  exit 1
+}
+
+assert_eq() {
+  local label=$1 expected=$2 actual=$3
+  [[ $actual == "$expected" ]] || fail "$label: expected '$expected', got '$actual'"
+}
+
+expect_failure() {
+  local label=$1
+  shift
+  if "$@" >/dev/null 2>&1; then
+    fail "$label: command unexpectedly succeeded"
+  fi
+}
+
+fixture=
+case ${1:-} in
+  --fixture)
+    if (($# != 2)) || [[ -z ${2:-} || ! -d ${2:-} ]]; then
+      printf '%s\n' '--fixture requires an existing directory' >&2
+      exit 2
+    fi
+    fixture=$2
+    shift 2
+    ;;
+  --self-test)
+    if (($# != 1)); then
+      printf '%s\n' '--self-test takes no arguments' >&2
+      exit 2
+    fi
+    jq_test=$(command -v jq 2>/dev/null || true)
+    [[ -n $jq_test ]] || fail 'jq is required'
+
+    script=${BASH_SOURCE[0]}
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+
+    # Match the column-oriented output produced by iwd (there are no colons).
+    wifi=$tmp/wifi
+    mkdir -p "$wifi/net/wlan-fixture/wireless"
+    printf '1\n' > "$wifi/net/wlan-fixture/carrier"
+    printf 'Inter-| sta\n wlan-fixture: 0000 14. 0. 0. 0. 0. 0. 0. 0. 0. 0.\n' > "$wifi/wireless"
+    printf 'Interface Destination Gateway Flags RefCnt Use Metric Mask\nwlan-fixture 00000000 01000000 0003 0 0 25 00000000\n' > "$wifi/route"
+    printf '\033[1m                             State            connected\033[0m\n                 Connected network            Fixture Network\n                             RSSI            -65 dBm\n' > "$wifi/iwctl-wlan-fixture.txt"
+    got=$("$script" --fixture "$wifi")
+    assert_eq 'real iwd kind' wifi "$("$jq_test" -r '.kind' <<<"$got")"
+    assert_eq 'real iwd connected' true "$("$jq_test" -r '.connected' <<<"$got")"
+    assert_eq 'real iwd SSID' 'Fixture Network' "$("$jq_test" -r '.ssid' <<<"$got")"
+    assert_eq 'iwd RSSI conversion' 70 "$("$jq_test" -r '.signal' <<<"$got")"
+
+    # Colon-form iwd output remains supported; absent RSSI uses normalized /proc quality.
+    fallback=$tmp/fallback
+    mkdir -p "$fallback/net/wifi-fallback/wireless"
+    printf '1\n' > "$fallback/net/wifi-fallback/carrier"
+    printf 'Inter-| sta\n wifi-fallback: 0000 42. 0. 0. 0. 0. 0. 0. 0. 0. 0.\n' > "$fallback/wireless"
+    printf 'Interface Destination Gateway Flags RefCnt Use Metric Mask\nwifi-fallback 00000000 01000000 0003 0 0 0 00000000\n' > "$fallback/route"
+    printf 'State: connected\nConnected network: Colon Fixture\n' > "$fallback/iwctl-wifi-fallback.txt"
+    got=$("$script" --fixture "$fallback")
+    assert_eq 'colon iwd SSID' 'Colon Fixture' "$("$jq_test" -r '.ssid' <<<"$got")"
+    assert_eq 'wireless quality normalization' 60 "$("$jq_test" -r '.signal' <<<"$got")"
+
+    disconnected=$tmp/disconnected
+    mkdir -p "$disconnected/net/wifi-disconnected/wireless"
+    printf '1\n' > "$disconnected/net/wifi-disconnected/carrier"
+    printf 'Interface Destination Gateway Flags RefCnt Use Metric Mask\nwifi-disconnected 00000000 01000000 0003 0 0 0 00000000\n' > "$disconnected/route"
+    : > "$disconnected/wireless"
+    printf '                             State            disconnected\n' > "$disconnected/iwctl-wifi-disconnected.txt"
+    got=$("$script" --fixture "$disconnected")
+    assert_eq 'disconnected state' false "$("$jq_test" -r '.connected' <<<"$got")"
+    assert_eq 'disconnected kind' disconnected "$("$jq_test" -r '.kind' <<<"$got")"
+
+    ethernet=$tmp/ethernet
+    mkdir -p "$ethernet/net/down-fixture" "$ethernet/net/ethernet-fixture"
+    printf '0\n' > "$ethernet/net/down-fixture/carrier"
+    printf '1\n' > "$ethernet/net/ethernet-fixture/carrier"
+    printf 'Interface Destination Gateway Flags RefCnt Use Metric Mask\ndown-fixture 00000000 01000000 0003 0 0 0 00000000\nethernet-fixture 00000000 01000000 0003 0 0 50 00000000\n' > "$ethernet/route"
+    : > "$ethernet/wireless"
+    got=$("$script" --fixture "$ethernet")
+    assert_eq 'ethernet connected' true "$("$jq_test" -r '.connected' <<<"$got")"
+    assert_eq 'ethernet kind' ethernet "$("$jq_test" -r '.kind' <<<"$got")"
+    assert_eq 'usable default interface' ethernet-fixture "$("$jq_test" -r '.interface' <<<"$got")"
+
+    expect_failure 'missing fixture argument' "$script" --fixture
+    expect_failure 'missing fixture directory' "$script" --fixture "$tmp/not-present"
+    expect_failure 'unknown option' "$script" --not-an-option
+
+    printf '%s\n' 'network-status self-test: ok'
+    exit 0
+    ;;
+  -h|--help)
+    printf 'Usage: network-status [--fixture DIR|--self-test]\n'
+    exit 0
+    ;;
+  '') ;;
+  *)
+    printf 'Usage: network-status [--fixture DIR|--self-test]\n' >&2
+    exit 2
+    ;;
+esac
+
+if (($# != 0)); then
+  printf 'Usage: network-status [--fixture DIR|--self-test]\n' >&2
+  exit 2
+fi
+
+jq_bin=$(command -v jq 2>/dev/null || true)
+if [[ -z $jq_bin ]]; then
+  printf '{"connected":false,"kind":"unknown","icon":"󰖪","tooltip":"Network status unavailable (jq missing)"}\n'
+  exit 0
+fi
+
+sysnet=/sys/class/net
+route=/proc/net/route
+wireless=/proc/net/wireless
+if [[ -n $fixture ]]; then
+  sysnet=$fixture/net
+  route=$fixture/route
+  wireless=$fixture/wireless
+fi
+
+has_carrier() {
+  local candidate=$1 value
+  [[ -n $candidate && $candidate != lo && $candidate != */* ]] || return 1
+  [[ -e "$sysnet/$candidate" && -r "$sysnet/$candidate/carrier" ]] || return 1
+  if ! IFS= read -r value < "$sysnet/$candidate/carrier"; then
+    return 1
+  fi
+  [[ $value == 1 ]]
+}
+
+iface=
+if [[ -z $fixture ]]; then
+  ip_bin=$(command -v ip 2>/dev/null || true)
+  if [[ -n $ip_bin ]]; then
+    route_json=$("$ip_bin" -j route show default 2>/dev/null || true)
+    while IFS= read -r candidate; do
+      if has_carrier "$candidate"; then
+        iface=$candidate
+        break
+      fi
+    done < <(printf '%s\n' "$route_json" | "$jq_bin" -r '
+      [.[] | select((.type // "unicast") == "unicast") | select(.dev? != null)]
+      | sort_by(.metric // 0) | .[].dev
+    ' 2>/dev/null || true)
+  fi
+fi
+
+# Fixture mode deliberately stays offline. This is also the runtime fallback
+# when ip is unavailable or returns no usable default route.
+if [[ -z $iface && -r $route ]]; then
+  best_metric=
+  best_iface=
+  while read -r route_iface destination _gateway flags _refcnt _use metric _mask _rest; do
+    [[ $destination == 00000000 && $flags =~ ^[[:xdigit:]]+$ ]] || continue
+    flags_value=$((16#$flags))
+    (( (flags_value & 1) != 0 )) || continue
+    has_carrier "$route_iface" || continue
+    [[ $metric =~ ^[0-9]+$ ]] || metric=2147483647
+    if [[ -z $best_metric ]] || ((metric < best_metric)); then
+      best_metric=$metric
+      best_iface=$route_iface
+    fi
+  done < "$route"
+  iface=$best_iface
+fi
+
+if [[ -z $iface ]]; then
+  "$jq_bin" -nc '{connected:false,kind:"disconnected",icon:"󰖪",tooltip:"Disconnected"}'
+  exit 0
+fi
+
+strip_ansi() {
+  LC_ALL=C sed $'s/\033\\[[0-?]*[ -\\/]*[@-~]//g'
+}
+
+iwd_field() {
+  local key=$1
+  awk -v key="$key" '
+    {
+      line = $0
+      sub(/\r$/, "", line)
+      sub(/^[[:space:]]*/, "", line)
+      pattern = "^" key "[[:space:]]*:?[[:space:]]+"
+      if (line ~ pattern) {
+        sub(pattern, "", line)
+        sub(/[[:space:]]+$/, "", line)
+        print line
+        exit
+      }
+    }
+  '
+}
+
+kind=ethernet
+icon='󰀂'
+ssid=
+signal=0
+iwd_state=
+if [[ -d "$sysnet/$iface/wireless" ]]; then
+  kind=wifi
+  show=
+  if [[ -n $fixture ]]; then
+    if [[ -r "$fixture/iwctl-$iface.txt" ]]; then
+      show=$(<"$fixture/iwctl-$iface.txt")
+    fi
+  else
+    iwctl_bin=$(command -v iwctl 2>/dev/null || true)
+    if [[ -n $iwctl_bin ]]; then
+      timeout_bin=$(command -v timeout 2>/dev/null || true)
+      if [[ -n $timeout_bin ]]; then
+        show=$("$timeout_bin" 2 "$iwctl_bin" station "$iface" show 2>/dev/null || true)
+      else
+        show=$("$iwctl_bin" station "$iface" show 2>/dev/null || true)
+      fi
+    fi
+  fi
+
+  show=$(printf '%s' "$show" | strip_ansi)
+  iwd_state=$(printf '%s\n' "$show" | iwd_field State)
+  ssid=$(printf '%s\n' "$show" | iwd_field 'Connected network')
+  rssi_text=$(printf '%s\n' "$show" | iwd_field RSSI)
+  if [[ $rssi_text =~ (-?[0-9]+)[[:space:]]*dBm ]]; then
+    rssi=${BASH_REMATCH[1]}
+    signal=$((2 * (rssi + 100)))
+  elif [[ -r $wireless ]]; then
+    quality=$(awk -v dev="$iface" '
+      $1 == dev ":" {
+        value = $3
+        sub(/\.$/, "", value)
+        if (value ~ /^[0-9]+([.][0-9]+)?$/) print int(value)
+        exit
+      }
+    ' "$wireless" 2>/dev/null || true)
+    if [[ $quality =~ ^[0-9]+$ ]]; then
+      signal=$(((quality * 100 + 35) / 70))
+    fi
+  fi
+
+  ((signal < 0)) && signal=0
+  ((signal > 100)) && signal=100
+  if ((signal >= 75)); then
+    icon='󰤨'
+  elif ((signal >= 50)); then
+    icon='󰤥'
+  elif ((signal >= 25)); then
+    icon='󰤢'
+  elif ((signal > 0)); then
+    icon='󰤟'
+  else
+    icon='󰤯'
+  fi
+fi
+
+carrier=0
+if [[ -r "$sysnet/$iface/carrier" ]]; then
+  IFS= read -r carrier < "$sysnet/$iface/carrier" || carrier=0
+fi
+connected=false
+if [[ $carrier == 1 ]]; then
+  connected=true
+fi
+if [[ $kind == wifi && -n $iwd_state && ${iwd_state,,} != connected ]]; then
+  connected=false
+fi
+
+if [[ $connected != true ]]; then
+  "$jq_bin" -nc '{connected:false,kind:"disconnected",icon:"󰖪",tooltip:"Disconnected"}'
+elif [[ $kind == wifi ]]; then
+  if [[ -n $ssid ]]; then
+    printf -v tooltip '%s\nSignal: %s%%' "$ssid" "$signal"
+  else
+    printf -v tooltip 'Wi-Fi connected\nSignal: %s%%' "$signal"
+  fi
+  "$jq_bin" -nc --arg kind "$kind" --arg icon "$icon" --arg iface "$iface" --arg ssid "$ssid" --arg tooltip "$tooltip" --argjson signal "$signal" \
+    '{connected:true,kind:$kind,icon:$icon,interface:$iface,ssid:$ssid,signal:$signal,tooltip:$tooltip}'
+else
+  "$jq_bin" -nc --arg icon "$icon" --arg iface "$iface" \
+    '{connected:true,kind:"ethernet",icon:$icon,interface:$iface,tooltip:"Ethernet connected"}'
+fi

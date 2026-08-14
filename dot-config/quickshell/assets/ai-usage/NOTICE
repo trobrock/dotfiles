@@ -1,0 +1,16 @@
+Omarchy AI provider marks
+=========================
+
+The following files were copied from the Omarchy project:
+
+- claude.svg
+- codex.svg
+- codex-light.svg
+- fireworks.svg
+
+Upstream: https://github.com/basecamp/omarchy
+Upstream path: shell/plugins/agents/assets/
+Exact source commit: b15ec6c6b3bac1e0406608f4a130f1684e734088 (origin/quattro)
+License: MIT; the exact upstream license text is reproduced in LICENSE.omarchy.
+
+No Omarchy framework QML components are included.

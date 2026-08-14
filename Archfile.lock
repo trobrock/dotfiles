@@ -68,7 +68,7 @@ less
 libreoffice-fresh
 libvips
 lld
-localsend
+localsend-bin
 magic-wormhole
 mako
 man-db
@@ -88,6 +88,7 @@ pipewire
 polkit-gnome
 power-profiles-daemon
 qalculate-gtk
+quickshell
 restic
 ripgrep
 ruby-build
@@ -114,7 +115,6 @@ uwsm
 vulkan-headers
 vulkan-radeon
 walker
-waybar
 wget
 wireplumber
 worktrunk-bin

@@ -7,7 +7,7 @@
 # Soniox is a paid cloud backend; keep SONIOX_API_KEY outside this public repo.
 engine = "soniox"
 
-# State file for external integrations (Waybar, polybar, etc.)
+# State file for external integrations (Quickshell, trays, etc.)
 # Use "auto" for default location ($XDG_RUNTIME_DIR/voxtype/state),
 # a custom path, or "disabled" to turn off. The daemon writes state
 # ("idle", "recording", "transcribing") to this file whenever it changes.
@@ -76,7 +76,7 @@ translate = false
 
 # Biases Whisper toward proper nouns frequently dictated across daily work.
 # Prior context only — not transcribed into output.
-initial_prompt = "Ruby on Rails, Comfortly, Channex, rezStream, Stripe, ViewComponent, Flipper, Sentry, PagerDuty, Hyprland, Waybar, VoxType, Claude Code, Arch Linux, Neovim."
+initial_prompt = "Ruby on Rails, Comfortly, Channex, rezStream, Stripe, ViewComponent, Flipper, Sentry, PagerDuty, Hyprland, Quickshell, VoxType, Claude Code, Arch Linux, Neovim."
 
 # https://github.com/peteonrails/voxtype/blob/main/docs/CONFIGURATION.md#gpu_isolation
 gpu_isolation = true
@@ -92,7 +92,7 @@ language_hints_strict = true
 streaming = true
 type_partials = true
 context = "Software development dictation for terminal commands, Git workflows, code review, issue comments, Rails applications, DevOps, Linux desktop configuration, and AI coding agents."
-terms = ["Ruby on Rails", "Comfortly", "Channex", "rezStream", "Stripe", "ViewComponent", "Flipper", "Sentry", "PagerDuty", "Hyprland", "Waybar", "VoxType", "Claude Code", "Arch Linux", "Neovim", "Developerly", "Worktrunk", "OpenAPI", "GitHub Actions", "Docker Buildx", "Kamal", "Terraform", "Grafana", "MySQL", "PostgreSQL", "Redis", "Sidekiq", "ActiveRecord", "Stimulus", "Turbo", "Hotwire", "Tailwind", "Cloudflare", "Tailscale", "systemd", "zsh", "tmux", "mise", "sops", "stow", "yay", "pacman", "Hyprshot", "Walker", "Elephant", "Quickshell", "MIGraphX", "Vulkan", "ONNX", "Cohere", "Whisper", "Parakeet", "Soniox", "SuperWhisper", "Pi", "CLI", "CLI deploy", "deploy", "deployment"]
+terms = ["Ruby on Rails", "Comfortly", "Channex", "rezStream", "Stripe", "ViewComponent", "Flipper", "Sentry", "PagerDuty", "Hyprland", "VoxType", "Claude Code", "Arch Linux", "Neovim", "Developerly", "Worktrunk", "OpenAPI", "GitHub Actions", "Docker Buildx", "Kamal", "Terraform", "Grafana", "MySQL", "PostgreSQL", "Redis", "Sidekiq", "ActiveRecord", "Stimulus", "Turbo", "Hotwire", "Tailwind", "Cloudflare", "Tailscale", "systemd", "zsh", "tmux", "mise", "sops", "stow", "yay", "pacman", "Hyprshot", "Walker", "Elephant", "Quickshell", "MIGraphX", "Vulkan", "ONNX", "Cohere", "Whisper", "Parakeet", "Soniox", "SuperWhisper", "Pi", "CLI", "CLI deploy", "deploy", "deployment"]
 
 [output]
 # Primary output mode: "type", "clipboard", "paste", or "file"
@@ -142,7 +142,7 @@ replacements = { "ChanX" = "Channex", "clod" = "Claude", "Clod" = "Claude" }
 enabled = false
 
 [status]
-# Status display icons for Waybar/tray integrations
+# Status display icons for bar and tray integrations
 #
 # Icon theme (or path to custom theme file):
 #   Font-based (require specific fonts):

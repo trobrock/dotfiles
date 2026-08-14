@@ -84,7 +84,7 @@ if [[ $events_found -gt 0 ]]; then
     for ((i=1; i<events_found; i++)); do
       event_formatted_time=$(date_from_string "${event_dates[i]} ${event_times[i]}" "+%I:%M %p")
       if [[ $i -gt 1 ]]; then
-        tooltip+="\\n"
+        tooltip+=$'\n'
       fi
       tooltip+="$event_formatted_time - ${event_titles[i]}"
     done
@@ -92,8 +92,12 @@ if [[ $events_found -gt 0 ]]; then
     tooltip="No more events today"
   fi
 
-  echo '{"title":"'$formatted_time' - '$main_title'", "conference_url":"'$next_event_url'", "tooltip":"'$tooltip'"}'
+  jq -nc \
+    --arg title "$formatted_time - $main_title" \
+    --arg conference_url "$next_event_url" \
+    --arg tooltip "$tooltip" \
+    '{title:$title,conference_url:$conference_url,tooltip:$tooltip}'
 else
-  echo '{"title":"No upcoming events", "conference_url":"", "tooltip":"No upcoming events"}'
+  jq -nc '{title:"No upcoming events",conference_url:"",tooltip:"No upcoming events"}'
 fi
 
