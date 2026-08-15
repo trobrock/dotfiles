@@ -54,6 +54,16 @@ qs -p "$HOME/.config/quickshell" ipc call launcher showClipboard
 qs -p "$HOME/.config/quickshell" ipc call launcher hide
 ```
 
+## Notifications and OSD
+
+Notifications are compact, ephemeral top-right toasts. Expired or dismissed
+notifications are destroyed; there is no history or notification tray.
+
+- `Super+,` dismisses the latest toast.
+- `Super+Shift+,` dismisses every toast.
+- `Super+Ctrl+,` toggles do not disturb. Notifications received while DND is on are dropped.
+- Volume, mute, microphone, brightness, power-profile, and DND changes use the shared bottom-center OSD.
+
 ## Runtime data
 
 Provider, SSID, device, and account data stays out of the repository. AI

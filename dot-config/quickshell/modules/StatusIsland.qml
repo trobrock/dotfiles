@@ -7,6 +7,7 @@ Pill {
     id: root
 
     required property var bar
+    property var osd: null
     property bool compact: false
     property bool narrow: false
     property bool iconOnly: false
@@ -168,6 +169,11 @@ Pill {
             PowerProfiles.profile = PowerProfiles.hasPerformanceProfile ? PowerProfile.Performance : PowerProfile.PowerSaver;
         else
             PowerProfiles.profile = PowerProfile.PowerSaver;
+
+        if (osd && typeof osd.showPowerProfile === "function")
+            Qt.callLater(function() {
+                root.osd.showPowerProfile();
+            });
     }
 
     theme: bar.theme

@@ -9,6 +9,7 @@ Item {
 
     required property var theme
     required property var services
+    required property var osd
     readonly property bool testMode: Quickshell.env("QUICKSHELL_BAR_TEST") === "1"
     property var activePopup: null
     property var tooltipTarget: null
@@ -179,6 +180,7 @@ Item {
                             narrow: panel.narrow
                             iconOnly: true
                             monochrome: true
+                            osd: root.osd
                         }
 
                         BarDivider {
