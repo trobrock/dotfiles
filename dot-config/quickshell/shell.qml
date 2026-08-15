@@ -17,6 +17,10 @@ ShellRoot {
         theme: shell.theme
     }
 
+    PowerMenu {
+        theme: shell.theme
+    }
+
     NotificationToasts {
         service: shell.notifications
         theme: shell.theme

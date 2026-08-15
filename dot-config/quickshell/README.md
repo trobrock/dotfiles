@@ -54,6 +54,19 @@ qs -p "$HOME/.config/quickshell" ipc call launcher showClipboard
 qs -p "$HOME/.config/quickshell" ipc call launcher hide
 ```
 
+## Power and session menu
+
+`Super+Ctrl+Escape` opens a compact menu on the focused monitor. Lock, suspend,
+and hibernate run when selected. Log out, restart, and shut down first show an
+inline confirmation with **Cancel** selected by default. Use arrows or Tab to
+select, Enter or Space to activate, and Escape to go back or close the menu.
+Clicking the dimmed background also closes it. `Super+Escape` still locks
+immediately. Both `Super+Ctrl+Escape` and `Super+Shift+Escape` open the menu so
+there is no unconfirmed logout shortcut.
+
+The `powerMenu` IPC target provides only visibility, selection, and display
+controls; it cannot execute or confirm an action.
+
 ## Notifications and OSD
 
 Notifications are compact, ephemeral top-right toasts. Expired or dismissed
