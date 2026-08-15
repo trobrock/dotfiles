@@ -323,10 +323,6 @@ Item {
         runDetached(["ghostty", "-e", home + "/.config/scripts/tailscale-switch"]);
     }
 
-    function openBluetooth() {
-        runDetached(["ghostty", "-e", "bluetuith"]);
-    }
-
     function openNetwork() {
         runDetached(["ghostty", "-e", "impala"]);
     }

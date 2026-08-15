@@ -55,9 +55,7 @@ streamdeck-ui
 telegram-desktop
 
 # [desktop] CLI
-bluetuith
 bluez
-bluez-utils
 brightnessctl
 1password-cli
 

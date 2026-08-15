@@ -155,7 +155,7 @@ write_metadata() {
 
 proc_start_time() {
   local pid=$1 stat_line tail
-  IFS= read -r stat_line < "/proc/$pid/stat" 2>/dev/null || return 1
+  IFS= read -r stat_line 2>/dev/null < "/proc/$pid/stat" || return 1
   [[ $stat_line == *') '* ]] || return 1
   tail=${stat_line##*) }
   # The tail starts at proc field 3; starttime is field 22 (tail field 20).
@@ -166,7 +166,7 @@ proc_start_time() {
 
 proc_comm() {
   local value
-  IFS= read -r value < "/proc/$1/comm" 2>/dev/null || return 1
+  IFS= read -r value 2>/dev/null < "/proc/$1/comm" || return 1
   [[ -n $value ]] || return 1
   printf '%s\n' "$value"
 }
@@ -296,6 +296,7 @@ self_test() {
 {
   printf 'test=%s\n' "${QUICKSHELL_BAR_TEST:-unset}"
   printf 'pid=%s\n' "$$"
+  while IFS= read -r logging_rule; do printf 'logging=%s\n' "$logging_rule"; done <<< "${QT_LOGGING_RULES:-}"
   for arg in "$@"; do printf 'arg=%s\n' "$arg"; done
 } >> "$MOCK_LOG"
 if [[ -n ${MOCK_HOLD:-} ]]; then
@@ -325,6 +326,8 @@ MOCK
   assert_invocation() {
     local file=$1 test_value=$2 qml=$3 extra=$4
     grep -Fqx -- "test=$test_value" "$file" &&
+      grep -Fqx -- 'logging=quickshell.bluetooth=false' "$file" &&
+      grep -Fqx -- 'logging=quickshell.bluetooth.*=false' "$file" &&
       grep -Fqx -- 'arg=-p' "$file" &&
       grep -Fqx -- "arg=$qml" "$file" &&
       grep -Fqx -- "arg=$extra" "$file" || fail_test "bad invocation in $file"
@@ -336,8 +339,11 @@ MOCK
   rt="$tmp/rt-normal"; mkdir -m 700 "$rt"
   mock_log="$tmp/normal.log"
   PATH="$mock_dir:$PATH" XDG_RUNTIME_DIR="$rt" QUICKSHELL_BAR_CONFIG="$config" MOCK_LOG="$mock_log" \
-    "$launcher" -- normal-arg
+    QT_LOGGING_RULES=$'existing.one=true\nexisting.two=false\nquickshell.*=true' "$launcher" -- normal-arg
   assert_invocation "$mock_log" 0 "$expected" normal-arg
+  grep -Fqx -- 'logging=existing.one=true' "$mock_log" || fail_test 'first existing logging rule was not preserved'
+  grep -Fqx -- 'logging=existing.two=false' "$mock_log" || fail_test 'second existing logging rule was not preserved'
+  grep -Fqx -- 'logging=quickshell.*=true' "$mock_log" || fail_test 'overlapping existing logging rule was not preserved before privacy filters'
 
   rt="$tmp/rt-test"; mkdir -m 700 "$rt"
   mock_log="$tmp/test.log"
@@ -449,6 +455,11 @@ export QUICKSHELL_BAR_TEST=$([[ $mode == test ]] && printf 1 || printf 0)
 # until complete metadata has been published.
 (
   exec {lock_fd}>&-
+  if [[ -n ${QT_LOGGING_RULES:-} ]]; then
+    export QT_LOGGING_RULES="${QT_LOGGING_RULES%$'\n'}"$'\nquickshell.bluetooth=false\nquickshell.bluetooth.*=false'
+  else
+    export QT_LOGGING_RULES=$'quickshell.bluetooth=false\nquickshell.bluetooth.*=false'
+  fi
   exec "$qs_bin" -p "$shell_qml" "$@"
 ) &
 child=$!

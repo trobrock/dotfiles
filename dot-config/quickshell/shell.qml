@@ -11,6 +11,7 @@ ShellRoot {
         theme: shell.theme
         services: shell.services
         osd: osd
+        bluetoothMenu: bluetoothMenu
     }
 
     Launcher {
@@ -18,6 +19,12 @@ ShellRoot {
     }
 
     PowerMenu {
+        theme: shell.theme
+    }
+
+    BluetoothMenu {
+        id: bluetoothMenu
+
         theme: shell.theme
     }
 

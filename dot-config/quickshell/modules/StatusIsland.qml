@@ -8,20 +8,23 @@ Pill {
 
     required property var bar
     property var osd: null
+    required property var bluetoothMenu
+    required property var panelScreen
     property bool compact: false
     property bool narrow: false
     property bool iconOnly: false
     property bool monochrome: false
     readonly property var services: bar.services
     readonly property var adapter: Bluetooth.defaultAdapter
-    readonly property var bluetoothDevices: Bluetooth.devices ? Bluetooth.devices.values : []
+    readonly property var bluetoothDevices: adapter && adapter.devices ? adapter.devices.values : []
     readonly property var battery: UPower.displayDevice
     readonly property int batteryCriticalPercent: 10
     readonly property int batteryWarningPercent: 20
 
     function connectedBluetoothCount() {
         var count = 0;
-        for (var i = 0; i < bluetoothDevices.length; i++) {
+        var candidateCount = Math.min(bluetoothDevices.length, 50);
+        for (var i = 0; i < candidateCount; i++) {
             if (bluetoothDevices[i].connected)
                 count++;
 
@@ -202,7 +205,7 @@ Pill {
             text: root.adapter && root.adapter.enabled ? "" : "󰂲"
             foreground: root.adapter && root.adapter.enabled ? (root.monochrome ? root.theme.subtext : root.connectedBluetoothCount() ? root.theme.green : root.theme.blue) : root.theme.overlay
             tooltip: root.adapter ? (root.adapter.enabled ? "Bluetooth · " + root.connectedBluetoothCount() + " connected" : "Bluetooth disabled") : "No Bluetooth adapter"
-            onActivated: root.services.openBluetooth()
+            onActivated: root.bluetoothMenu.showOnScreen(root.panelScreen)
         }
 
         StatusButton {

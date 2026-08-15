@@ -67,6 +67,18 @@ there is no unconfirmed logout shortcut.
 The `powerMenu` IPC target provides only visibility, selection, and display
 controls; it cannot execute or confirm an action.
 
+## Bluetooth panel
+
+`Super+B` or the bar's Bluetooth icon opens the native panel. Bar clicks target
+that bar's monitor; the shortcut targets the focused monitor. Use Up/Down or Tab
+to select the adapter, scan control, and devices; Enter or Space activates, `F`
+requests forgetting a paired device, and Escape goes back or closes the panel.
+
+Scanning is explicit and stops after 30 seconds. Closing the panel stops only a
+scan started by this panel. Pairing uses Quickshell's native BlueZ API and does
+not provide a passkey/PIN agent; devices requiring one need an external BlueZ
+agent.
+
 ## Notifications and OSD
 
 Notifications are compact, ephemeral top-right toasts. Expired or dismissed

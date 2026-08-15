@@ -6,9 +6,7 @@ asciinema
 base-devel
 bat
 bind
-bluetuith
 bluez
-bluez-utils
 brightnessctl
 btop
 btrfs-progs
@@ -27,6 +25,7 @@ elephant
 elephant-clipboard
 epson-inkjet-printer-escpr
 eza
+fd
 firefox
 firewalld
 fprintd
