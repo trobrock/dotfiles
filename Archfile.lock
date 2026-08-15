@@ -24,18 +24,7 @@ docker-buildx
 docker-compose
 dosfstools
 elephant
-elephant-bluetooth
-elephant-calc
 elephant-clipboard
-elephant-desktopapplications
-elephant-files
-elephant-menus
-elephant-providerlist
-elephant-runner
-elephant-symbols
-elephant-todo
-elephant-unicode
-elephant-websearch
 epson-inkjet-printer-escpr
 eza
 firefox
@@ -115,7 +104,6 @@ unzip
 uwsm
 vulkan-headers
 vulkan-radeon
-walker
 wget
 wireplumber
 worktrunk-bin

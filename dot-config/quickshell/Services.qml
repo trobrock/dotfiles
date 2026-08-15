@@ -332,7 +332,7 @@ Item {
     }
 
     function toggleRecording() {
-        runDetached([home + "/.config/scripts/record-screen", "menu"]);
+        runDetached([home + "/.config/scripts/record-screen", "--stop"]);
     }
 
     function restartVox() {

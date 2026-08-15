@@ -6,10 +6,9 @@
 # Omarchy-inspired workflow using gpu-screen-recorder for capture and an
 # ffplay/v4l2 webcam preview window as an overlay. Re-running the command while
 # a recording is active stops it. Supports MP4, optional GIF conversion,
-# desktop/microphone audio, a Walker menu, and a polled bar status indicator.
+# desktop/microphone audio, and a polled bar status indicator.
 #
 # Usage:
-#   record-screen menu
 #   record-screen mp4 [--with-desktop-audio] [--with-microphone-audio] [--with-webcam]
 #   record-screen gif [--with-desktop-audio] [--with-microphone-audio] [--with-webcam]
 #   record-screen --stop
@@ -29,7 +28,6 @@ microphone_audio="false"
 webcam="false"
 webcam_device=""
 resolution=""
-show_menu="false"
 stop_requested="false"
 status_requested="false"
 use_portal="${RECORD_SCREEN_USE_PORTAL:-false}"
@@ -46,7 +44,6 @@ logfile="$state_dir/log"
 usage() {
     cat <<'EOF'
 Usage:
-  record-screen menu
   record-screen mp4 [--with-desktop-audio] [--with-microphone-audio] [--with-webcam]
   record-screen gif [--with-desktop-audio] [--with-microphone-audio] [--with-webcam]
   record-screen --stop
@@ -67,7 +64,6 @@ EOF
 for arg in "$@"; do
     case "$arg" in
         mp4|gif) mode="$arg" ;;
-        menu|--menu) show_menu="true" ;;
         --with-desktop-audio|--desktop-audio) desktop_audio="true" ;;
         --with-microphone-audio|--microphone-audio|--mic) microphone_audio="true" ;;
         --with-webcam|--webcam) webcam="true" ;;
@@ -110,17 +106,8 @@ list_webcams() {
     done
 }
 
-choose_from_walker() {
-    local placeholder="$1"
-    if ! command -v walker >/dev/null 2>&1; then
-        notify_critical "Walker is required for the recording menu"
-        return 1
-    fi
-    walker --dmenu --placeholder "$placeholder"
-}
-
 select_webcam_device() {
-    local devices count selection
+    local devices count selected
     devices="$(list_webcams || true)"
     count="$(grep -c . <<<"$devices" || true)"
 
@@ -129,14 +116,11 @@ select_webcam_device() {
         return 1
     fi
 
-    if ((count == 1)); then
-        awk '{print $1}' <<<"$devices"
-        return 0
+    selected="$(awk 'NR == 1 { print $1 }' <<<"$devices")"
+    if ((count > 1)); then
+        notify "Multiple webcams found; using $selected (override with --webcam-device)"
     fi
-
-    selection="$(printf '%s\n' "$devices" | choose_from_walker "Select webcam")" || return 1
-    [[ -n "$selection" ]] || return 1
-    awk '{print $1}' <<<"$selection"
+    printf '%s\n' "$selected"
 }
 
 cleanup_webcam() {
@@ -269,50 +253,6 @@ select_capture_target() {
     else
         echo "region:${sw}x${sh}+${sx}+${sy}"
     fi
-}
-
-show_recording_menu() {
-    local choice
-    choice="$({
-        printf 'MP4 · no audio\n'
-        printf 'MP4 · desktop audio\n'
-        printf 'MP4 · desktop + microphone\n'
-        printf 'MP4 · desktop + microphone + webcam\n'
-        printf 'GIF · no audio\n'
-        printf 'GIF · desktop + microphone\n'
-    } | choose_from_walker "Screen recording")" || exit 0
-
-    case "$choice" in
-        "MP4 · no audio")
-            mode="mp4"
-            ;;
-        "MP4 · desktop audio")
-            mode="mp4"
-            desktop_audio="true"
-            ;;
-        "MP4 · desktop + microphone")
-            mode="mp4"
-            desktop_audio="true"
-            microphone_audio="true"
-            ;;
-        "MP4 · desktop + microphone + webcam")
-            mode="mp4"
-            desktop_audio="true"
-            microphone_audio="true"
-            webcam="true"
-            ;;
-        "GIF · no audio")
-            mode="gif"
-            ;;
-        "GIF · desktop + microphone")
-            mode="gif"
-            desktop_audio="true"
-            microphone_audio="true"
-            ;;
-        *)
-            exit 0
-            ;;
-    esac
 }
 
 postprocess_recording() {
@@ -494,10 +434,6 @@ fi
 if recording_active; then
     stop_recording
     exit 0
-fi
-
-if [[ "$show_menu" == "true" ]]; then
-    show_recording_menu
 fi
 
 start_recording "$@"

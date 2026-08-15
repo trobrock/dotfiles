@@ -8,18 +8,7 @@ uwsm
 
 # [desktop] Misc UI
 elephant
-elephant-bluetooth
-elephant-calc
 elephant-clipboard
-elephant-desktopapplications
-elephant-files
-elephant-menus
-elephant-providerlist
-elephant-runner
-elephant-symbols
-elephant-todo
-elephant-unicode
-elephant-websearch
 fprintd
 gpu-screen-recorder
 localsend-bin
@@ -33,7 +22,6 @@ ttf-cascadia-code-nerd
 vulkan-headers
 vulkan-icd-loader
 vulkan-radeon
-walker
 wireplumber
 wl-clipboard
 wtype

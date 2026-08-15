@@ -10,4 +10,8 @@ ShellRoot {
         theme: shell.theme
         services: shell.services
     }
+
+    Launcher {
+        theme: shell.theme
+    }
 }

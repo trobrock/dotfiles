@@ -32,6 +32,28 @@ Test mode puts the bar on the bottom edge with `ExclusionMode.Ignore`. It does
 not reserve screen space and may overlap windows. Bar actions still affect the
 live system.
 
+## Launcher
+
+The same Quickshell process provides a focused-monitor launcher:
+
+- `Super+Space` opens application search.
+- Start a query with `=` or choose **Calc** to evaluate with `qalc`; Enter copies the result.
+- `Super+Shift+C`, `$`, or **Clipboard** searches clipboard history; Enter copies the selected item.
+- Tab and Shift+Tab change modes. Up/Down select, Enter activates, and Escape closes.
+
+Applications come from Quickshell's desktop-entry index. Elephant remains only
+as the private clipboard-history backend; clipboard content is bounded in
+memory and is never logged or persisted by Quickshell.
+
+For debugging, the zero-argument IPC calls avoid command-line parser differences:
+
+```sh
+qs -p "$HOME/.config/quickshell" ipc call launcher showApps
+qs -p "$HOME/.config/quickshell" ipc call launcher showCalc
+qs -p "$HOME/.config/quickshell" ipc call launcher showClipboard
+qs -p "$HOME/.config/quickshell" ipc call launcher hide
+```
+
 ## Runtime data
 
 Provider, SSID, device, and account data stays out of the repository. AI

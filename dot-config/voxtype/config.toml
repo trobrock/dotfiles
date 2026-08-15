@@ -92,7 +92,7 @@ language_hints_strict = true
 streaming = true
 type_partials = true
 context = "Software development dictation for terminal commands, Git workflows, code review, issue comments, Rails applications, DevOps, Linux desktop configuration, and AI coding agents."
-terms = ["Ruby on Rails", "Comfortly", "Channex", "rezStream", "Stripe", "ViewComponent", "Flipper", "Sentry", "PagerDuty", "Hyprland", "VoxType", "Claude Code", "Arch Linux", "Neovim", "Developerly", "Worktrunk", "OpenAPI", "GitHub Actions", "Docker Buildx", "Kamal", "Terraform", "Grafana", "MySQL", "PostgreSQL", "Redis", "Sidekiq", "ActiveRecord", "Stimulus", "Turbo", "Hotwire", "Tailwind", "Cloudflare", "Tailscale", "systemd", "zsh", "tmux", "mise", "sops", "stow", "yay", "pacman", "Hyprshot", "Walker", "Elephant", "Quickshell", "MIGraphX", "Vulkan", "ONNX", "Cohere", "Whisper", "Parakeet", "Soniox", "SuperWhisper", "Pi", "CLI", "CLI deploy", "deploy", "deployment"]
+terms = ["Ruby on Rails", "Comfortly", "Channex", "rezStream", "Stripe", "ViewComponent", "Flipper", "Sentry", "PagerDuty", "Hyprland", "VoxType", "Claude Code", "Arch Linux", "Neovim", "Developerly", "Worktrunk", "OpenAPI", "GitHub Actions", "Docker Buildx", "Kamal", "Terraform", "Grafana", "MySQL", "PostgreSQL", "Redis", "Sidekiq", "ActiveRecord", "Stimulus", "Turbo", "Hotwire", "Tailwind", "Cloudflare", "Tailscale", "systemd", "zsh", "tmux", "mise", "sops", "stow", "yay", "pacman", "Hyprshot", "Elephant", "Quickshell", "MIGraphX", "Vulkan", "ONNX", "Cohere", "Whisper", "Parakeet", "Soniox", "SuperWhisper", "Pi", "CLI", "CLI deploy", "deploy", "deployment"]
 
 [output]
 # Primary output mode: "type", "clipboard", "paste", or "file"
