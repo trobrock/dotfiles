@@ -108,7 +108,7 @@ Pill {
 
         bar: root.bar
         theme: root.theme
-        text: Qt.formatDateTime(root.now, root.compact ? "h:mm AP" : "MM-dd h:mm AP")
+        text: Qt.formatDateTime(root.now, "MMM d · h:mm AP")
         // The rich calendar below replaces the old plain-text tooltip.
         tooltip: ""
         foreground: root.monochrome ? root.theme.text : root.theme.lavender
