@@ -32,7 +32,7 @@ Rectangle {
     }
 
     implicitWidth: 420
-    implicitHeight: hasActions ? 118 : (hasBody ? 86 : 68)
+    implicitHeight: hasActions ? (hasBody ? 186 : 118) : (hasBody ? 148 : 68)
     radius: 10
     color: theme.base
     border.width: 2
@@ -126,6 +126,8 @@ Rectangle {
         text: String(root.entry.summary || "Notification").slice(0, 180)
         textFormat: Text.PlainText
         color: root.theme.text
+        wrapMode: Text.Wrap
+        maximumLineCount: 2
         elide: Text.ElideRight
         font.family: root.theme.fontFamily
         font.pixelSize: 14
@@ -145,7 +147,7 @@ Rectangle {
         textFormat: Text.PlainText
         color: root.theme.subtext
         wrapMode: Text.Wrap
-        maximumLineCount: 1
+        maximumLineCount: 3
         elide: Text.ElideRight
         font.family: root.theme.fontFamily
         font.pixelSize: 11

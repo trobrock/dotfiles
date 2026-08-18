@@ -15,8 +15,8 @@ Item {
             return 0;
         var requested = Number(notification.expireTimeout);
         if (!isFinite(requested) || requested <= 0)
-            return Number(notification.urgency) === 2 ? 15000 : 7000;
-        return Math.max(1500, Math.min(15000, Math.round(requested)));
+            return Number(notification.urgency) === 2 ? 20000 : 10000;
+        return Math.max(3000, Math.min(20000, Math.round(requested)));
     }
 
     function restartExpiry() {
