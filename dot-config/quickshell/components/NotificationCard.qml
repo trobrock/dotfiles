@@ -32,7 +32,7 @@ Rectangle {
     }
 
     implicitWidth: 420
-    implicitHeight: hasActions ? (hasBody ? 186 : 118) : (hasBody ? 148 : 68)
+    implicitHeight: Math.max(68, Math.ceil(10 + appName.contentHeight + 2 + summary.contentHeight + (hasBody ? 5 + body.contentHeight : 0) + (hasActions ? 38 : 10)))
     radius: 10
     color: theme.base
     border.width: 2
@@ -146,8 +146,8 @@ Rectangle {
         text: String(root.entry.body || "").slice(0, 1000)
         textFormat: Text.PlainText
         color: root.theme.subtext
-        wrapMode: Text.Wrap
-        maximumLineCount: 3
+        wrapMode: Text.WrapAnywhere
+        maximumLineCount: 2
         elide: Text.ElideRight
         font.family: root.theme.fontFamily
         font.pixelSize: 11
