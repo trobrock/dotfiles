@@ -323,10 +323,6 @@ Item {
         runDetached(["ghostty", "-e", home + "/.config/scripts/tailscale-switch"]);
     }
 
-    function openNetwork() {
-        runDetached(["ghostty", "-e", "impala"]);
-    }
-
     function toggleRecording() {
         runDetached([home + "/.config/scripts/record-screen", "--stop"]);
     }

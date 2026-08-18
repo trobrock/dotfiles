@@ -79,6 +79,23 @@ scan started by this panel. Pairing uses Quickshell's native BlueZ API and does
 not provide a passkey/PIN agent; devices requiring one need an external BlueZ
 agent.
 
+## Wi-Fi panel
+
+`Super+N` or the bar's network-status icon opens the Wi-Fi panel. Bar clicks
+target that bar's monitor; the shortcut targets the focused monitor. Use
+Up/Down or Tab to select, Enter or Space to activate, `A` to toggle a saved
+network's autoconnect setting, `F` to request forgetting it, and Escape to go
+back or close.
+
+Scanning is always explicit: select **Scan** to refresh the list. The panel uses
+iwd for Wi-Fi and is intended for systems using iwd with systemd-networkd; it
+does not invoke NetworkManager or `iwctl`. Unknown PSK credentials are held only
+in the password field, passed once over the private JSON-line bridge, and
+cleared on cancel, submit, or panel close. Enterprise (802.1X), WEP, unknown
+security types, and passkey/enterprise credential flows are not supported.
+Closing the panel does not cancel an in-progress connection; its visible Cancel
+control does.
+
 ## Notifications and OSD
 
 Notifications are compact, ephemeral top-right toasts. Expired or dismissed

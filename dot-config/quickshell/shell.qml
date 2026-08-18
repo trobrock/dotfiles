@@ -6,12 +6,14 @@ ShellRoot {
     property Theme theme: Theme {}
     property Services services: Services {}
     property NotificationService notifications: NotificationService {}
+    property WifiService wifiService: WifiService {}
 
     Bar {
         theme: shell.theme
         services: shell.services
         osd: osd
         bluetoothMenu: bluetoothMenu
+        wifiMenu: wifiMenu
     }
 
     Launcher {
@@ -26,6 +28,13 @@ ShellRoot {
         id: bluetoothMenu
 
         theme: shell.theme
+    }
+
+    WifiMenu {
+        id: wifiMenu
+
+        theme: shell.theme
+        service: shell.wifiService
     }
 
     NotificationToasts {

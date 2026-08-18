@@ -55,9 +55,12 @@ streamdeck-ui
 telegram-desktop
 
 # [desktop] CLI
+1password-cli
 bluez
 brightnessctl
-1password-cli
+iwd
+python-dbus
+python-gobject
 
 # [shared] CLI
 age
@@ -90,7 +93,6 @@ github-cli
 go
 gum
 imagemagick
-impala
 inetutils
 jq
 lazydocker

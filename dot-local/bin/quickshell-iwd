@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+startup_failed() {
+  printf '%s\n' 'IWD_BRIDGE_STARTUP_FAILED' >&2
+  exit 1
+}
+
+launcher=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null) || startup_failed
+library=$(readlink -f -- "$(dirname -- "$launcher")/../lib/quickshell/iwd_bridge.py" 2>/dev/null) || startup_failed
+
+# Fail closed: neither this shell nor the isolated Python bridge may dump core.
+ulimit -S -c 0 2>/dev/null || startup_failed
+ulimit -H -c 0 2>/dev/null || startup_failed
+printf '0\n' 2>/dev/null > /proc/self/coredump_filter || startup_failed
+IFS= read -r coredump_filter 2>/dev/null < /proc/self/coredump_filter || startup_failed
+[[ $coredump_filter =~ ^0+$ ]] || startup_failed
+
+exec /usr/bin/python3 -I "$library" "$@"

@@ -296,6 +296,10 @@ self_test() {
 {
   printf 'test=%s\n' "${QUICKSHELL_BAR_TEST:-unset}"
   printf 'pid=%s\n' "$$"
+  printf 'core-soft=%s\n' "$(ulimit -S -c)"
+  printf 'core-hard=%s\n' "$(ulimit -H -c)"
+  IFS= read -r coredump_filter < /proc/self/coredump_filter
+  printf 'coredump-filter=%s\n' "$coredump_filter"
   while IFS= read -r logging_rule; do printf 'logging=%s\n' "$logging_rule"; done <<< "${QT_LOGGING_RULES:-}"
   for arg in "$@"; do printf 'arg=%s\n' "$arg"; done
 } >> "$MOCK_LOG"
@@ -326,6 +330,9 @@ MOCK
   assert_invocation() {
     local file=$1 test_value=$2 qml=$3 extra=$4
     grep -Fqx -- "test=$test_value" "$file" &&
+      grep -Fqx -- 'core-soft=0' "$file" &&
+      grep -Fqx -- 'core-hard=0' "$file" &&
+      grep -Eqx -- 'coredump-filter=0+' "$file" &&
       grep -Fqx -- 'logging=quickshell.bluetooth=false' "$file" &&
       grep -Fqx -- 'logging=quickshell.bluetooth.*=false' "$file" &&
       grep -Fqx -- 'arg=-p' "$file" &&
@@ -459,6 +466,15 @@ export QUICKSHELL_BAR_TEST=$([[ $mode == test ]] && printf 1 || printf 0)
     export QT_LOGGING_RULES="${QT_LOGGING_RULES%$'\n'}"$'\nquickshell.bluetooth=false\nquickshell.bluetooth.*=false'
   else
     export QT_LOGGING_RULES=$'quickshell.bluetooth=false\nquickshell.bluetooth.*=false'
+  fi
+  # Keep hardening local to the child subshell so the lifecycle parent retains
+  # its original limits.  Refuse to launch Quickshell if any step fails.
+  if ! ulimit -S -c 0 2>/dev/null || ! ulimit -H -c 0 2>/dev/null ||
+      ! printf '0\n' 2>/dev/null > /proc/self/coredump_filter ||
+      ! IFS= read -r coredump_filter 2>/dev/null < /proc/self/coredump_filter ||
+      [[ ! $coredump_filter =~ ^0+$ ]]; then
+    printf '%s\n' 'QUICKSHELL_BAR_STARTUP_FAILED' >&2
+    exit 1
   fi
   exec "$qs_bin" -p "$shell_qml" "$@"
 ) &

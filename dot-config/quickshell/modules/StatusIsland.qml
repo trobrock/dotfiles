@@ -9,6 +9,7 @@ Pill {
     required property var bar
     property var osd: null
     required property var bluetoothMenu
+    required property var wifiMenu
     required property var panelScreen
     property bool compact: false
     property bool narrow: false
@@ -219,7 +220,7 @@ Pill {
             text: String(root.services.network.icon || "󰖪")
             foreground: root.services.network.connected ? (root.monochrome ? root.theme.subtext : root.theme.sapphire) : root.theme.red
             tooltip: String(root.services.network.tooltip || "Network unavailable")
-            onActivated: root.services.openNetwork()
+            onActivated: root.wifiMenu.showOnScreen(root.panelScreen)
         }
 
         StatusButton {

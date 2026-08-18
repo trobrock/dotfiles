@@ -11,6 +11,7 @@ Item {
     required property var services
     required property var osd
     required property var bluetoothMenu
+    required property var wifiMenu
     readonly property bool testMode: Quickshell.env("QUICKSHELL_BAR_TEST") === "1"
     property var activePopup: null
     property var tooltipTarget: null
@@ -183,6 +184,7 @@ Item {
                             monochrome: true
                             osd: root.osd
                             bluetoothMenu: root.bluetoothMenu
+                            wifiMenu: root.wifiMenu
                             panelScreen: panel.screen
                         }
 
