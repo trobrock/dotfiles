@@ -7,6 +7,7 @@ ShellRoot {
     property Services services: Services {}
     property NotificationService notifications: NotificationService {}
     property WifiService wifiService: WifiService {}
+    property TailscaleService tailscaleService: TailscaleService {}
 
     Bar {
         theme: shell.theme
@@ -14,6 +15,8 @@ ShellRoot {
         osd: osd
         bluetoothMenu: bluetoothMenu
         wifiMenu: wifiMenu
+        tailscaleMenu: tailscaleMenu
+        tailscaleService: shell.tailscaleService
     }
 
     Launcher {
@@ -35,6 +38,13 @@ ShellRoot {
 
         theme: shell.theme
         service: shell.wifiService
+    }
+
+    TailscaleMenu {
+        id: tailscaleMenu
+
+        theme: shell.theme
+        service: shell.tailscaleService
     }
 
     NotificationToasts {

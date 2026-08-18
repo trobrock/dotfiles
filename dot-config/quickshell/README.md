@@ -96,6 +96,27 @@ security types, and passkey/enterprise credential flows are not supported.
 Closing the panel does not cancel an in-progress connection; its visible Cancel
 control does.
 
+## Tailscale panel
+
+Left-click the bar's Tailscale mark to open the full panel on that bar's
+monitor. Right-click toggles Tailscale directly. The panel can connect or
+disconnect, open an explicit browser login, switch profiles, browse online
+peers, copy peer addresses or names, send files with Taildrop, and select or
+clear tailnet and Mullvad exit nodes. Operator authorization uses Polkit only
+when Tailscale denies profile access.
+
+Use `J`/`K` or Up/Down to select and Enter or Space to activate. `T` toggles,
+`R` refreshes, `X` opens exit nodes, and Escape goes back or closes. Peer detail
+also supports `C` for address, `N` for name, `D` for DNS name, and `S` for
+Taildrop. File selection uses the desktop portal-backed Qt file dialog.
+
+Status, profile, peer, and exit-node data is bounded and sanitized before it is
+shown. Commands use literal argument arrays, raw command errors are never shown
+or logged, browser login links open only after an explicit action, and the IPC
+target exposes no tailnet data. The implementation is adapted from Omarchy's
+MIT-licensed Tailscale widget; exact source and license details are under
+`assets/tailscale/`.
+
 ## Notifications and OSD
 
 Notifications are compact, ephemeral top-right toasts. Expired or dismissed
@@ -108,7 +129,7 @@ notifications are destroyed; there is no history or notification tray.
 
 ## Runtime data
 
-Provider, SSID, device, and account data stays out of the repository. AI
+Provider, SSID, device, tailnet, and account data stays out of the repository. AI
 provider records use mode `0600` under
 `$XDG_STATE_HOME/quickshell/agents/usage`, and scanner caches use
 `$XDG_CACHE_HOME/quickshell/agent-usage`, with the usual home-directory

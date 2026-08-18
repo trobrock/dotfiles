@@ -1,0 +1,16 @@
+Omarchy Tailscale widget attribution
+
+The following files are adapted from the Omarchy project:
+- shell/plugins/panels/tailscale/Model.js
+- shell/plugins/panels/tailscale/Service.qml
+- shell/plugins/panels/tailscale/TailscaleIcon.qml
+- shell/plugins/panels/tailscale/Panel.qml
+
+Upstream: https://github.com/basecamp/omarchy
+Commit: b15ec6c6b3bac1e0406608f4a130f1684e734088
+Source: https://github.com/basecamp/omarchy/tree/b15ec6c6b3bac1e0406608f4a130f1684e734088/shell/plugins/panels/tailscale
+License: MIT; the exact upstream license text is reproduced in LICENSE.omarchy.
+
+The local implementation is adapted to the standalone Quickshell shell and
+adds stricter input bounds, sanitization, literal command execution, private
+runtime state, and generic error reporting.

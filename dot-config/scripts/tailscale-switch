@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-sudo tailscale switch --list | sed -n '1!p' | awk '{ print $2 }' | gum filter | xargs sudo tailscale switch

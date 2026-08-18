@@ -10,6 +10,8 @@ Pill {
     property var osd: null
     required property var bluetoothMenu
     required property var wifiMenu
+    required property var tailscaleMenu
+    required property var tailscaleService
     required property var panelScreen
     property bool compact: false
     property bool narrow: false
@@ -21,6 +23,8 @@ Pill {
     readonly property var battery: UPower.displayDevice
     readonly property int batteryCriticalPercent: 10
     readonly property int batteryWarningPercent: 20
+    readonly property int statusIconSlotWidth: narrow ? 24 : 28
+    readonly property real nativeStatusIconSize: 11
 
     function connectedBluetoothCount() {
         var count = 0;
@@ -186,11 +190,24 @@ Pill {
         spacing: 0
 
         StatusButton {
-            visible: !root.compact
-            text: String(root.services.tailscale.icon || "󰖪")
-            foreground: root.services.tailscale.connected ? (root.monochrome ? root.theme.subtext : root.theme.lavender) : root.theme.red
-            tooltip: String(root.services.tailscale.tooltip || "Tailscale unavailable")
-            onActivated: root.services.openTailscale()
+            id: tailscaleButton
+
+            visible: !root.narrow
+            text: ""
+            allowSecondary: true
+            foreground: root.tailscaleService.running ? (root.monochrome ? root.theme.subtext : root.theme.lavender) : root.tailscaleService.needsLogin ? root.theme.yellow : root.theme.overlay
+            tooltip: "Tailscale · " + String(root.tailscaleService.statusText || "Unavailable") + "\nLeft click: open · Right click: toggle"
+            onActivated: root.tailscaleMenu.showOnScreen(root.panelScreen)
+            onSecondaryActivated: root.tailscaleService.toggle()
+
+            TailscaleIcon {
+                anchors.centerIn: parent
+                iconSize: root.nativeStatusIconSize
+                foreground: tailscaleButton.foreground
+                badgeColor: root.theme.red
+                crossed: !root.tailscaleService.running && !root.tailscaleService.needsLogin
+                warning: root.tailscaleService.needsLogin
+            }
         }
 
         StatusButton {
@@ -233,6 +250,7 @@ Pill {
 
         StatusButton {
             visible: String(root.services.recording.text || "") !== ""
+            fixedIconSlot: false
             text: "● " + String(root.services.recording.text || "")
             foreground: root.theme.red
             highlighted: true
@@ -259,16 +277,22 @@ Pill {
     }
 
     component StatusButton: ModuleButton {
+        property bool allowSecondary: false
+        property bool fixedIconSlot: true
         signal activated()
+        signal secondaryActivated()
 
         bar: root.bar
         theme: root.theme
-        horizontalPadding: root.narrow ? 5 : 7
-        acceptedButtons: Qt.LeftButton
+        width: fixedIconSlot ? root.statusIconSlotWidth : implicitWidth
+        horizontalPadding: fixedIconSlot ? 0 : (root.narrow ? 5 : 7)
+        acceptedButtons: allowSecondary ? Qt.LeftButton | Qt.RightButton : Qt.LeftButton
         actionable: true
         onClicked: function(button) {
             if (button === Qt.LeftButton)
                 activated();
+            else if (allowSecondary && button === Qt.RightButton)
+                secondaryActivated();
 
         }
     }

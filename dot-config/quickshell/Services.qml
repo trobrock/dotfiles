@@ -14,13 +14,6 @@ Item {
         "text": "",
         "tooltip": "Calendar unavailable"
     })
-    property var tailscale: ({
-        "available": false,
-        "connected": false,
-        "icon": "󰖪",
-        "text": "",
-        "tooltip": "Tailscale unavailable"
-    })
     property var recording: ({
         "text": "",
         "tooltip": ""
@@ -194,33 +187,6 @@ Item {
         }
     }
 
-    function setTailscaleUnavailable(message) {
-        tailscale = {
-            "available": false,
-            "connected": false,
-            "icon": "󰖪",
-            "text": "",
-            "tooltip": message || "Tailscale unavailable"
-        };
-    }
-
-    function applyTailscale(raw) {
-        var parsed = objectOrFallback(raw, null);
-        var name = parsed && parsed.CurrentTailnet && typeof parsed.CurrentTailnet.Name === "string" ? parsed.CurrentTailnet.Name.trim() : "";
-        var connected = parsed && parsed.BackendState === "Running" && name !== "";
-        if (!connected) {
-            setTailscaleUnavailable("Tailscale disconnected or unavailable");
-            return ;
-        }
-        tailscale = {
-            "available": true,
-            "connected": true,
-            "icon": "",
-            "text": name,
-            "tooltip": "Tailscale VPN\nConnected as: " + name
-        };
-    }
-
     function setVoxUnavailable(message) {
         voxAvailable = false;
         voxText = "󰍭";
@@ -317,10 +283,6 @@ Item {
 
     function openCalendarEvent() {
         runDetached([home + "/.config/scripts/open_calendar_event.sh"]);
-    }
-
-    function openTailscale() {
-        runDetached(["ghostty", "-e", home + "/.config/scripts/tailscale-switch"]);
     }
 
     function toggleRecording() {
@@ -446,23 +408,6 @@ Item {
         stdout: StdioCollector {
             waitForEnd: true
             onStreamFinished: root.applyCalendar(text)
-        }
-
-    }
-
-    Process {
-        id: tailscaleProcess
-
-        command: ["tailscale", "status", "--json"]
-        onExited: function(code) {
-            if (code !== 0)
-                root.setTailscaleUnavailable("Tailscale status failed (exit " + code + ")");
-
-        }
-
-        stdout: StdioCollector {
-            waitForEnd: true
-            onStreamFinished: root.applyTailscale(text)
         }
 
     }
@@ -711,18 +656,6 @@ Item {
         onTriggered: {
             if (!calendarProcess.running)
                 calendarProcess.running = true;
-
-        }
-    }
-
-    Timer {
-        interval: 60000
-        repeat: true
-        running: true
-        triggeredOnStart: true
-        onTriggered: {
-            if (!tailscaleProcess.running)
-                tailscaleProcess.running = true;
 
         }
     }

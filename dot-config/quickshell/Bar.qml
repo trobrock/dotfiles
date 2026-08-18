@@ -12,6 +12,8 @@ Item {
     required property var osd
     required property var bluetoothMenu
     required property var wifiMenu
+    required property var tailscaleMenu
+    required property var tailscaleService
     readonly property bool testMode: Quickshell.env("QUICKSHELL_BAR_TEST") === "1"
     property var activePopup: null
     property var tooltipTarget: null
@@ -185,6 +187,8 @@ Item {
                             osd: root.osd
                             bluetoothMenu: root.bluetoothMenu
                             wifiMenu: root.wifiMenu
+                            tailscaleMenu: root.tailscaleMenu
+                            tailscaleService: root.tailscaleService
                             panelScreen: panel.screen
                         }
 
