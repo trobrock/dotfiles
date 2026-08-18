@@ -99,7 +99,7 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: Qt.rgba(root.theme.base.r, root.theme.base.g, root.theme.base.b, 0.78)
+                    color: Qt.rgba(root.theme.base.r, root.theme.base.g, root.theme.base.b, 0.43)
                 }
 
                 Rectangle {
