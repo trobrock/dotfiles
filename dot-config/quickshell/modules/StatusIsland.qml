@@ -269,11 +269,6 @@ Pill {
             tooltip: root.batteryTooltip()
         }
 
-        Tray {
-            bar: root.bar
-            maxItems: root.narrow ? 2 : root.compact ? 4 : 99
-        }
-
     }
 
     component StatusButton: ModuleButton {

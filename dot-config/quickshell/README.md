@@ -180,5 +180,4 @@ versions containing machine-specific build or import paths.
 - [SplitParser](https://quickshell.org/docs/v0.3.0/types/Quickshell.Io/SplitParser/)
 - [PipeWire](https://quickshell.org/docs/v0.3.0/types/Quickshell.Services.Pipewire/Pipewire/)
 - [UPower and power profiles](https://quickshell.org/docs/v0.3.0/types/Quickshell.Services.UPower/)
-- [System tray](https://quickshell.org/docs/v0.3.0/types/Quickshell.Services.SystemTray/SystemTray/)
 - [Hyprland integration](https://quickshell.org/docs/v0.3.0/types/Quickshell.Hyprland/Hyprland/)
