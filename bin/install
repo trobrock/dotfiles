@@ -352,6 +352,24 @@ install_agent_browser() {
   fi
 }
 
+install_notch() {
+  if [ -z "$(command -v notch)" ]; then
+    log "notch not found, installing..."
+    curl --proto '=https' --proto-redir '=https' --tlsv1.2 -fsSL \
+      https://raw.githubusercontent.com/trobrock/notch/main/install.sh | sh
+  fi
+
+  # Make notch visible to this script even if ~/.local/bin isn't on PATH yet.
+  if [ -z "$(command -v notch)" ] && [ -x "$HOME/.local/bin/notch" ]; then
+    export PATH="$HOME/.local/bin:$PATH"
+  fi
+
+  if ! command -v notch >/dev/null 2>&1; then
+    log_error "notch install appears to have failed."
+    return 1
+  fi
+}
+
 install_developerly() {
   if [ -z "$(command -v developerly)" ]; then
     log "developerly not found, installing..."
@@ -694,6 +712,7 @@ run_stow
 install_packages
 install_pi_dev
 install_agent_browser
+install_notch
 install_developerly
 setup_github_user
 

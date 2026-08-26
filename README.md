@@ -46,6 +46,20 @@ bin/diff: This shows what symlinks are missing.
 
 bin/ss: Decrypts machine secrets from `~/.config/dotfiles-secrets/secrets.yaml` via `sops` and writes them to `~/.zsh_secrets`. Run on its own to refresh secrets without doing a full install. Shell startup tolerates this file being absent, which is useful before the age key has been seeded on a new server.
 
+## Notch
+
+`bin/install` installs the latest stable [Notch](https://github.com/trobrock/notch) release to `~/.local/bin/notch`. Its global defaults and MCP servers are stowed from `dot-config/notch` to `~/.config/notch`.
+
+The Grafana MCP server resolves `GRAFANA_SERVICE_ACCOUNT_TOKEN` from the environment when Notch loads the config. Keep that value in the encrypted `dotfiles-secrets` workflow rather than in this repository. Sentry and Cloudflare use OAuth; authenticate them once per machine with:
+
+```bash
+notch login openai-codex
+notch mcp login sentry
+notch mcp login cloudflare-api
+```
+
+Notch stores OAuth credentials and sessions under `~/.local/share/notch`; those private runtime files are not managed by these dotfiles.
+
 bin/migrate-from-1password: One-shot migration that pulls the legacy "ZSH Secrets" 1Password item into the sops-encrypted file. Run once on a GUI-capable machine that's signed into 1Password.
 
 ## tmux Developerly widgets
