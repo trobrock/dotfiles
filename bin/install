@@ -368,6 +368,9 @@ install_notch() {
     log_error "notch install appears to have failed."
     return 1
   fi
+
+  log "Syncing Notch extensions..."
+  notch extensions sync
 }
 
 install_developerly() {
