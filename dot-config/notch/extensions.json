@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "packages": [
+    {
+      "name": "notch-notes",
+      "source": "github:trobrock/notch-notes"
+    }
+  ]
+}
