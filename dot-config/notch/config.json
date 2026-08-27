@@ -22,7 +22,7 @@
       "model": "claude-opus-5",
       "thinking_level": "medium"
     },
-    "f6": {
+    "f5": {
       "provider": "anthropic",
       "model": "claude-sonnet-5",
       "thinking_level": "medium"
