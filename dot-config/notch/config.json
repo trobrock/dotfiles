@@ -1,6 +1,7 @@
 {
   "provider": "openai-codex",
   "model": "gpt-5.6-sol",
+  "theme": "catppuccin-mocha",
   "presets": {
     "f1": {
       "provider": "openai-codex",
