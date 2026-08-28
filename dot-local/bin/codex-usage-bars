@@ -34,6 +34,14 @@ DEFAULT_CODEX_PROVIDER_TTL_SECONDS = 60
 DEFAULT_CLAUDE_PROVIDER_TTL_SECONDS = 10 * 60
 DEFAULT_API_SPEND_TTL_SECONDS = 10 * 60
 DEFAULT_API_SPEND_DAYS = 7
+# A failed refresh may keep serving the last good total for this long. Past it
+# the pill renders an em dash rather than a stale number it cannot vouch for.
+DEFAULT_API_SPEND_MAX_AGE_SECONDS = 6 * 60 * 60
+DEFAULT_NOTCH_SESSIONS_DIR = "~/.local/share/notch/sessions"
+# Notch records the provider that served each turn. Only key-billed providers
+# belong in a dollar pill; subscription providers are already covered by the
+# codex/claude percentage pills and would double-count as spend here.
+NOTCH_BILLABLE_PROVIDERS = frozenset({"anthropic", "openai"})
 DEFAULT_CCUSAGE_TIMEOUT_SECONDS = 30
 DEFAULT_FAILURE_BACKOFF_SECONDS = 5 * 60
 DEFAULT_RATE_LIMIT_BACKOFF_SECONDS = 30 * 60
@@ -46,7 +54,7 @@ CLAUDE_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 CLAUDE_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 CLAUDE_KEYCHAIN_SERVICE = "Claude Code-credentials"
 
-CACHE_VERSION = 9
+CACHE_VERSION = 10
 JSON_SCHEMA_VERSION = 1
 LOCK_MAX_AGE_SECONDS = 120
 TOKEN_REFRESH_SKEW_SECONDS = 60
@@ -227,6 +235,30 @@ def api_spend_days() -> int:
     return max(1, env_int("CODEX_USAGE_BARS_API_SPEND_DAYS", DEFAULT_API_SPEND_DAYS))
 
 
+def api_spend_max_age_seconds() -> int:
+    return max(
+        0,
+        env_int("CODEX_USAGE_BARS_API_SPEND_MAX_AGE", DEFAULT_API_SPEND_MAX_AGE_SECONDS),
+    )
+
+
+def api_spend_split() -> bool:
+    value = os.environ.get("CODEX_USAGE_BARS_API_SPEND_SPLIT", "").casefold()
+    return value in ("1", "true", "yes", "on")
+
+
+def notch_sessions_dir() -> Path:
+    override = os.environ.get("CODEX_USAGE_BARS_NOTCH_SESSIONS")
+    if override:
+        return Path(override).expanduser()
+    return Path(DEFAULT_NOTCH_SESSIONS_DIR).expanduser()
+
+
+def notch_spend_enabled() -> bool:
+    value = os.environ.get("CODEX_USAGE_BARS_NOTCH_SPEND", "auto").casefold()
+    return value != "off"
+
+
 def ccusage_timeout_seconds() -> int:
     return env_int("CODEX_USAGE_BARS_CCUSAGE_TIMEOUT", DEFAULT_CCUSAGE_TIMEOUT_SECONDS)
 
@@ -241,7 +273,27 @@ def ccusage_command() -> list[str]:
     binary = shutil.which("ccusage")
     if binary:
         return [binary]
+    # tmux runs status-right through /bin/sh, which never sources the shell
+    # config that puts mise shims on PATH, so a mise-installed ccusage is
+    # invisible to which(). Probe the shim directly. Deliberately still no npx
+    # fallback: that would fetch and execute a package on a status-bar refresh.
+    shim = mise_shim_path("ccusage")
+    if shim is not None:
+        return [str(shim)]
     raise UsageError("ccusage is not installed")
+
+
+def mise_shim_path(name: str) -> Path | None:
+    base = os.environ.get("MISE_DATA_DIR")
+    roots = [Path(base) if base else Path.home() / ".local" / "share" / "mise"]
+    for root in roots:
+        candidate = root / "shims" / name
+        try:
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                return candidate
+        except OSError:
+            continue
+    return None
 
 
 def json_refresh_wait_seconds() -> float:
@@ -355,14 +407,32 @@ def format_dollars(value: float | None, decimals: int) -> str:
     return f"${number:.{decimals}f}"
 
 
-def render_api_spend_pill(total: float | None, days: int) -> str:
+def render_api_spend_pill(
+    total: float | None, days: int, label: str = "api", partial: bool = False
+) -> str:
     total_str = format_dollars(total, 2)
+    if partial and total is not None:
+        # Leading tilde: a source dropped out, so this is a floor, not a total.
+        total_str = f"~{total_str}"
     return (
         f"#[bg={PILL_BG_APISPEND},fg={PILL_FG_APISPEND_LABEL}] {APISPEND_ICON} "
-        f"#[fg={PILL_FG_APISPEND_LABEL}]api "
+        f"#[fg={PILL_FG_APISPEND_LABEL}]{label} "
         f"#[fg={PILL_FG_VALUE}]{total_str} "
         f"#[fg={PILL_FG_APISPEND_LABEL}]{days}d "
     )
+
+
+def render_api_spend_pills(api_spend: dict[str, Any]) -> list[str]:
+    days = api_spend_days()
+    missing = api_spend.get("missing")
+    partial = bool(missing) if isinstance(missing, list) else False
+    sources = api_spend.get("sources")
+    if api_spend_split() and isinstance(sources, dict) and sources:
+        return [
+            render_api_spend_pill(_json_number(amount), days, label=name)
+            for name, amount in sorted(sources.items())
+        ]
+    return [render_api_spend_pill(api_spend.get("total"), days, partial=partial)]
 
 
 def render_chain(
@@ -394,9 +464,7 @@ def render_chain(
             )
         )
     if api_spend is not None:
-        pills.append(
-            render_api_spend_pill(api_spend.get("total"), api_spend_days())
-        )
+        pills.extend(render_api_spend_pills(api_spend))
     if not pills:
         return ""
     return "".join((*pills, RESET_STYLE))
@@ -923,6 +991,112 @@ def fetch_api_spend() -> float:
     raise UsageError("ccusage did not include a valid total or daily data")
 
 
+def _notch_row_cost(usage: dict[str, Any]) -> float | None:
+    """Return the dollar cost Notch computed for one turn.
+
+    Notch >= 0.4.14 emits cost_usd (with estimated_cost_usd and
+    provider_cost_usd variants) alongside cache token counts, so the widget
+    never has to price tokens itself. Older rows carry no cost at all and are
+    skipped rather than back-estimated from a pricing table we would have to
+    keep in sync.
+    """
+    for key in ("provider_cost_usd", "cost_usd", "estimated_cost_usd"):
+        cost = _json_number(usage.get(key))
+        if cost is not None:
+            return cost
+    return None
+
+
+def fetch_notch_spend() -> float:
+    """Sum billable Notch spend inside the API spend window.
+
+    ccusage cannot see Notch: it discovers agent CLIs by their own log
+    formats, and Notch writes an unrelated schema to its session directory.
+    """
+    directory = notch_sessions_dir()
+    try:
+        entries = sorted(directory.glob("*.jsonl"))
+    except OSError as error:
+        raise UsageError(f"notch session directory is unreadable: {error}") from error
+
+    cutoff_date = datetime.date.today() - datetime.timedelta(days=api_spend_days() - 1)
+    cutoff = datetime.datetime.combine(
+        cutoff_date, datetime.time.min, tzinfo=datetime.timezone.utc
+    )
+    cutoff_ts = cutoff.timestamp()
+
+    total = 0.0
+    for entry in entries:
+        try:
+            # Sessions are append-only, so an mtime before the window means no
+            # row inside it. Skips the whole file without reading it.
+            if entry.stat().st_mtime < cutoff_ts:
+                continue
+            handle = entry.open("r", encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        with handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    # A session killed mid-write leaves a torn final line.
+                    # One bad row must not zero out a real spend total.
+                    continue
+                if not isinstance(row, dict) or row.get("type") != "usage":
+                    continue
+                if row.get("provider") not in NOTCH_BILLABLE_PROVIDERS:
+                    continue
+                timestamp = _parse_notch_timestamp(row.get("timestamp"))
+                if timestamp is None or timestamp < cutoff:
+                    continue
+                usage = row.get("usage")
+                if not isinstance(usage, dict):
+                    continue
+                cost = _notch_row_cost(usage)
+                if cost is not None:
+                    total += cost
+
+    result = _json_number(total)
+    if result is None:
+        raise UsageError("notch spend total was non-finite")
+    return result
+
+
+_NOTCH_FRACTION_RE = re.compile(r"\.(\d+)")
+
+
+def _parse_notch_timestamp(value: Any) -> datetime.datetime | None:
+    """Parse a Notch RFC 3339 timestamp across Python versions.
+
+    Notch writes whatever fractional precision Go produced (".08844",
+    ".27931", ".5"), but datetime.fromisoformat before 3.11 accepts only 3 or
+    6 fractional digits. macOS still ships 3.9, so the digits are padded to
+    microseconds first -- otherwise rows are dropped and spend under-reports
+    silently.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    text = value.strip()
+    if text.endswith(("Z", "z")):
+        text = text[:-1] + "+00:00"
+
+    def pad(match: re.Match[str]) -> str:
+        return "." + match.group(1)[:6].ljust(6, "0")
+
+    text = _NOTCH_FRACTION_RE.sub(pad, text, count=1)
+    try:
+        parsed = datetime.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc)
+
+
 def cached_api_spend(cached: dict[str, Any] | None) -> dict[str, Any] | None:
     if not cached:
         return None
@@ -930,8 +1104,46 @@ def cached_api_spend(cached: dict[str, Any] | None) -> dict[str, Any] | None:
     if isinstance(value, dict):
         total = _json_number(value.get("total"))
         if total is not None:
-            return {"total": total}
+            spend: dict[str, Any] = {"total": total}
+            sources = value.get("sources")
+            if isinstance(sources, dict):
+                kept = {
+                    name: _json_number(amount)
+                    for name, amount in sources.items()
+                    if isinstance(name, str) and _json_number(amount) is not None
+                }
+                if kept:
+                    spend["sources"] = kept
+            missing = value.get("missing")
+            if isinstance(missing, list):
+                names = [name for name in missing if isinstance(name, str)]
+                if names:
+                    spend["missing"] = names
+            return spend
     return None
+
+
+def cached_api_spend_within_max_age(
+    previous: dict[str, Any] | None, state: dict[str, Any], now: float
+) -> dict[str, Any] | None:
+    """Return the last good total only while it is still defensible.
+
+    Without this bound a permanently failing source (an uninstalled ccusage,
+    say) pins the pill to whatever number happened to be cached last, and the
+    widget reports it with full confidence forever.
+    """
+    spend = cached_api_spend(previous)
+    if spend is None:
+        return None
+    max_age = api_spend_max_age_seconds()
+    if max_age <= 0:
+        return None
+    last_success_at = _json_number(state.get("last_success_at"))
+    if last_success_at is None:
+        return None
+    if now - last_success_at > max_age:
+        return None
+    return spend
 
 
 def should_skip_api_spend(previous: dict[str, Any] | None, now: float) -> bool:
@@ -956,22 +1168,43 @@ def collect_api_spend(
     previous_state = cached_provider_state(previous, "apispend")
     if should_skip_api_spend(previous, now):
         return cached_api_spend(previous), previous_state
-    try:
-        total = _json_number(fetch_api_spend())
-        if total is None:
-            raise UsageError("ccusage returned a bool or non-finite total")
-        return {"total": total}, {
-            "last_attempt_at": now,
-            "last_success_at": now,
-        }
-    except (OSError, ValueError, UsageError, json.JSONDecodeError) as error:
-        log_provider_failure("apispend", error)
-        return cached_api_spend(previous), {
+
+    sources: dict[str, float] = {}
+    missing: list[str] = []
+    last_error: BaseException | None = None
+
+    collectors: list[tuple[str, Callable[[], float]]] = [("ccusage", fetch_api_spend)]
+    if notch_spend_enabled():
+        collectors.append(("notch", fetch_notch_spend))
+
+    for name, collector in collectors:
+        try:
+            total = _json_number(collector())
+            if total is None:
+                raise UsageError(f"{name} returned a bool or non-finite total")
+            sources[name] = total
+        except (OSError, ValueError, UsageError, json.JSONDecodeError) as error:
+            log_provider_failure(f"apispend.{name}", error)
+            missing.append(name)
+            last_error = error
+
+    if not sources:
+        return cached_api_spend_within_max_age(previous, previous_state, now), {
             **previous_state,
             "last_attempt_at": now,
             "last_error_at": now,
-            "next_attempt_at": now + failure_backoff_seconds(error),
+            "next_attempt_at": now
+            + failure_backoff_seconds(last_error or UsageError("api spend failed")),
         }
+
+    spend: dict[str, Any] = {"total": sum(sources.values()), "sources": dict(sources)}
+    state: dict[str, Any] = {"last_attempt_at": now, "last_success_at": now}
+    if missing:
+        # A partial total is still worth showing, but it under-reports by
+        # construction, so record which half is absent and mark the pill.
+        spend["missing"] = sorted(missing)
+        state["last_error_at"] = now
+    return spend, state
 
 
 # Status/cache ---------------------------------------------------------------
@@ -1300,6 +1533,13 @@ def build_json_status(
                 "stale": data_stale,
                 "health": _json_health(spend_state, True, now),
             }
+            sources = spend.get("sources")
+            if isinstance(sources, dict) and sources:
+                payload["api_spend"]["sources"] = sources
+            missing = spend.get("missing")
+            if isinstance(missing, list) and missing:
+                payload["api_spend"]["missing"] = missing
+                payload["api_spend"]["partial"] = True
             payload["stale"] = payload["stale"] or data_stale
     return payload
 

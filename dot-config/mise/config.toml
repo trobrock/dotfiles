@@ -1,6 +1,9 @@
 [tools]
 node = "24"
 ruby = "3.4.7"
+# Feeds the api spend pill in codex-usage-bars. npm-only, so it lives here
+# rather than in the Brewfile/Archfile and stays available on both platforms.
+"npm:ccusage" = "latest"
 
 [settings]
 idiomatic_version_file_enable_tools = ["ruby"]

@@ -31,6 +31,11 @@ class JsonStatusTests(unittest.TestCase):
         self.tempdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tempdir.cleanup)
         self.cache = Path(self.tempdir.name) / "usage.json"
+        # Point the Notch reader at an empty directory. Without this the suite
+        # reads the developer's real ~/.local/share/notch/sessions and results
+        # change based on how much Notch was used that week.
+        self.notch_sessions = Path(self.tempdir.name) / "notch-sessions"
+        self.notch_sessions.mkdir()
         self.env = mock.patch.dict(
             os.environ,
             {
@@ -41,6 +46,8 @@ class JsonStatusTests(unittest.TestCase):
                 "CODEX_USAGE_BARS_API_SPEND": "auto",
                 "CODEX_USAGE_BARS_CCUSAGE_CMD": "",
                 "CODEX_USAGE_BARS_JSON_REFRESH_WAIT": "",
+                "CODEX_USAGE_BARS_NOTCH_SESSIONS": str(self.notch_sessions),
+                "CODEX_USAGE_BARS_NOTCH_SPEND": "off",
             },
         )
         self.env.start()
@@ -432,9 +439,37 @@ class JsonStatusTests(unittest.TestCase):
             return usage.fetch_api_spend()
 
     def test_ccusage_requires_an_object_and_never_defaults_to_npx(self) -> None:
-        with mock.patch.object(usage.shutil, "which", return_value=None):
+        with (
+            mock.patch.object(usage.shutil, "which", return_value=None),
+            mock.patch.object(usage, "mise_shim_path", return_value=None),
+        ):
             with self.assertRaisesRegex(usage.UsageError, "not installed"):
                 usage.ccusage_command()
+
+    def test_ccusage_falls_back_to_the_mise_shim_outside_an_activated_shell(
+        self,
+    ) -> None:
+        """tmux runs status-right via /bin/sh, which has no mise shims on PATH."""
+        with tempfile.TemporaryDirectory() as tmp:
+            shims = Path(tmp) / "shims"
+            shims.mkdir()
+            shim = shims / "ccusage"
+            shim.write_text("#!/bin/sh\n", encoding="utf-8")
+            shim.chmod(0o755)
+            with (
+                mock.patch.object(usage.shutil, "which", return_value=None),
+                mock.patch.dict(os.environ, {"MISE_DATA_DIR": tmp}),
+            ):
+                self.assertEqual(usage.ccusage_command(), [str(shim)])
+
+            # A non-executable or absent shim must not be treated as installed.
+            shim.chmod(0o644)
+            with (
+                mock.patch.object(usage.shutil, "which", return_value=None),
+                mock.patch.dict(os.environ, {"MISE_DATA_DIR": tmp}),
+            ):
+                with self.assertRaisesRegex(usage.UsageError, "not installed"):
+                    usage.ccusage_command()
 
         with self.assertRaisesRegex(usage.UsageError, "non-object JSON"):
             self.fetch_ccusage_payload([])
@@ -517,6 +552,233 @@ class JsonStatusTests(unittest.TestCase):
             self.assertEqual(usage.print_status(), 0)
         spawn.assert_not_called()
         self.assertEqual(output.getvalue(), "tmux-output\n")
+
+
+class NotchSpendTests(unittest.TestCase):
+    """Notch spend is invisible to ccusage, so the widget reads it directly."""
+
+    def setUp(self) -> None:
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+        self.sessions = Path(self.tempdir.name) / "sessions"
+        self.sessions.mkdir()
+        self.env = mock.patch.dict(
+            os.environ,
+            {
+                "CODEX_USAGE_BARS_NOTCH_SESSIONS": str(self.sessions),
+                "CODEX_USAGE_BARS_NOTCH_SPEND": "auto",
+                "CODEX_USAGE_BARS_API_SPEND_DAYS": "7",
+                "CODEX_USAGE_BARS_API_SPEND": "auto",
+                "CODEX_USAGE_BARS_API_SPEND_SPLIT": "",
+            },
+        )
+        self.env.start()
+        self.addCleanup(self.env.stop)
+
+    @staticmethod
+    def usage_row(
+        cost: float | None,
+        *,
+        provider: str = "anthropic",
+        days_ago: int = 0,
+        cost_key: str = "cost_usd",
+    ) -> str:
+        stamp = usage.datetime.datetime.now(
+            usage.datetime.timezone.utc
+        ) - usage.datetime.timedelta(days=days_ago)
+        payload: dict[str, object] = {
+            "input_tokens": 2,
+            "output_tokens": 387,
+            "cache_write_tokens": 49_207,
+        }
+        if cost is not None:
+            payload[cost_key] = cost
+        return json.dumps(
+            {
+                "type": "usage",
+                "timestamp": stamp.isoformat().replace("+00:00", "Z"),
+                "provider": provider,
+                "model": "claude-opus-5",
+                "usage": payload,
+            }
+        )
+
+    def write_session(self, name: str, lines: list[str]) -> Path:
+        path = self.sessions / f"{name}.jsonl"
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+
+    def test_sums_reported_cost_for_billable_providers_only(self) -> None:
+        self.write_session(
+            "a",
+            [
+                json.dumps({"type": "metadata", "cwd": "/tmp"}),
+                self.usage_row(0.25),
+                self.usage_row(0.50),
+                # Subscription-backed turns are covered by the claude pill and
+                # are not API spend.
+                self.usage_row(9.99, provider="anthropic-claude-code"),
+                self.usage_row(9.99, provider="openai-codex"),
+            ],
+        )
+        self.assertAlmostEqual(usage.fetch_notch_spend(), 0.75)
+
+    def test_ignores_rows_outside_the_spend_window(self) -> None:
+        self.write_session("a", [self.usage_row(1.0), self.usage_row(5.0, days_ago=30)])
+        self.assertAlmostEqual(usage.fetch_notch_spend(), 1.0)
+
+    def test_prefers_provider_cost_then_falls_back_to_estimate(self) -> None:
+        self.write_session("a", [self.usage_row(2.0, cost_key="estimated_cost_usd")])
+        self.assertAlmostEqual(usage.fetch_notch_spend(), 2.0)
+
+        self.write_session(
+            "b",
+            [
+                json.dumps(
+                    {
+                        "type": "usage",
+                        "timestamp": usage.datetime.datetime.now(
+                            usage.datetime.timezone.utc
+                        )
+                        .isoformat()
+                        .replace("+00:00", "Z"),
+                        "provider": "anthropic",
+                        "usage": {
+                            "cost_usd": 1.0,
+                            "estimated_cost_usd": 1.0,
+                            "provider_cost_usd": 3.0,
+                        },
+                    }
+                )
+            ],
+        )
+        self.assertAlmostEqual(usage.fetch_notch_spend(), 5.0)
+
+    def test_torn_final_line_and_legacy_rows_do_not_break_the_total(self) -> None:
+        path = self.write_session("a", [self.usage_row(1.25)])
+        with path.open("a", encoding="utf-8") as handle:
+            # Pre-0.4.14 rows carry no cost; a killed session leaves a partial
+            # trailing line. Neither may zero out a real total.
+            handle.write(self.usage_row(None) + "\n")
+            handle.write('{"type":"usage","provider":"anthr')
+        self.assertAlmostEqual(usage.fetch_notch_spend(), 1.25)
+
+    def test_variable_precision_timestamps_are_all_counted(self) -> None:
+        """Go emits whatever precision it has; 3.9 fromisoformat rejects most."""
+        now = usage.datetime.datetime.now(usage.datetime.timezone.utc)
+        base = now.strftime("%Y-%m-%dT%H:%M:%S")
+        rows = []
+        for fraction in (".08844", ".27931", ".5", ".891043", "", ".1234567"):
+            rows.append(
+                json.dumps(
+                    {
+                        "type": "usage",
+                        "timestamp": f"{base}{fraction}Z",
+                        "provider": "anthropic",
+                        "usage": {"cost_usd": 1.0},
+                    }
+                )
+            )
+        self.write_session("a", rows)
+        self.assertAlmostEqual(usage.fetch_notch_spend(), float(len(rows)))
+
+    def test_unparseable_timestamps_are_skipped_without_failing(self) -> None:
+        self.write_session(
+            "a",
+            [
+                self.usage_row(1.0),
+                json.dumps(
+                    {
+                        "type": "usage",
+                        "timestamp": "not-a-timestamp",
+                        "provider": "anthropic",
+                        "usage": {"cost_usd": 99.0},
+                    }
+                ),
+            ],
+        )
+        self.assertAlmostEqual(usage.fetch_notch_spend(), 1.0)
+
+    def test_missing_directory_is_reported_as_zero_not_an_error(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {"CODEX_USAGE_BARS_NOTCH_SESSIONS": str(self.sessions / "absent")},
+        ):
+            self.assertEqual(usage.fetch_notch_spend(), 0.0)
+
+    def test_total_combines_ccusage_and_notch(self) -> None:
+        self.write_session("a", [self.usage_row(4.0)])
+        with (
+            mock.patch.object(usage.time, "time", return_value=1_000),
+            mock.patch.object(usage, "fetch_api_spend", return_value=46.0),
+        ):
+            spend, state = usage.collect_api_spend()
+        self.assertAlmostEqual(spend["total"], 50.0)
+        self.assertEqual(spend["sources"], {"ccusage": 46.0, "notch": 4.0})
+        self.assertNotIn("missing", spend)
+        self.assertEqual(state["last_success_at"], 1_000)
+
+    def test_one_failed_source_still_reports_a_marked_partial_total(self) -> None:
+        self.write_session("a", [self.usage_row(4.0)])
+        with (
+            mock.patch.object(usage.time, "time", return_value=1_000),
+            mock.patch.object(
+                usage, "fetch_api_spend", side_effect=usage.UsageError("not installed")
+            ),
+            mock.patch.object(usage, "log_provider_failure"),
+        ):
+            spend, state = usage.collect_api_spend()
+        self.assertAlmostEqual(spend["total"], 4.0)
+        self.assertEqual(spend["missing"], ["ccusage"])
+        self.assertEqual(state["last_error_at"], 1_000)
+        pills = usage.render_api_spend_pills(spend)
+        self.assertEqual(len(pills), 1)
+        self.assertIn("~$4.00", pills[0])
+
+    def test_split_renders_one_pill_per_source(self) -> None:
+        spend = {"total": 50.0, "sources": {"ccusage": 46.0, "notch": 4.0}}
+        with mock.patch.dict(os.environ, {"CODEX_USAGE_BARS_API_SPEND_SPLIT": "1"}):
+            pills = usage.render_api_spend_pills(spend)
+        self.assertEqual(len(pills), 2)
+        self.assertIn("ccusage", pills[0])
+        self.assertIn("$46.00", pills[0])
+        self.assertIn("notch", pills[1])
+        self.assertIn("$4.00", pills[1])
+
+    def test_stale_total_expires_instead_of_being_served_forever(self) -> None:
+        previous = {"api_spend": {"total": 18.41}}
+        state = {"last_success_at": 1_000}
+        with mock.patch.dict(
+            os.environ, {"CODEX_USAGE_BARS_API_SPEND_MAX_AGE": "3600"}
+        ):
+            fresh = usage.cached_api_spend_within_max_age(previous, state, 2_000)
+            expired = usage.cached_api_spend_within_max_age(previous, state, 10_000)
+        self.assertEqual(fresh["total"], 18.41)
+        self.assertIsNone(expired)
+
+    def test_every_source_failing_drops_an_expired_total(self) -> None:
+        previous = {
+            "api_spend": {"total": 18.41},
+            "provider_state": {"apispend": {"last_success_at": 1_000}},
+        }
+        with (
+            mock.patch.dict(
+                os.environ,
+                {
+                    "CODEX_USAGE_BARS_API_SPEND_MAX_AGE": "3600",
+                    "CODEX_USAGE_BARS_NOTCH_SPEND": "off",
+                },
+            ),
+            mock.patch.object(usage.time, "time", return_value=100_000),
+            mock.patch.object(
+                usage, "fetch_api_spend", side_effect=usage.UsageError("not installed")
+            ),
+            mock.patch.object(usage, "log_provider_failure"),
+        ):
+            spend, state = usage.collect_api_spend(previous)
+        self.assertIsNone(spend)
+        self.assertEqual(state["last_error_at"], 100_000)
+        self.assertEqual(usage.render_api_spend_pill(None, 7).count("\u2014"), 1)
 
 
 class SecurityHardeningTests(unittest.TestCase):

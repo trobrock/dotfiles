@@ -80,3 +80,37 @@ Developerly:
 - `@developerly_status_task` — per-session tmux option populated by the Developerly TUI for `status-left`.
 - `developerly usage show-compact` — compact token usage widget for `status-right`.
 - `developerly status` — agent activity summary for `status-right`.
+
+## tmux API spend pill
+
+`dot-local/bin/codex-usage-bars` renders the `api $N 7d` pill from two sources,
+because no single tool sees everything:
+
+- **ccusage** (`npm:ccusage`, pinned in `dot-config/mise/config.toml`) covers Pi.
+  It auto-detects agent CLIs by their log formats.
+- **Notch sessions** are read directly from `~/.local/share/notch/sessions`.
+  ccusage cannot see Notch, which writes an unrelated schema. Notch >= 0.4.14
+  reports `cost_usd` per turn, so the widget sums that rather than pricing
+  tokens itself. Only key-billed providers (`anthropic`, `openai`) count;
+  subscription providers are already covered by the codex/claude pills.
+
+The pill degrades honestly: a total prefixed `~` means one source failed and the
+figure is a floor, and a cached total older than
+`CODEX_USAGE_BARS_API_SPEND_MAX_AGE` (default 6h) renders `—` instead of a stale
+number.
+
+Useful env vars:
+
+| Variable | Effect |
+| --- | --- |
+| `CODEX_USAGE_BARS_API_SPEND` | `on` / `off` / `auto` (default) |
+| `CODEX_USAGE_BARS_API_SPEND_SPLIT` | `1` renders separate `ccusage` and `notch` pills |
+| `CODEX_USAGE_BARS_NOTCH_SPEND` | `off` drops the Notch source |
+| `CODEX_USAGE_BARS_NOTCH_SESSIONS` | Override the Notch session directory |
+| `CODEX_USAGE_BARS_API_SPEND_MAX_AGE` | Seconds a failed refresh may keep serving the last total |
+
+Note that tmux runs `status-right` through `/bin/sh`, which never sources the
+zsh config that puts mise shims on `PATH`. The widget therefore probes
+`$MISE_DATA_DIR/shims` (or `~/.local/share/mise/shims`) directly when `ccusage`
+is not on `PATH`. It never falls back to `npx`, which would fetch and execute a
+package on a status-bar refresh.
