@@ -14,3 +14,4 @@ dot-config/systemd/user/*.target.wants/
 /dot-pi/agent/trust.json
 /dot-pi/agent/mcp-npx-cache.json
 /dot-pi/agent/models-store.json
+/dot-agents/skills/developerly/SKILL.md

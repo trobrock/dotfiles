@@ -83,7 +83,7 @@ server="${server:-https://ntfy.sh}"
 server="${server%/}"
 
 if [[ -z "$topic" ]]; then
-  echo "notify: not configured; run ~/.pi/agent/skills/notify/setup" >&2
+  echo "notify: not configured; run ~/.agents/skills/notify/setup" >&2
   exit 2
 fi
 if [[ ! "$topic" =~ ^[-_A-Za-z0-9]{1,64}$ ]]; then

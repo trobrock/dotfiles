@@ -14,7 +14,7 @@ Only send or arrange a notification when the user explicitly requests one. Never
 When the user explicitly requests a notification for a long-running command started with `monitor_command`, wrap the actual command so it sends its own completion notification:
 
 ```bash
-~/.pi/agent/skills/notify/run-and-notify --title "Build" -- command arg1 arg2
+~/.agents/skills/notify/run-and-notify --title "Build" -- command arg1 arg2
 ```
 
 Pass that complete invocation as `monitor_command`'s `command`. Use a concise title identifying the task. The wrapper preserves the wrapped command's exit status and sends success or failure plus elapsed time.
@@ -22,7 +22,7 @@ Pass that complete invocation as `monitor_command`'s `command`. Use a concise ti
 If shell syntax is required, explicitly invoke a shell:
 
 ```bash
-~/.pi/agent/skills/notify/run-and-notify --title "Deploy" -- bash -lc 'command1 && command2'
+~/.agents/skills/notify/run-and-notify --title "Deploy" -- bash -lc 'command1 && command2'
 ```
 
 Do not interpolate or include credentials in notification titles or messages. Avoid putting secret-bearing command arguments into shell command strings.
@@ -30,21 +30,21 @@ Do not interpolate or include credentials in notification titles or messages. Av
 ## Direct notifications
 
 ```bash
-~/.pi/agent/skills/notify/notify --title "Pi" "Task completed"
-~/.pi/agent/skills/notify/notify --title "Tests failed" --priority high --tags warning "3 test failures"
-printf '%s\n' "Multiline message" | ~/.pi/agent/skills/notify/notify --title "Pi"
+~/.agents/skills/notify/notify --title "Pi" "Task completed"
+~/.agents/skills/notify/notify --title "Tests failed" --priority high --tags warning "3 test failures"
+printf '%s\n' "Multiline message" | ~/.agents/skills/notify/notify --title "Pi"
 ```
 
 Priorities: `min`, `low`, `default`, `high`, `max`, or numeric `1` through `5`.
 
-When the user explicitly requests a notification for a monitor that cannot be wrapped, such as `monitor_github_pr_checks`, call `notify` immediately when the monitor wakes. Wrapping is preferred because it can notify while Pi is idle.
+When the user explicitly requests a notification for a monitor that cannot be wrapped, such as `monitor_github_pr_checks`, call `notify` immediately when the monitor wakes. Wrapping is preferred because it can notify while the agent is idle.
 
 ## Configuration
 
 If configuration is missing, run:
 
 ```bash
-~/.pi/agent/skills/notify/setup
+~/.agents/skills/notify/setup
 ```
 
 This creates an unguessable topic and stores it in `~/.config/pi-notify/topic`, with mode `0600`. It defaults to `https://ntfy.sh`. The topic is a secret and must never be committed or printed in normal responses.

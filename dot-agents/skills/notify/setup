@@ -58,5 +58,5 @@ Topic:  $topic
 Treat the topic as a password. In the ntfy mobile app, add the server above and
 subscribe to the topic exactly as shown. Then run:
 
-  ~/.pi/agent/skills/notify/notify --title "Pi test" "Notifications are working."
+  ~/.agents/skills/notify/notify --title "Pi test" "Notifications are working."
 EOF
