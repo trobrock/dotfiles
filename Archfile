@@ -53,6 +53,7 @@ qalculate-gtk
 slack-desktop-wayland
 streamdeck-ui
 telegram-desktop
+tigervnc
 
 # [desktop] CLI
 1password-cli
