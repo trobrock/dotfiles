@@ -1,3 +1,8 @@
+# Ensure a UTF-8 locale for all shells, including non-login/non-interactive ones.
+if [ -z "$LANG" ]; then
+  export LANG=C.UTF-8
+fi
+
 # Homebrew (must be early so brew-installed tools are found)
 if [ -f /opt/homebrew/bin/brew ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
