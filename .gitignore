@@ -10,7 +10,8 @@ dot-config/systemd/user/*.target.wants/
 /dot-pi/agent/mcp-onboarding.json
 /dot-pi/agent/models-store.json
 /dot-pi/agent/skills/developerly/SKILL.md
-/dot-local/bin/__pycache__
+__pycache__/
+*.py[cod]
 /dot-pi/agent/trust.json
 /dot-pi/agent/mcp-npx-cache.json
 /dot-pi/agent/models-store.json
