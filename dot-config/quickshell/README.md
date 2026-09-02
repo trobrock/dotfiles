@@ -120,7 +120,9 @@ MIT-licensed Tailscale widget; exact source and license details are under
 ## Notifications and OSD
 
 Notifications are compact, ephemeral top-right toasts. Expired or dismissed
-notifications are destroyed; there is no history or notification tray.
+notifications are destroyed; there is no history or notification tray. A **Copy
+code** action appears when a nearby MFA-related phrase and 4–8 character code
+are detected; copying does not dismiss the notification.
 
 - `Super+,` dismisses the latest toast.
 - `Super+Shift+,` dismisses every toast.
