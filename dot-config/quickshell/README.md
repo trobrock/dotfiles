@@ -129,6 +129,11 @@ are detected; copying does not dismiss the notification.
 - `Super+Ctrl+,` toggles do not disturb. Notifications received while DND is on are dropped.
 - Volume, mute, microphone, brightness, power-profile, and DND changes use the shared bottom-center OSD.
 
+The power profile switches to **balanced** when AC power is connected and to
+**power saver** when it is disconnected. This happens only when the power source
+changes (and once when the bar starts), so selecting another profile from the
+bar remains effective until the next plug or unplug event.
+
 ## Runtime data
 
 Provider, SSID, device, tailnet, and account data stays out of the repository. AI
