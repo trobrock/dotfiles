@@ -45,6 +45,7 @@ neovim
 nodejs
 npm
 ollama-rocm
+openbsd-netcat
 openslide
 openssh
 poppler-glib

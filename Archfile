@@ -57,6 +57,7 @@ telegram-desktop
 # [desktop] CLI
 1password-cli
 bluez
+bluez-utils
 brightnessctl
 iwd
 python-dbus
@@ -111,6 +112,7 @@ nodejs
 npm
 ollama-rocm
 openai-codex-bin
+openbsd-netcat
 openssh
 power-profiles-daemon
 restic
