@@ -7,6 +7,7 @@ base-devel
 bat
 bind
 bluez
+bluez-utils
 brightnessctl
 btop
 btrfs-progs
@@ -72,6 +73,7 @@ npm
 obsidian
 ollama-rocm
 openai-codex-bin
+openbsd-netcat
 openslide
 pipewire
 polkit-gnome
@@ -94,6 +96,7 @@ system-config-printer
 tailscale
 telegram-desktop
 terraform
+tigervnc
 tldr
 tmux
 tree-sitter-cli

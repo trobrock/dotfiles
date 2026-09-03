@@ -61,6 +61,47 @@ Item {
         return false;
     }
 
+    function verificationCode(summary, body) {
+        var text = bounded(summary, 180) + "\n" + bounded(body, 1000);
+        var keywordPattern = /\b(?:verification|authentication|security|confirmation|login|sign[- ]?in|two[- ]?factor|one[- ]?time|2fa|mfa|otp|passcode|pin|code)\b/ig;
+        var keywordPositions = [];
+        var keywordMatch;
+        while ((keywordMatch = keywordPattern.exec(text)) !== null)
+            keywordPositions.push(keywordMatch.index);
+        if (keywordPositions.length === 0)
+            return "";
+
+        var candidates = [];
+        var candidatePatterns = [
+            /(^|[^0-9])([0-9]{3}[ -][0-9]{3})(?=$|[^0-9])/g,
+            /(^|[^A-Za-z0-9])([A-Za-z0-9]{4,8})(?=$|[^A-Za-z0-9])/g
+        ];
+        for (var patternIndex = 0; patternIndex < candidatePatterns.length; ++patternIndex) {
+            var pattern = candidatePatterns[patternIndex];
+            var match;
+            while ((match = pattern.exec(text)) !== null) {
+                var raw = match[2];
+                var code = raw.replace(/[ -]/g, "");
+                if (!/[0-9]/.test(code))
+                    continue;
+                if (!/^[0-9]+$/.test(code) && !/[A-Z]/.test(code))
+                    continue;
+                var position = match.index + match[1].length;
+                var nearestKeyword = text.length;
+                for (var keywordIndex = 0; keywordIndex < keywordPositions.length; ++keywordIndex)
+                    nearestKeyword = Math.min(nearestKeyword, Math.abs(position - keywordPositions[keywordIndex]));
+                if (nearestKeyword > 80)
+                    continue;
+                var score = nearestKeyword + Math.abs(code.length - 6) * 8 + (/^[0-9]+$/.test(code) ? 0 : 4);
+                candidates.push({ "code": code, "score": score });
+            }
+        }
+        if (candidates.length === 0)
+            return "";
+        candidates.sort(function(left, right) { return left.score - right.score; });
+        return candidates[0].code;
+    }
+
     function copyEntry(entry) {
         var copy = {};
         for (var key in entry)
@@ -76,6 +117,7 @@ Item {
             "icon": bounded(notification.appIcon, 160),
             "summary": oneLine(notification.summary || "Notification", 180),
             "body": bounded(notification.body, 1000),
+            "verificationCode": verificationCode(notification.summary || "", notification.body || ""),
             "urgency": Number(notification.urgency),
             "actions": snapshotActions(notification),
             "hasDefaultAction": notificationHasDefaultAction(notification),
@@ -220,6 +262,15 @@ Item {
             clearAll();
         else
             ++revision;
+    }
+
+    function copyVerificationCode(identifier) {
+        var index = indexForId(identifier);
+        if (index < 0)
+            return;
+        var code = bounded(entries[index].verificationCode, 8);
+        if (/^[A-Za-z0-9]{4,8}$/.test(code))
+            Quickshell.clipboardText = code;
     }
 
     function invokeNamedAction(identifier, actionIdentifier) {

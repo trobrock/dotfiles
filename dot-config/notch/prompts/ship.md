@@ -18,7 +18,7 @@ Use project-specific judgment for tests, PR wording, merge strategy, and failure
 ## 1. Commit pending changes
 
 - If the working tree is clean, skip this step.
-- Stage files by name (never `git add -A` or `git add .`; never `-f`). Skip anything that looks like secrets (`.env`, credentials, keys).
+- Stage files by name (never `git add -A` or `git add .`; never `-f`). Skip untracked or plaintext secrets such as `.env`, `*.key`, `master.key`, and unencrypted credential files. Tracked encrypted Rails credential files (`config/credentials.yml.enc` and `config/credentials/*.yml.enc`) are expected to be committed when intentionally modified; stage them by name, but never stage their corresponding key files.
 - Write a commit message matching the repo's recent style. Focus on the *why*. No Claude co-author trailer unless the repo's recent history uses one.
 - Never `--amend`, never `--no-verify`. If a pre-commit hook fails: fix the underlying issue, re-stage, create a NEW commit (not an amend).
 
@@ -69,5 +69,6 @@ Use project-specific judgment for tests, PR wording, merge strategy, and failure
 - Never push to `main` or `master`.
 - Never `--force` / `--force-with-lease` / `--no-verify` / `--amend`.
 - Never `git add -A`, `git add .`, or `git add -f`.
+- Never stage plaintext secrets or key files. Tracked encrypted Rails credential files may be staged by their exact paths when intentionally changed.
 - Never `git restore`, `git reset --hard`, or `git checkout --` to discard user changes.
 - If anything unexpected appears (unfamiliar files, diverged branch, existing merge conflict), stop and ask.

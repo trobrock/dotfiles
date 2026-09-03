@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Pipewire
+import Quickshell.Services.UPower
 
 // One shared service instance feeds every monitor's bar.
 Item {
@@ -45,6 +46,7 @@ Item {
     property bool powerProfileProbeResponseValid: false
     property bool powerProfileProbeExited: false
     property string powerProfileProbeResult: ""
+    property bool powerProfileAutoApplyPending: true
     property string voxText: "󰍭"
     property string voxTooltip: "VoxType starting…"
     property bool voxAvailable: false
@@ -254,6 +256,20 @@ Item {
         powerProfileWatchdog.stop();
         powerProfilesAvailable = true;
         powerProfilesState = powerProfileProbeResult;
+        applyAutomaticPowerProfile();
+    }
+
+    function applyAutomaticPowerProfile() {
+        if (!powerProfileAutoApplyPending || !powerProfilesAvailable)
+            return ;
+
+        PowerProfiles.profile = UPower.onBattery ? PowerProfile.PowerSaver : PowerProfile.Balanced;
+        powerProfileAutoApplyPending = false;
+    }
+
+    function handlePowerSourceChanged() {
+        powerProfileAutoApplyPending = true;
+        applyAutomaticPowerProfile();
     }
 
     function setPowerProfilesUnavailable() {
@@ -395,6 +411,14 @@ Item {
     }
 
     Component.onCompleted: root.startVoxMonitor()
+
+    Connections {
+        target: UPower
+
+        function onOnBatteryChanged() {
+            root.handlePowerSourceChanged();
+        }
+    }
 
     PwObjectTracker {
         objects: root.audioSink ? [root.audioSink] : []

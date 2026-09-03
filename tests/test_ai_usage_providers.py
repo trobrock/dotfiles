@@ -152,11 +152,12 @@ class CodexProviderTests(unittest.TestCase):
         stderr = io.StringIO()
         with (
             mock.patch.object(codex, "find_command", return_value="/safe/codex"),
-            mock.patch.object(codex.subprocess, "Popen", side_effect=OSError(secret)),
+            mock.patch.object(codex.subprocess, "Popen", side_effect=OSError(secret)) as popen,
             mock.patch.dict(os.environ, {"AI_USAGE_DEBUG": "0"}),
             contextlib.redirect_stderr(stderr),
         ):
             result = codex.fetch_codex_rpc()
+        self.assertEqual(popen.call_args.args[0], ["/safe/codex", "-s", "read-only", "-a", "never", "app-server"])
         self.assertNotIn(secret, json.dumps(result))
         self.assertEqual(stderr.getvalue(), "")
 

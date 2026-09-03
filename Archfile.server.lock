@@ -45,6 +45,7 @@ nodejs
 npm
 ollama-rocm
 openai-codex-bin
+openbsd-netcat
 openslide
 openssh
 poppler-glib

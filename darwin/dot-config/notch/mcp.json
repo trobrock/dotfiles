@@ -3,6 +3,10 @@
     "datadog": {
       "url": "https://mcp.datadoghq.com/api/unstable/mcp-server/mcp?toolsets=core,software-delivery",
       "auth": "oauth"
+    },
+    "firecrawl": {
+      "url": "https://mcp.firecrawl.dev/v2/mcp-oauth",
+      "auth": "oauth"
     }
   }
 }
