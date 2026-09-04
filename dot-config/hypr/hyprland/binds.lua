@@ -67,6 +67,7 @@ hl.bind("SUPER + SHIFT + G", hl.dsp.exec_cmd("~/.config/scripts/record-screen gi
 hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("~/.config/scripts/record-screen mp4 --with-desktop-audio --with-microphone-audio --with-webcam"))
 
 -- Special workspaces
+hl.bind("SUPER + grave", hl.dsp.workspace.toggle_special("dotfiles-agent"))
 hl.bind("SUPER + S", hl.dsp.workspace.toggle_special("magic"))
 hl.bind("SUPER + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
 hl.bind("SUPER + TAB", hl.dsp.workspace.toggle_special("typingmind"))
