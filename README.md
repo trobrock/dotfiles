@@ -54,18 +54,19 @@ MCP servers are **per-platform**, because Notch has no way to merge multiple MCP
 
 | Overlay | `mcp.json` | Servers |
 | --- | --- | --- |
-| `linux/dot-config/notch/` | yes | `grafana`, `sentry`, `cloudflare-api` |
+| `linux/dot-config/notch/` | yes | `grafana`, `sentry`, `cloudflare-api`, `firecrawl` |
 | `darwin/dot-config/notch/` | yes, empty | none — no Comfortly servers on the work Mac |
-| `server/` | absent | none |
+| `server/dot-config/notch/` | symlink to Linux config | `grafana`, `sentry`, `cloudflare-api`, `firecrawl` |
 
-The empty file on macOS is deliberate. Notch treats an unresolved `${NAME}` reference in an MCP `env` block as a hard parse error, and `GRAFANA_SERVICE_ACCOUNT_TOKEN` only exists in the `personal_arch` section of `dotfiles-secrets` — sharing the Linux file would make every `notch` invocation on the Mac print a `parse MCP config` warning.
+The server overlay reuses the Linux MCP file so desktop and headless Linux machines always have the same servers. The empty file on macOS is deliberate. Notch treats an unresolved `${NAME}` reference in an MCP `env` block as a hard parse error, and `GRAFANA_SERVICE_ACCOUNT_TOKEN` only exists in the `personal_arch` section of `dotfiles-secrets` — sharing the Linux file with macOS would make every `notch` invocation on the Mac print a `parse MCP config` warning.
 
-On the Linux desktop, the Grafana server resolves `GRAFANA_SERVICE_ACCOUNT_TOKEN` from the environment when Notch loads the config. Keep that value in the encrypted `dotfiles-secrets` workflow rather than in this repository. Sentry and Cloudflare use OAuth; authenticate them once per machine with:
+On Linux, the Grafana server resolves `GRAFANA_SERVICE_ACCOUNT_TOKEN` from the environment when Notch loads the config. Keep that value in the encrypted `dotfiles-secrets` workflow rather than in this repository. Sentry, Cloudflare, and Firecrawl use OAuth; authenticate them once per machine with:
 
 ```bash
 notch login openai-codex
-notch mcp login sentry          # linux desktop only
-notch mcp login cloudflare-api  # linux desktop only
+notch mcp login sentry
+notch mcp login cloudflare-api
+notch mcp login firecrawl
 ```
 
 Notch stores OAuth credentials and sessions under `~/.local/share/notch`; those private runtime files are not managed by these dotfiles.

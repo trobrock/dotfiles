@@ -26,7 +26,6 @@ github-cli
 git-lfs
 gum
 imagemagick
-impala
 inetutils
 jq
 lazydocker
@@ -45,6 +44,7 @@ neovim
 nodejs
 npm
 ollama-rocm
+openai-codex-bin
 openbsd-netcat
 openslide
 openssh
