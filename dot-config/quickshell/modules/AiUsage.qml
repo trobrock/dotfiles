@@ -14,7 +14,8 @@ Pill {
     readonly property var headline: bindingWindow(provider)
     readonly property var balance: balanceValue(provider)
     readonly property bool balanceAlarming: balance && balance.funded > 0 && balance.remaining / balance.funded <= 0.1
-    readonly property bool alarming: (headline && headline.percent >= 0.9) || balanceAlarming
+    readonly property bool hasProviderProblem: providerProblemTitle(provider) !== ""
+    readonly property bool alarming: (headline && headline.percent >= 0.9) || balanceAlarming || hasProviderProblem
     readonly property bool hasProviders: providers.length > 0
     property string defaultProviderId: "codex"
     property string selectedProviderId: ""

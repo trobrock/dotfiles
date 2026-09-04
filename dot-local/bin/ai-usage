@@ -74,8 +74,10 @@ def safe_help(value: Any, provider_id: str) -> str:
             "Anthropic's usage endpoint returned no limits. Local Claude Code stats are still shown.",
         },
         "codex": {
-            "Codex unavailable", "Codex limits unavailable",
-            "Run `codex login` to authenticate.", "codex not found in PATH",
+            "Codex unavailable", "Codex limits unavailable", "Codex sign-in expired",
+            "Run `codex login` to authenticate.",
+            "Run `codex login` to refresh your sign-in and restore limits.",
+            "codex not found in PATH",
         },
         "fireworks": {
             "Fireworks unavailable", "Balance unavailable",
