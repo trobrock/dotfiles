@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.trobrock.caffeinate-ac</string>
+
+  <!--
+    Keep the machine awake and responsive on AC power so SSH / OrbStack stay
+    usable. Runs the caffeinate-ac supervisor, which holds a `caffeinate -s -i`
+    assertion only while on AC power.
+
+    Full rationale (MDM override, why -s alone was insufficient, why -i needs
+    AC scoping) lives in /usr/local/bin/caffeinate-ac.
+
+    Installed as a system LaunchDaemon rather than a user LaunchAgent so the
+    assertion is held at the login window and across logout.
+  -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/caffeinate-ac</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>StandardOutPath</key>
+  <string>/var/log/caffeinate-ac.log</string>
+  <key>StandardErrorPath</key>
+  <string>/var/log/caffeinate-ac.log</string>
+</dict>
+</plist>

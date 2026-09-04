@@ -1,0 +1,80 @@
+#!/bin/sh
+# Hold a "don't idle sleep" power assertion, but only while on AC power.
+#
+# Background
+# ----------
+# This machine is MDM-managed (Intune) and ships a managed EnergySaver payload
+# at /Library/Managed Preferences/com.apple.MCX.plist:
+#     com.apple.EnergySaver.portable.ACPower
+#       System Sleep Timer  = 20
+#       Display Sleep Timer = 20
+# Managed Preferences beat pmset, so `pmset -c sleep 0` is reverted at every
+# MDM check-in. Power assertions are NOT revocable by MDM, so we hold one.
+#
+# Why not just `caffeinate -s`?
+# -----------------------------
+# `-s` (PreventSystemSleep) is conveniently AC-only per caffeinate(8), but it
+# only downgrades *full sleep* into *DarkWake* -- it does not prevent the idle
+# sleep transition itself. Observed in `pmset -g log` with -s held:
+#
+#   Entering DarkWake state due to 'Idle Sleep':TCPKeepAlive=active
+#   Using AC (Charge:100%) 4012 secs [System: PrevSleep SRPrevSleep kCPU]
+#
+# In DarkWake the network stack stays up (TCPKeepAlive), so SSH still connects,
+# but userspace is throttled and VMs (OrbStack) stall. Commands hang until HID
+# activity promotes DarkWake -> FullWake. That is the bug we're fixing.
+#
+# `-i` (PreventUserIdleSystemSleep) is what actually blocks that transition.
+# But unlike `-s`, `-i` is NOT scoped to AC power -- holding it unconditionally
+# would keep the laptop awake on battery and drain it. Hence this supervisor:
+# we start/stop the assertion as the power source changes.
+#
+# Deliberately NOT holding `-d` (PreventUserIdleDisplaySleep): the display is
+# allowed to sleep so the managed screensaver lock policy
+# (com.apple.screensaver idleTime=900) still applies. Lid-close sleep is also
+# unaffected, so closing the laptop still suspends normally.
+
+set -u
+
+POLL_INTERVAL=30
+CHILD=""
+
+on_ac() {
+	/usr/bin/pmset -g batt | /usr/bin/grep -q "AC Power"
+}
+
+assertion_running() {
+	[ -n "$CHILD" ] && kill -0 "$CHILD" 2>/dev/null
+}
+
+start_assertion() {
+	assertion_running && return 0
+	# -s: prevent system sleep (AC-only, harmless belt-and-suspenders)
+	# -i: prevent idle sleep -- this is the one that keeps us out of DarkWake
+	/usr/bin/caffeinate -s -i &
+	CHILD=$!
+	echo "$(date '+%F %T') on AC: holding assertion (caffeinate pid $CHILD)"
+}
+
+stop_assertion() {
+	assertion_running || { CHILD=""; return 0; }
+	echo "$(date '+%F %T') on battery: releasing assertion (pid $CHILD)"
+	kill "$CHILD" 2>/dev/null || true
+	wait "$CHILD" 2>/dev/null || true
+	CHILD=""
+}
+
+cleanup() {
+	stop_assertion
+	exit 0
+}
+trap cleanup TERM INT
+
+while true; do
+	if on_ac; then
+		start_assertion
+	else
+		stop_assertion
+	fi
+	sleep "$POLL_INTERVAL"
+done

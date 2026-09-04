@@ -639,6 +639,39 @@ setup_power_management() {
     log "Disabling disk sleep on AC power so SSH logins don't stall waking disks..."
     sudo pmset -c disksleep 0
   fi
+
+  setup_caffeinate_daemon
+}
+
+# The pmset calls above are best-effort: on MDM-managed machines an Intune
+# EnergySaver payload in /Library/Managed Preferences/com.apple.MCX.plist
+# forces "System Sleep Timer = 20" and silently reverts them at every MDM
+# check-in. Power assertions aren't revocable by MDM, so we also hold a
+# permanent `caffeinate -s` assertion, which is only valid on AC power.
+# See the comment block in the plist for the full rationale.
+setup_caffeinate_daemon() {
+  local label="com.trobrock.caffeinate-ac"
+  local src="$REPO_DIR/system/Library/LaunchDaemons/$label.plist"
+  local dest="/Library/LaunchDaemons/$label.plist"
+  local script_src="$REPO_DIR/system/usr/local/bin/caffeinate-ac"
+  local script_dest="/usr/local/bin/caffeinate-ac"
+
+  if [ ! -f "$src" ] || [ ! -f "$script_src" ]; then
+    log_error "Missing caffeinate-ac sources; skipping caffeinate daemon setup."
+    return
+  fi
+
+  log "Installing $label LaunchDaemon (keeps machine awake on AC power)..."
+  # Absolute paths: this repo's bin/ is on PATH and `install` would otherwise
+  # resolve to this very script instead of /usr/bin/install.
+  sudo /usr/bin/install -d -o root -g wheel -m 755 /usr/local/bin
+  sudo /usr/bin/install -o root -g wheel -m 755 "$script_src" "$script_dest"
+  sudo /usr/bin/install -o root -g wheel -m 644 "$src" "$dest"
+
+  sudo /bin/launchctl bootout "system/$label" 2>/dev/null || true
+  if ! sudo /bin/launchctl bootstrap system "$dest" 2>/dev/null; then
+    log_error "Could not load $label LaunchDaemon."
+  fi
 }
 
 install_pacman_hooks() {
