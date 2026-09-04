@@ -120,12 +120,19 @@ MIT-licensed Tailscale widget; exact source and license details are under
 ## Notifications and OSD
 
 Notifications are compact, ephemeral top-right toasts. Expired or dismissed
-notifications are destroyed; there is no history or notification tray.
+notifications are destroyed; there is no history or notification tray. A **Copy
+code** action appears when a nearby MFA-related phrase and 4–8 character code
+are detected; copying does not dismiss the notification.
 
 - `Super+,` dismisses the latest toast.
 - `Super+Shift+,` dismisses every toast.
 - `Super+Ctrl+,` toggles do not disturb. Notifications received while DND is on are dropped.
 - Volume, mute, microphone, brightness, power-profile, and DND changes use the shared bottom-center OSD.
+
+The power profile switches to **balanced** when AC power is connected and to
+**power saver** when it is disconnected. This happens only when the power source
+changes (and once when the bar starts), so selecting another profile from the
+bar remains effective until the next plug or unplug event.
 
 ## Runtime data
 

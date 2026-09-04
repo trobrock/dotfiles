@@ -147,16 +147,42 @@ class CodexProviderTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertIsNone(codex.limit_window({"usedPercent": value}))
 
+    def test_expired_rpc_token_has_actionable_status(self) -> None:
+        proc = mock.Mock()
+        proc.stdin = io.StringIO()
+        with (
+            mock.patch.object(codex, "find_command", return_value="/safe/codex"),
+            mock.patch.object(codex.subprocess, "Popen", return_value=proc),
+            mock.patch.object(codex, "rpc_request", side_effect=[
+                {"result": {}},
+                {"result": {"account": {"planType": "pro"}}},
+                codex.CodexRpcError("auth_expired"),
+            ]),
+        ):
+            result = codex.fetch_codex_rpc()
+        self.assertEqual(result["usageStatusText"], "Codex sign-in expired")
+        self.assertEqual(
+            result["authHelpText"],
+            "Run `codex login` to refresh your sign-in and restore limits.",
+        )
+
+    def test_rpc_error_classification_does_not_retain_response(self) -> None:
+        secret = "token_expired bearer-secret /home/private/auth.json"
+        error = codex.CodexRpcError(codex.rpc_error_kind({"message": secret}))
+        self.assertEqual(error.kind, "auth_expired")
+        self.assertNotIn(secret, str(error))
+
     def test_start_exception_is_fixed_and_default_stderr_is_quiet(self) -> None:
         secret = "TOKEN /home/private/session.jsonl response-body"
         stderr = io.StringIO()
         with (
             mock.patch.object(codex, "find_command", return_value="/safe/codex"),
-            mock.patch.object(codex.subprocess, "Popen", side_effect=OSError(secret)),
+            mock.patch.object(codex.subprocess, "Popen", side_effect=OSError(secret)) as popen,
             mock.patch.dict(os.environ, {"AI_USAGE_DEBUG": "0"}),
             contextlib.redirect_stderr(stderr),
         ):
             result = codex.fetch_codex_rpc()
+        self.assertEqual(popen.call_args.args[0], ["/safe/codex", "-s", "read-only", "-a", "never", "app-server"])
         self.assertNotIn(secret, json.dumps(result))
         self.assertEqual(stderr.getvalue(), "")
 

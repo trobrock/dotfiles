@@ -12,6 +12,9 @@ Rectangle {
     property bool compact: true
     readonly property var actionEntries: {
         var result = [];
+        var code = entry ? String(entry.verificationCode || "") : "";
+        if (code !== "")
+            result.push({ "identifier": "copy-verification-code", "text": "Copy code", "copiesCode": true });
         var actions = entry && entry.actions ? entry.actions : [];
         for (var i = 0; i < actions.length && result.length < 2; ++i) {
             if (actions[i].identifier !== "default")
@@ -23,6 +26,13 @@ Rectangle {
     readonly property bool hasActions: actionEntries.length > 0
     readonly property bool hasDefaultAction: entry && entry.hasDefaultAction === true
     readonly property color accent: Number(entry.urgency) === 2 ? theme.red : theme.lavender
+
+    function invokeAction(action) {
+        if (action && action.copiesCode === true)
+            service.copyVerificationCode(entry.id);
+        else if (action)
+            service.invokeNamedAction(entry.id, action.identifier);
+    }
 
     function safeIconSource() {
         var name = String(entry && entry.icon || "").slice(0, 160);
@@ -215,9 +225,9 @@ Rectangle {
                 activeFocusOnTab: true
                 Accessible.role: Accessible.Button
                 Accessible.name: String(modelData.text || "Action")
-                Keys.onEnterPressed: root.service.invokeNamedAction(root.entry.id, modelData.identifier)
-                Keys.onReturnPressed: root.service.invokeNamedAction(root.entry.id, modelData.identifier)
-                Keys.onSpacePressed: root.service.invokeNamedAction(root.entry.id, modelData.identifier)
+                Keys.onEnterPressed: root.invokeAction(modelData)
+                Keys.onReturnPressed: root.invokeAction(modelData)
+                Keys.onSpacePressed: root.invokeAction(modelData)
 
                 Text {
                     id: actionLabel
@@ -238,7 +248,7 @@ Rectangle {
                 }
 
                 TapHandler {
-                    onTapped: root.service.invokeNamedAction(root.entry.id, actionButton.modelData.identifier)
+                    onTapped: root.invokeAction(actionButton.modelData)
                 }
             }
         }

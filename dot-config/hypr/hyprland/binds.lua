@@ -94,5 +94,8 @@ hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = tr
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
 
+-- Headphones
+hl.bind("SUPER + SHIFT + CTRL + H", hl.dsp.exec_cmd("bluetoothctl connect 04:00:6E:D6:E3:59"))
+
 -- VoxType: ignore modifiers so the dedicated key always works.
 hl.bind("code:134", hl.dsp.exec_cmd("/usr/local/bin/voxtype record toggle"), { ignore_mods = true })
