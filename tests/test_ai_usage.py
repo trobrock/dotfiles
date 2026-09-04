@@ -371,6 +371,27 @@ class AiUsageTests(unittest.TestCase):
                 self.assertFalse(forbidden & received.keys())
                 self.assertEqual(provider_only & received.keys(), expected[provider_id])
 
+    def test_codex_expired_sign_in_message_survives_sanitization(self) -> None:
+        providers = self.tmp_path / "providers"
+        providers.mkdir()
+        crafted = record("codex")
+        crafted.update({
+            "usageStatusText": "Codex sign-in expired",
+            "authHelpText": "Run `codex login` to refresh your sign-in and restore limits.",
+        })
+        script = providers / "codex"
+        script.write_text("#!/usr/bin/env python3\nimport json\nprint(json.dumps(" + repr(crafted) + "))\n")
+        script.chmod(0o755)
+        env = environment(self.tmp_path, providers)
+        done = subprocess.run([str(CLI), "update", "codex"], env=env, text=True, capture_output=True)
+        self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
+        output = json.loads(done.stdout)["providers"][0]
+        self.assertEqual(output["usageStatusText"], "Codex sign-in expired")
+        self.assertEqual(
+            output["authHelpText"],
+            "Run `codex login` to refresh your sign-in and restore limits.",
+        )
+
     def test_provider_dto_strips_unknown_bounds_strings_and_rejects_bad_numbers(self) -> None:
         providers = self.tmp_path / "providers"
         providers.mkdir()

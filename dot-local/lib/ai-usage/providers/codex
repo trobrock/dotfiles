@@ -528,6 +528,23 @@ def _cached_local_stats(max_age):
     return stats
 
 
+class CodexRpcError(RuntimeError):
+  def __init__(self, kind="unknown"):
+    super().__init__("rpc error")
+    self.kind = kind
+
+
+def rpc_error_kind(error):
+  """Classify known app-server failures without exposing response details."""
+  try:
+    serialized = json.dumps(error).lower()
+  except Exception:
+    return "unknown"
+  if "token_expired" in serialized or "authentication token is expired" in serialized:
+    return "auth_expired"
+  return "unknown"
+
+
 def rpc_request(proc, request_id, method, params=None, timeout=8):
   payload = {"id": request_id, "method": method, "params": params or {}}
   proc.stdin.write(json.dumps(payload) + "\n")
@@ -550,7 +567,7 @@ def rpc_request(proc, request_id, method, params=None, timeout=8):
       continue
     if message.get("id") == request_id:
       if message.get("error") is not None:
-        raise RuntimeError("rpc error")
+        raise CodexRpcError(rpc_error_kind(message.get("error")))
       return message
   raise TimeoutError("rpc request timed out")
 
@@ -651,6 +668,14 @@ def fetch_codex_rpc():
     if not result["limits"]:
       result["usageStatusText"] = "Codex limits unavailable"
       result["authHelpText"] = "Codex did not return usable account limits. " + AUTH_HELP
+  except CodexRpcError as exc:
+    debug_exception("app-server usage request failed", exc)
+    if exc.kind == "auth_expired":
+      result["usageStatusText"] = "Codex sign-in expired"
+      result["authHelpText"] = "Run `codex login` to refresh your sign-in and restore limits."
+    else:
+      result["usageStatusText"] = "Codex limits unavailable"
+      result["authHelpText"] = "Could not read Codex account limits. " + AUTH_HELP
   except Exception as exc:
     debug_exception("app-server usage request failed", exc)
     result["usageStatusText"] = "Codex limits unavailable"
