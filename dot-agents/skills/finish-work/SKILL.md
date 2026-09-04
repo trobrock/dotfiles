@@ -1,11 +1,20 @@
 ---
 name: finish-work
-description: Finish implementation work with project-aware validation, an independent subagent review for correctness and simplicity, verified fixes, and a bounded re-review loop
+description: Run the opt-in /finish quality workflow. Use only when the user explicitly invokes /finish or asks to run the finish workflow. Do not load it merely because implementation is complete or the user requests normal testing, review, QA, or fixes.
 ---
 
 # Finish Work
 
-Use this skill when the user asks to finish, final-review, QA, polish, or get implementation work ready to ship. It orchestrates the final quality pass; it does not replace project-specific coding, design, testing, or QA guidance.
+## Activation
+
+Use this skill only when:
+
+- the user invokes `/finish`; or
+- the user explicitly asks to “run the finish workflow” or “use the finish skill.”
+
+Do not infer activation from requests to finish implementation, run tests, review code, fix issues, polish behavior, or prepare a normal final response.
+
+This skill orchestrates an explicit final quality pass; it does not replace project-specific coding, design, testing, or QA guidance.
 
 ## Goal
 
