@@ -47,6 +47,7 @@ Item {
     property bool powerProfileProbeExited: false
     property string powerProfileProbeResult: ""
     property bool powerProfileAutoApplyPending: true
+    property bool powerProfilePowerSaverHours: false
     property string voxText: "󰍭"
     property string voxTooltip: "VoxType starting…"
     property bool voxAvailable: false
@@ -259,17 +260,34 @@ Item {
         applyAutomaticPowerProfile();
     }
 
+    function isPowerSaverHours() {
+        var hour = new Date().getHours();
+        return hour >= 20 || hour < 8;
+    }
+
     function applyAutomaticPowerProfile() {
         if (!powerProfileAutoApplyPending || !powerProfilesAvailable)
             return ;
 
-        PowerProfiles.profile = UPower.onBattery ? PowerProfile.PowerSaver : PowerProfile.Balanced;
+        powerProfilePowerSaverHours = isPowerSaverHours();
+        PowerProfiles.profile = UPower.onBattery || powerProfilePowerSaverHours ? PowerProfile.PowerSaver : PowerProfile.Balanced;
         powerProfileAutoApplyPending = false;
     }
 
     function handlePowerSourceChanged() {
         powerProfileAutoApplyPending = true;
         applyAutomaticPowerProfile();
+    }
+
+    function handlePowerProfileSchedule() {
+        var powerSaverHours = isPowerSaverHours();
+        if (powerSaverHours === powerProfilePowerSaverHours)
+            return ;
+
+        powerProfilePowerSaverHours = powerSaverHours;
+        if (!UPower.onBattery)
+            handlePowerSourceChanged();
+
     }
 
     function setPowerProfilesUnavailable() {
@@ -669,7 +687,10 @@ Item {
         repeat: true
         running: true
         triggeredOnStart: true
-        onTriggered: root.probePowerProfiles()
+        onTriggered: {
+            root.handlePowerProfileSchedule();
+            root.probePowerProfiles();
+        }
     }
 
     Timer {
