@@ -5,7 +5,7 @@ description: Create or update a project in the Obsidian vault Projects folder
 
 # Obsidian Project Management
 
-Manage projects in `~/dev/personal/obsidian/trobrock/Projects/`.
+Manage projects in `~/obsidian/trobrock/Projects/`.
 
 ## Create New Project
 
@@ -18,7 +18,7 @@ When asked to create a new project:
    - Hosting plans (if applicable)
    - URL/domain (if applicable)
 
-2. **Create the file** at `~/dev/personal/obsidian/trobrock/Projects/{Project Name}.md`
+2. **Create the file** at `~/obsidian/trobrock/Projects/{Project Name}.md`
 
 3. **Use this template:**
 

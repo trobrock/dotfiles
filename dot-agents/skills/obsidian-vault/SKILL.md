@@ -1,16 +1,16 @@
 ---
 name: obsidian-vault
-description: Manage the Obsidian vault at ~/dev/personal/obsidian/trobrock - create, edit, and organize personal notes, projects, and travel plans
+description: Manage the Obsidian vault at ~/obsidian/trobrock - create, edit, and organize personal notes, projects, and travel plans
 ---
 
 # Obsidian Vault Management
 
-This skill teaches goose how to effectively manage the Obsidian vault located at `~/dev/personal/obsidian/trobrock`.
+This skill teaches goose how to effectively manage the Obsidian vault located at `~/obsidian/trobrock`.
 
 ## Vault Structure
 
 ```
-~/dev/personal/obsidian/trobrock/
+~/obsidian/trobrock/
 ├── Personal Home.md      # Dashboard with goals and quick links
 ├── Projects/             # Side projects and business ideas
 ├── Travel/               # Trip planning and travel notes
@@ -98,7 +98,7 @@ For quick thoughts or links, append to `Notes.md` under the appropriate section:
 
 ### Standalone Pages
 
-For new top-level notes, create in the root `~/dev/personal/obsidian/trobrock/` directory with a descriptive name.
+For new top-level notes, create in the root `~/obsidian/trobrock/` directory with a descriptive name.
 
 ## Editing Guidelines
 

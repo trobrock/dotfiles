@@ -5,7 +5,7 @@ description: Create or update a travel plan in the Obsidian vault Travel folder
 
 # Obsidian Travel Planning
 
-Manage travel plans in `~/dev/personal/obsidian/trobrock/Travel/`.
+Manage travel plans in `~/obsidian/trobrock/Travel/`.
 
 ## Create New Trip
 
@@ -18,7 +18,7 @@ When asked to plan a trip:
    - Who's traveling
    - Budget considerations
 
-2. **Create the file** at `~/dev/personal/obsidian/trobrock/Travel/{Trip Name}.md`
+2. **Create the file** at `~/obsidian/trobrock/Travel/{Trip Name}.md`
 
 3. **Use this template:**
 

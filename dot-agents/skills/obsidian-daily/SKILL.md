@@ -11,7 +11,7 @@ Quickly add content to the Obsidian vault without creating full pages.
 
 ### 1. Capture a Thought or Idea
 
-Add to `~/dev/personal/obsidian/trobrock/Notes.md` under the "Jot down some text" section:
+Add to `~/obsidian/trobrock/Notes.md` under the "Jot down some text" section:
 
 ```markdown
 {timestamp or topic}
@@ -20,7 +20,7 @@ Add to `~/dev/personal/obsidian/trobrock/Notes.md` under the "Jot down some text
 
 ### 2. Add a To-Do Item
 
-Add to `~/dev/personal/obsidian/trobrock/Notes.md` under the "Make a to-do list" section:
+Add to `~/obsidian/trobrock/Notes.md` under the "Make a to-do list" section:
 
 ```markdown
 - [ ] {Task description}
@@ -51,7 +51,7 @@ Just add directly to Notes.md:
 
 ### 4. Add a Quote
 
-Add to `~/dev/personal/obsidian/trobrock/Quotes.md`:
+Add to `~/obsidian/trobrock/Quotes.md`:
 ```markdown
 > {The quote text}
 > 
@@ -60,7 +60,7 @@ Add to `~/dev/personal/obsidian/trobrock/Quotes.md`:
 
 ### 5. Add to Wishlist
 
-Add to `~/dev/personal/obsidian/trobrock/Stuff I want.md`:
+Add to `~/obsidian/trobrock/Stuff I want.md`:
 ```markdown
 - {Item name} - {optional notes, price, or link}
 ```

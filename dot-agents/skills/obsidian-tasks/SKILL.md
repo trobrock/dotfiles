@@ -5,11 +5,11 @@ description: Manage tasks in the Obsidian vault - add, complete, reorder tasks
 
 # Obsidian Task Management
 
-Manage tasks in `~/dev/personal/obsidian/trobrock/Tasks.md`.
+Manage tasks in `~/obsidian/trobrock/Tasks.md`.
 
 ## Task File
 
-Location: `~/dev/personal/obsidian/trobrock/Tasks.md`
+Location: `~/obsidian/trobrock/Tasks.md`
 
 Simple ordered list - position indicates priority (top = most important).
 
