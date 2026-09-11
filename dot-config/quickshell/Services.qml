@@ -59,6 +59,13 @@ Item {
     property bool idleInhibited: false
     readonly property var audioSink: Pipewire.defaultAudioSink
 
+    Process {
+        id: idleInhibitorProcess
+
+        command: ["/usr/bin/systemd-inhibit", "--what=idle", "--mode=block", "--who=Quickshell", "--why=Coffee mode enabled", "/usr/bin/sleep", "infinity"]
+        running: root.idleInhibited
+    }
+
     function objectOrFallback(raw, fallback) {
         try {
             var parsed = JSON.parse(String(raw || "").trim());

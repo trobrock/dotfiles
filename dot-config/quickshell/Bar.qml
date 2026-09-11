@@ -92,11 +92,6 @@ Item {
                     right: true
                 }
 
-                IdleInhibitor {
-                    window: panel
-                    enabled: root.services.idleInhibited
-                }
-
                 Rectangle {
                     anchors.fill: parent
                     color: Qt.rgba(root.theme.base.r, root.theme.base.g, root.theme.base.b, 0.43)
