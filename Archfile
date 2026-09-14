@@ -118,6 +118,7 @@ openssh
 power-profiles-daemon
 restic
 ripgrep
+rtk-bin
 ruby-build
 rust
 sd
