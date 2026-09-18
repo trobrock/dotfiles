@@ -1,11 +1,13 @@
-sketchybar --add item focus.today e \
-           --set      focus.today icon= \
+# macOS-only extra (no Linux counterpart): current focus block. Restyled flat
+# with mauve text to match the Quickshell design language.
+sketchybar --add item focus.today left \
+           --set      focus.today icon="$GLYPH_FOCUS" \
                                   label="" \
-                                  icon.padding_left=$BRACKET_LEFT_PADDING \
-                                  label.padding_right=$BRACKET_RIGHT_PADDING \
-                                  icon.color=0xFFCBA6F7 \
-                                  label.color=0xFFCBA6F7 \
+                                  icon.color="$MAUVE" \
+                                  label.color="$MAUVE" \
+                                  icon.padding_left=5 \
+                                  icon.padding_right=5 \
+                                  label.padding_left=0 \
+                                  label.padding_right=5 \
                                   update_freq=60 \
-                                  script="$PLUGIN_DIR/focus.sh" \
-           --add bracket focus '/focus\./' \
-           --set         focus ${BACKGROUND_OPTIONS[@]}
+                                  script="$PLUGIN_DIR/focus.sh"

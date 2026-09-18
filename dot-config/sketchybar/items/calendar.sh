@@ -1,11 +1,17 @@
-sketchybar --add item calendar.today left \
-           --set      calendar.today icon= \
-                                    label="" \
-                                    icon.padding_left=$BRACKET_LEFT_PADDING \
-                                    label.padding_right=$BRACKET_RIGHT_PADDING \
-                                    icon.color=0xFFfab387 \
-                                    label.color=0xFFfab387 \
-                                    update_freq=300 \
-                                    script="$PLUGIN_DIR/calendar.sh" \
-           --add bracket calendar '/calendar\./' \
-           --set         calendar ${BACKGROUND_OPTIONS[@]}
+# Bar.qml's contextGroup: a centered ScriptPill showing the upcoming event in
+# subtext, hidden unless there actually is one.
+#
+# NOTE: use `center`, not `e`. Both are accepted, but only `center` actually
+# centers on the display -- `e` lands well to the right of center.
+sketchybar --add item calendar.today center \
+           --set      calendar.today icon="$GLYPH_CALENDAR" \
+                                     label="" \
+                                     icon.color="$SUBTEXT" \
+                                     label.color="$SUBTEXT" \
+                                     icon.padding_left=5 \
+                                     icon.padding_right=5 \
+                                     label.padding_left=0 \
+                                     label.padding_right=5 \
+                                     drawing=off \
+                                     update_freq=300 \
+                                     script="$PLUGIN_DIR/calendar.sh"

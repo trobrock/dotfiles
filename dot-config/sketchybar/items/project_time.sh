@@ -1,10 +1,14 @@
+# macOS-only extra (no Linux counterpart): time tracked today. Restyled flat
+# with subtext to sit quietly next to the workspaces.
 sketchybar --add item project_time.today left \
-           --set      project_time.today icon=󰃰 \
+           --set      project_time.today icon="$GLYPH_CLOCK" \
                                          label="0h0m" \
-                                         icon.padding_left=$BRACKET_LEFT_PADDING \
-                                         label.padding_right=$BRACKET_RIGHT_PADDING \
+                                         icon.color="$SUBTEXT" \
+                                         label.color="$SUBTEXT" \
+                                         icon.padding_left=5 \
+                                         icon.padding_right=5 \
+                                         label.padding_left=0 \
+                                         label.padding_right=5 \
                                          update_freq=300 \
                                          script="$PLUGIN_DIR/project_time.sh" \
-                                         click_script="sketchybar --set project_time.today popup.drawing=toggle" \
-           --add bracket project_time '/project_time\./' \
-           --set         project_time ${BACKGROUND_OPTIONS[@]}
+                                         click_script="sketchybar --set project_time.today popup.drawing=toggle"

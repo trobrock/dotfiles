@@ -104,13 +104,13 @@ alt-ctrl-shift-h = 'exec-and-forget blueutil --connect 04-00-6e-d6-e3-59'
 # --- Shell surfaces ---------------------------------------------------------
 # Hyprland routes these to Quickshell over its `global` IPC; on macOS the
 # sketchybar popups and helper scripts stand in.
-alt-b = 'exec-and-forget sketchybar --set bluetooth popup.drawing=toggle'
-alt-n = 'exec-and-forget sketchybar --set wifi popup.drawing=toggle'
+alt-b = 'exec-and-forget sketchybar --trigger bluetooth_menu_toggle'
+alt-n = 'exec-and-forget sketchybar --trigger wifi_menu_toggle'
 
 # Lock and power menu (Hyprland: SUPER+ESC hyprlock, SUPER+SHIFT/CTRL+ESC menu)
 alt-esc = 'exec-and-forget pmset displaysleepnow'
-alt-shift-esc = 'exec-and-forget sketchybar --set power popup.drawing=toggle'
-alt-ctrl-esc = 'exec-and-forget sketchybar --set power popup.drawing=toggle'
+alt-shift-esc = 'exec-and-forget sketchybar --trigger power_menu_toggle'
+alt-ctrl-esc = 'exec-and-forget sketchybar --trigger power_menu_toggle'
 
 # NOTE: alt-space (launcher) and alt-shift-c (clipboard history) are NOT bound
 # here. Raycast grabs its own hotkeys at the system level, so binding them in

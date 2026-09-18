@@ -1,39 +1,55 @@
-#!/bin/sh
+#!/usr/bin/env bash
+# Battery, mirroring StatusIsland.qml's batteryIcon() and batteryColor().
+#
+# Icon thresholds: charging, fully charged, then >=90 / >=65 / >=40 / >=15 / low.
+# Color: <=10 red, <=20 yellow, charging green, otherwise `text`. The bar runs
+# monochrome, which pins anything above the 20% warning line to subtext.
 
-PERCENTAGE="$(pmset -g batt | grep -Eo "\d+%" | cut -d% -f1)"
-CHARGING="$(pmset -g batt | grep 'AC Power')"
+set -uo pipefail
 
-if [ "$PERCENTAGE" = "" ]; then
+source "$CONFIG_DIR/theme.sh"
+
+readonly WARNING_PERCENT=20
+readonly CRITICAL_PERCENT=10
+
+batt=$(pmset -g batt)
+percent=$(printf '%s' "$batt" | grep -Eo '[0-9]+%' | head -1 | tr -d '%')
+
+# Desktops report no battery at all; Quickshell hides the button in that case.
+if [ -z "$percent" ]; then
+  sketchybar --set "$NAME" drawing=off
   exit 0
 fi
 
-case "${PERCENTAGE}" in
-  9[0-9]|100)
-    ICON=""
-    COLOR=0xff4fd6be
-  ;;
-  [6-8][0-9])
-    ICON=""
-    COLOR=0xffffc777
-  ;;
-  [3-5][0-9])
-    ICON=""
-    COLOR=0xffff9e64
-  ;;
-  [1-2][0-9])
-    ICON=""
-    COLOR=0xffc53b53
-  ;;
-  *)
-    ICON=""
-    COLOR=0xff737aa2
-esac
+charging=false
+printf '%s' "$batt" | grep -q "AC Power" && charging=true
 
-if [[ "$CHARGING" != "" ]]; then
-  ICON=""
-  COLOR=0xffffc777
+charged=false
+printf '%s' "$batt" | grep -qi "charged" && charged=true
+
+if $charging && ! $charged; then
+  icon=$GLYPH_BAT_CHARGING
+elif $charged; then
+  icon=$GLYPH_BAT_FULL
+elif [ "$percent" -ge 90 ]; then
+  icon=$GLYPH_BAT_90
+elif [ "$percent" -ge 65 ]; then
+  icon=$GLYPH_BAT_65
+elif [ "$percent" -ge 40 ]; then
+  icon=$GLYPH_BAT_40
+elif [ "$percent" -ge 15 ]; then
+  icon=$GLYPH_BAT_15
+else
+  icon=$GLYPH_BAT_LOW
 fi
 
-# The item invoking this script (name $NAME) will get its icon and label
-# updated with the current battery status
-sketchybar --set "$NAME" icon="$ICON" icon.color="$COLOR" label="$PERCENTAGE%"
+if [ "$percent" -le "$CRITICAL_PERCENT" ]; then
+  color=$RED
+elif [ "$percent" -le "$WARNING_PERCENT" ]; then
+  color=$YELLOW
+else
+  # monochrome && percent > warning -> subtext
+  color=$SUBTEXT
+fi
+
+sketchybar --set "$NAME" drawing=on icon="$icon" icon.color="$color"

@@ -1,8 +1,7 @@
-#!/bin/sh
+#!/usr/bin/env bash
+# modules/Clock.qml formats the bar label as "MMM d · h:mm AP".
 
-# The $NAME variable is passed from sketchybar and holds the name of
-# the item invoking this script:
-# https://felixkratz.github.io/SketchyBar/config/events#events-and-scripting
+set -uo pipefail
 
-sketchybar --set "$NAME" label="$(date '+%a %m/%d %I:%M %p')"
-
+# %-d and %-I strip the leading zero, matching Qt's "d" and "h".
+sketchybar --set "$NAME" label="$(date '+%b %-d · %-I:%M %p')"
