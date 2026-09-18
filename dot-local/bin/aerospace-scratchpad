@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# aerospace-scratchpad — emulate Hyprland's special workspaces on AeroSpace.
+#
+# Hyprland has `togglespecialworkspace`, which shows a hidden workspace over the
+# current one and hides it again on a second press. AeroSpace has no special
+# workspaces, so this approximates the behavior with an ordinary named
+# workspace:
+#
+#   toggle <name>   If <name> is already focused, bounce back to the previously
+#                   focused workspace. Otherwise summon <name> onto the focused
+#                   monitor and focus it.
+#
+# Unlike Hyprland this does not overlay the scratchpad on top of the current
+# workspace -- AeroSpace focuses it like any other workspace.
+
+set -euo pipefail
+
+readonly PROGRAM_NAME=${0##*/}
+
+die() {
+  printf '%s: %s\n' "$PROGRAM_NAME" "$1" >&2
+  exit 1
+}
+
+usage() {
+  cat <<EOF
+Usage: $PROGRAM_NAME toggle <workspace>
+
+Commands:
+  toggle <workspace>   Focus <workspace>, or return to the previous workspace
+                       if <workspace> is already focused.
+
+Examples:
+  $PROGRAM_NAME toggle magic
+EOF
+}
+
+find_aerospace() {
+  if command -v aerospace >/dev/null 2>&1; then
+    command -v aerospace
+    return 0
+  fi
+
+  # AeroSpace's own exec-and-forget PATH is minimal, and callers may not have
+  # Homebrew on PATH at all.
+  local candidate
+  for candidate in \
+    /opt/homebrew/bin/aerospace \
+    /usr/local/bin/aerospace \
+    /Applications/AeroSpace.app/Contents/MacOS/aerospace; do
+    if [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+cmd_toggle() {
+  local target=$1
+  local aerospace focused
+
+  aerospace=$(find_aerospace) || die 'could not find the aerospace CLI'
+
+  focused=$("$aerospace" list-workspaces --focused) ||
+    die 'could not query the focused workspace'
+
+  if [ "$focused" = "$target" ]; then
+    # Hyprland hides a special workspace on the second press. The closest
+    # AeroSpace equivalent is returning to wherever we came from.
+    exec "$aerospace" workspace-back-and-forth
+  fi
+
+  exec "$aerospace" summon-workspace "$target"
+}
+
+main() {
+  if [ $# -eq 0 ]; then
+    usage >&2
+    exit 1
+  fi
+
+  case $1 in
+    -h | --help | help)
+      usage
+      ;;
+    toggle)
+      [ $# -eq 2 ] || die 'toggle requires exactly one workspace name'
+      cmd_toggle "$2"
+      ;;
+    *)
+      die "unknown command: $1"
+      ;;
+  esac
+}
+
+main "$@"
