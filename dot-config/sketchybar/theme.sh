@@ -48,8 +48,17 @@ export INDICATOR_HEIGHT=2
 export INDICATOR_Y_OFFSET=-11
 
 # components/BarDivider.qml: a 1x14 surface1 line in a 7px-wide slot.
-export DIVIDER_HEIGHT=14
-export DIVIDER_PADDING=3
+#
+# Drawn as a box-drawing glyph rather than a 1px background: sketchybar ignores
+# an item's padding_left/right for layout whenever `width` is set explicitly,
+# which left the line flush against its neighbour's glyph. A glyph keeps normal
+# padding behaviour and takes its height from the font.
+# The box-drawing glyph's ink sits right of center in its advance cell, so the
+# padding is asymmetric to compensate. Measured result: ~9px before the line and
+# ~5px after, which matches Quickshell's 8/5 (neighbour padding 5 or 2, plus
+# BarDivider's own 3 either side).
+export DIVIDER_PADDING_LEFT=0
+export DIVIDER_PADDING_RIGHT=6
 
 # StatusIsland's StatusButton uses horizontalPadding 5 when iconOnly.
 export STATUS_PADDING=5
@@ -85,4 +94,5 @@ export GLYPH_TAILSCALE="󰖂"
 export GLYPH_MIC_MUTED="󰍭"
 export GLYPH_MIC_ON="󰍬"
 export GLYPH_FOCUS="󰌵"
+export GLYPH_DIVIDER="│"
 export GLYPH_CLOCK="󰥔"

@@ -4,8 +4,13 @@
 #   focused              lavender label + lavender indicator
 #   visible elsewhere    blue label + blue indicator (Hyprland: active on
 #                        another monitor)
-#   occupied             subtext label, no indicator
-#   empty                overlay label, no indicator
+#   otherwise            subtext label, no indicator
+#
+# Quickshell dims workspaces that do not exist yet to `overlay`, because in
+# Hyprland an empty workspace has no object at all. Reproducing that here made
+# an empty workspace look miscolored rather than empty, and overlay is hard to
+# read against a translucent bar, so occupied and empty both use subtext and
+# only the focused workspace stands out.
 #
 # Quickshell always shows workspaces 1-5 and only shows 6-10 when occupied, so
 # the bar cannot grow without bound. Same rule here.
@@ -53,11 +58,8 @@ for item in "${sids[@]}"; do
   elif contains_line "$sid" "$visible"; then
     label_color=$BLUE
     indicator=$BLUE
-  elif $occupied; then
-    label_color=$SUBTEXT
-    indicator=$TRANSPARENT
   else
-    label_color=$OVERLAY
+    label_color=$SUBTEXT
     indicator=$TRANSPARENT
   fi
 

@@ -41,7 +41,12 @@ sketchybar "${space_commands[@]}"
 
 # The bracket is only a grouping handle for the plugin's query -- it draws
 # nothing, matching Quickshell's flat BarGroup.
+# AeroSpace only emits events for workspace switches and explicit window moves,
+# so front_app_switched is added to catch windows merely opening or closing --
+# otherwise the overflow workspaces stay visible after their last window goes.
 sketchybar --add bracket aerospace '/space\./' \
-           --subscribe   aerospace aerospace_workspace_change aerospace_window_moved \
+           --subscribe   aerospace aerospace_workspace_change \
+                                   aerospace_window_moved \
+                                   front_app_switched \
            --set         aerospace background.drawing=off \
                                    script="$PLUGIN_DIR/workspaces.sh"

@@ -102,6 +102,10 @@ Layout, matching `Bar.qml`:
 
 - **left** — workspaces, minimal style: colored label plus a 14x2 underline
   indicator, no pill. Workspaces 1-5 always show; 6-9 appear only when occupied.
+  Only the focused workspace is highlighted (lavender); every other visible
+  workspace is subtext. Quickshell dims not-yet-created workspaces to `overlay`,
+  but that read as miscolored rather than empty here and is hard to see against
+  the translucent bar.
 - **center** — upcoming calendar event, hidden when there is none.
 - **right** — `tailscale coffee bluetooth wifi mic battery | audio | clock`,
   icon-only and monochrome, taking on color only to signal a problem.
@@ -119,8 +123,15 @@ dividers separate them, reproducing `components/BarDivider.qml`.
   accepted silently and has no effect; the background always spans the item's
   content width. The 14px workspace indicator is produced by sizing the content
   (3px label padding) and pushing the gap outward with 5px item padding.
-- **Use `center`, not `e`, to center an item.** Both are accepted, but `e`
-  lands well right of center.
+- **The centered module uses `e`, not `center`.** `center` really does center
+  on the display, which puts the label underneath the MacBook's camera notch
+  where it is partly hidden. `e` sits right of center and clears the notch. The
+  Linux bar can center freely because there is no notch.
+- **Do not build a divider from a 1px background.** Setting `width` explicitly
+  makes sketchybar ignore that item's `padding_left/right` during layout, so the
+  line ends up flush against its neighbour's glyph. Dividers are a box-drawing
+  glyph instead, with asymmetric padding (0 left / 6 right) to compensate for
+  the glyph's ink sitting right of center in its advance cell.
 - **The bar border cannot be limited to one edge.** `border_width` draws around
   the whole bar; because the bar is flush with the top of the screen, only the
   bottom hairline reads as a visible line.
@@ -132,6 +143,9 @@ dividers separate them, reproducing `components/BarDivider.qml`.
 ### Modules with no macOS equivalent
 
 - **AI usage pill** — intentionally not ported to this machine.
+- **Time tracking / focus block** — previously macOS-only sketchybar items
+  (`project_time`, `focus`) left over from an old waybar setup. The Linux bar
+  dropped them, so they were removed here too.
 - **Wi-Fi signal strength** — the Linux bar buckets RSSI into five glyphs, but
   macOS 26 exposes RSSI only to root (`wdutil info`); it is absent from both
   `ioreg` and `ipconfig`. The bar shows connected/disconnected only.

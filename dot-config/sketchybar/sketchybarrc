@@ -61,25 +61,23 @@ default=(
 )
 sketchybar --default "${default[@]}"
 
-# components/BarDivider.qml: 1x14 surface1 line, 3px padding either side.
+# components/BarDivider.qml: a thin surface1 line with 3px padding either side.
+#
+# NOTE: do not implement this as a 1px background. Setting `width` explicitly
+# makes sketchybar ignore the item's padding during layout, so the line ends up
+# flush against the neighbouring glyph.
 divider() {
   sketchybar --add item "divider.$1" "$2" \
-             --set "divider.$1" icon.drawing=off \
+             --set "divider.$1" icon="$GLYPH_DIVIDER" \
+                                icon.color="$SURFACE1" \
+                                icon.padding_left="$DIVIDER_PADDING_LEFT" \
+                                icon.padding_right="$DIVIDER_PADDING_RIGHT" \
                                 label.drawing=off \
-                                width=1 \
-                                padding_left="$DIVIDER_PADDING" \
-                                padding_right="$DIVIDER_PADDING" \
-                                background.drawing=on \
-                                background.color="$SURFACE1" \
-                                background.height="$DIVIDER_HEIGHT" \
-                                background.corner_radius=0
+                                background.drawing=off
 }
 
 ##### Left #####
 source "$ITEM_DIR/workspaces.sh"
-divider "left_extras" "left"
-source "$ITEM_DIR/focus.sh"
-source "$ITEM_DIR/project_time.sh"
 
 ##### Center #####
 source "$ITEM_DIR/calendar.sh"
