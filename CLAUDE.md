@@ -10,7 +10,8 @@ This is a GNU Stow-managed dotfiles repo.
 - **Repo-local vs. stowed** — `dot-claude/` is **global** (stows to `~/.claude/`). Anything repo-scoped (like this file) must live at the repo root AND be listed in `.stow-local-ignore` so stow won't symlink it.
 - **Package manifests** — `Archfile` (Linux) and `Brewfile` (macOS) are the source of truth for installed packages. Add new entries alphabetically within the matching comment-delimited section. In `Archfile`, sections tagged `[desktop]` are skipped by the headless server profile; untagged and `[shared]` sections install everywhere. `Archfile.lock`, `Archfile.server.lock`, and `Brewfile.lock.json` are generated — do not hand-edit.
 - **Platform split** — `linux/` and `darwin/` hold OS-specific setup scripts. Cross-platform config lives in `dot-*` at the root.
-- **Primary platform** — Arch + Hyprland. `linux/` and `Archfile` are the actively-used paths; macOS/Brewfile exist but aren't daily-driven.
+- **Primary platform** — Arch + Hyprland. `linux/` and `Archfile` are the actively-used paths, and the Hyprland/Quickshell configs are the source of truth for desktop design and keybinds.
+- **macOS is a second daily driver** — it mirrors the Linux desktop: AeroSpace stands in for Hyprland and sketchybar for the Quickshell bar, with Option playing the role of SUPER. When changing Hyprland keybinds or the Quickshell bar's look, check whether `dot-config/aerospace/aerospace.toml` and `dot-config/sketchybar` need the matching change. `dot-config/sketchybar/theme.sh` is the deliberate mirror of `dot-config/quickshell/Theme.qml`. See `docs/macos-desktop.md` for the mapping and the platform limits.
 
 # Linux package management
 

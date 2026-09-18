@@ -630,6 +630,35 @@ ac_power_setting() {
   pmset -g custom | awk -v key="$1" '/^AC Power:/{flag=1; next} /^Battery Power:/{flag=0} flag && $1==key{print $2; exit}'
 }
 
+# AeroSpace + sketchybar + borders are the macOS stand-in for Hyprland and the
+# Quickshell bar. AeroSpace has start-at-login in its own config and launches
+# borders itself via after-startup-command, so this only has to cover the first
+# run after a fresh install. See docs/macos-desktop.md.
+setup_desktop_darwin() {
+  if ! command -v brew >/dev/null 2>&1; then
+    log_error "Homebrew not found; skipping macOS desktop setup."
+    return
+  fi
+
+  if command -v sketchybar >/dev/null 2>&1; then
+    if ! brew services list | grep -q '^sketchybar[[:space:]]\+started'; then
+      log "Starting sketchybar service..."
+      brew services start sketchybar
+    fi
+  else
+    log_error "sketchybar not installed; run brew bundle first."
+  fi
+
+  if [ -d /Applications/AeroSpace.app ]; then
+    if ! pgrep -f '/Applications/AeroSpace.app/Contents/MacOS/AeroSpace' >/dev/null 2>&1; then
+      log "Starting AeroSpace..."
+      open -a AeroSpace
+    fi
+  else
+    log_error "AeroSpace not installed; run brew bundle first."
+  fi
+}
+
 setup_power_management() {
   if [ "$(ac_power_setting sleep)" != "0" ]; then
     log "Disabling system sleep on AC power so SSH stays reachable..."
@@ -785,4 +814,5 @@ if [ "$(uname)" = "Linux" ]; then
 elif [ "$(uname)" = "Darwin" ]; then
   setup_power_management
   setup_ssh_agent_darwin
+  setup_desktop_darwin
 fi
