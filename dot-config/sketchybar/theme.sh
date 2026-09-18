@@ -53,12 +53,24 @@ export INDICATOR_Y_OFFSET=-11
 # an item's padding_left/right for layout whenever `width` is set explicitly,
 # which left the line flush against its neighbour's glyph. A glyph keeps normal
 # padding behaviour and takes its height from the font.
-# The box-drawing glyph's ink sits right of center in its advance cell, so the
-# padding is asymmetric to compensate. Measured result: ~9px before the line and
-# ~5px after, which matches Quickshell's 8/5 (neighbour padding 5 or 2, plus
-# BarDivider's own 3 either side).
+# BarDivider is 3px either side of the line, but the padding here is asymmetric
+# on purpose. sketchybar sizes a glyph item from the glyph's ink (~1px for a box
+# drawing character) while still rendering it with the font's full advance, so
+# the line lands about 3.5px right of where the padding implies. Measured
+# against the volume glyph, 0/6 yields 8.5px either side, matching Quickshell's
+# 8px. Verify by flagging the items a unique icon.color and reading back pixels.
 export DIVIDER_PADDING_LEFT=0
 export DIVIDER_PADDING_RIGHT=6
+
+# Quickshell draws BarDivider in solid surface1. That works on Linux because the
+# bar composites dark, making the line slightly lighter than its background. The
+# macOS bar sits over a lighter wallpaper and composites to roughly #77837F, so
+# solid surface1 inverts into a heavy dark bar. Half alpha keeps it a hairline.
+export DIVIDER_COLOR=0x8045475a
+
+# BarGroup itemSpacing: 3px between each child of the right group, including
+# between a divider and the module next to it.
+export MODULE_SPACING=3
 
 # StatusIsland's StatusButton uses horizontalPadding 5 when iconOnly.
 export STATUS_PADDING=5

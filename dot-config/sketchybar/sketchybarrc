@@ -4,8 +4,11 @@
 # Layout mirrors dot-config/quickshell/Bar.qml:
 #
 #   left    workspaces (minimal: no pill, colored label + underline indicator)
-#   center  upcoming calendar event, shown only when there is one
+#           | upcoming calendar event, shown only when there is one
 #   right   tailscale coffee bluetooth wifi mic battery | audio | clock
+#
+# The calendar sits on the left rather than centered: there is more room there,
+# and true center collides with the MacBook camera notch.
 #
 # The Linux bar also carries an AI-usage pill; it is intentionally omitted here.
 #
@@ -65,11 +68,12 @@ sketchybar --default "${default[@]}"
 #
 # NOTE: do not implement this as a 1px background. Setting `width` explicitly
 # makes sketchybar ignore the item's padding during layout, so the line ends up
-# flush against the neighbouring glyph.
+# flush against the neighbouring glyph. The modules either side carry
+# MODULE_SPACING to reproduce BarGroup's itemSpacing.
 divider() {
   sketchybar --add item "divider.$1" "$2" \
              --set "divider.$1" icon="$GLYPH_DIVIDER" \
-                                icon.color="$SURFACE1" \
+                                icon.color="$DIVIDER_COLOR" \
                                 icon.padding_left="$DIVIDER_PADDING_LEFT" \
                                 icon.padding_right="$DIVIDER_PADDING_RIGHT" \
                                 label.drawing=off \
@@ -78,8 +82,7 @@ divider() {
 
 ##### Left #####
 source "$ITEM_DIR/workspaces.sh"
-
-##### Center #####
+divider "calendar" "left"
 source "$ITEM_DIR/calendar.sh"
 
 ##### Right #####

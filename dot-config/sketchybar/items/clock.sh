@@ -2,6 +2,7 @@
 # monochrome: true, so it renders in `text` rather than lavender.
 sketchybar --add item clock right \
            --set      clock icon.drawing=off \
+                            padding_left="$MODULE_SPACING" \
                             label.color="$TEXT" \
                             label.padding_left=2 \
                             label.padding_right=2 \

@@ -1,10 +1,10 @@
 # Bar.qml's contextGroup: a ScriptPill showing the upcoming event in subtext,
 # hidden unless there actually is one.
 #
-# NOTE: this uses `e` (right of center), NOT `center`. True center would put the
-# label underneath the MacBook's camera notch, where it is partly hidden. The
-# Linux bar can center it because there is no notch to avoid.
-sketchybar --add item calendar.today e \
+# Placed on the left instead of centered. `center` would put the label under the
+# MacBook's camera notch, and the left side simply has more room for a long
+# event title than the gap between the notch and the status cluster.
+sketchybar --add item calendar.today left \
            --set      calendar.today icon="$GLYPH_CALENDAR" \
                                      label="" \
                                      icon.color="$SUBTEXT" \

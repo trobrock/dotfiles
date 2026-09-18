@@ -6,6 +6,8 @@
 # Quickshell module's wheel handler.
 sketchybar --add item audio right \
            --set      audio label.drawing=off \
+                            padding_left="$MODULE_SPACING" \
+                            padding_right="$MODULE_SPACING" \
                             icon.color="$TEXT" \
                             icon.padding_left=2 \
                             icon.padding_right=2 \

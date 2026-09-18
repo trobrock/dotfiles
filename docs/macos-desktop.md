@@ -105,8 +105,7 @@ Layout, matching `Bar.qml`:
   Only the focused workspace is highlighted (lavender); every other visible
   workspace is subtext. Quickshell dims not-yet-created workspaces to `overlay`,
   but that read as miscolored rather than empty here and is hard to see against
-  the translucent bar.
-- **center** — upcoming calendar event, hidden when there is none.
+  the translucent bar. The upcoming calendar event follows, after a divider.
 - **right** — `tailscale coffee bluetooth wifi mic battery | audio | clock`,
   icon-only and monochrome, taking on color only to signal a problem.
 
@@ -123,15 +122,28 @@ dividers separate them, reproducing `components/BarDivider.qml`.
   accepted silently and has no effect; the background always spans the item's
   content width. The 14px workspace indicator is produced by sizing the content
   (3px label padding) and pushing the gap outward with 5px item padding.
-- **The centered module uses `e`, not `center`.** `center` really does center
-  on the display, which puts the label underneath the MacBook's camera notch
-  where it is partly hidden. `e` sits right of center and clears the notch. The
-  Linux bar can center freely because there is no notch.
+- **Nothing is centered.** `center` puts an item under the MacBook's camera
+  notch, and `e` leaves too little room between the notch and the status
+  cluster, so the calendar lives on the left instead. The Linux bar can center
+  freely because there is no notch.
 - **Do not build a divider from a 1px background.** Setting `width` explicitly
   makes sketchybar ignore that item's `padding_left/right` during layout, so the
   line ends up flush against its neighbour's glyph. Dividers are a box-drawing
-  glyph instead, with asymmetric padding (0 left / 6 right) to compensate for
-  the glyph's ink sitting right of center in its advance cell.
+  glyph instead.
+- **A glyph item's ink is not where its padding implies.** sketchybar sizes the
+  item from the glyph's ink (about 1px for a box-drawing character) but still
+  renders it with the font's full advance, so the line lands roughly 3.5px to
+  the right. Hence the asymmetric `0 / 6` divider padding, which measures 8.5px
+  of clearance either side. To re-measure, set a unique `icon.color` on the
+  items and read the pixels back -- but note that a module with an `update_freq`
+  will overwrite the flag on its next refresh.
+- **`MODULE_SPACING` reproduces `BarGroup`'s `itemSpacing`.** Quickshell puts 3px
+  between *every* child of the right group, including between a divider and the
+  module beside it. Omitting this is what made the volume glyph look cramped.
+- **Dividers are surface1 at half alpha, not solid.** Quickshell uses solid
+  surface1, which reads as a subtle light line because the Linux bar composites
+  dark. The macOS bar sits over a lighter wallpaper and composites to about
+  #77837F, so solid surface1 inverts into a heavy dark bar.
 - **The bar border cannot be limited to one edge.** `border_width` draws around
   the whole bar; because the bar is flush with the top of the screen, only the
   bottom hairline reads as a visible line.
