@@ -259,7 +259,7 @@ postprocess_recording() {
     local file="$1"
     local processed="${file%.mp4}-processed.mp4"
     local video_codec=(-c:v copy)
-    local args
+    local args audio_filter audio_count i mix_inputs
 
     command -v ffmpeg >/dev/null 2>&1 || return 0
 
@@ -268,10 +268,18 @@ postprocess_recording() {
         video_codec=(-c:v libx264 -preset veryfast -crf 20)
     fi
 
-    args=(-y -ss 0.1 -i "$file" "${video_codec[@]}")
-    if command -v ffprobe >/dev/null 2>&1 && \
-        ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 "$file" 2>/dev/null | grep -q audio; then
-        args+=(-af "volume=enable='lt(t,0.4)':volume=0,afade=t=in:st=0.4:d=0.05,loudnorm=I=-14:TP=-1.5:LRA=11")
+    audio_filter="volume=enable='lt(t,0.4)':volume=0,afade=t=in:st=0.4:d=0.05,loudnorm=I=-14:TP=-1.5:LRA=11"
+    audio_count="$(ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "$file" 2>/dev/null | wc -l)"
+
+    args=(-y -ss 0.1 -i "$file" -map 0:v:0 "${video_codec[@]}")
+    if ((audio_count == 1)); then
+        args+=(-map 0:a:0 -af "$audio_filter")
+    elif ((audio_count > 1)); then
+        mix_inputs=""
+        for ((i = 0; i < audio_count; i++)); do
+            mix_inputs+="[0:a:$i]"
+        done
+        args+=(-filter_complex "${mix_inputs}amix=inputs=${audio_count}:duration=longest:dropout_transition=0,${audio_filter}[audio]" -map "[audio]")
     fi
 
     if ffmpeg "${args[@]}" "$processed" -loglevel quiet 2>/dev/null; then
@@ -301,7 +309,7 @@ convert_to_gif() {
 }
 
 start_recording() {
-    local capture_args audio_devices audio_args target pid
+    local capture_args audio_args target pid
 
     rm -f "$videofile" "$logfile" "$pidfile" "$modefile"
     : >"$logfile"
@@ -332,16 +340,10 @@ start_recording() {
         esac
     fi
 
-    audio_devices=""
     audio_args=()
-    [[ "$desktop_audio" == "true" ]] && audio_devices="default_output"
-
-    if [[ "$microphone_audio" == "true" ]]; then
-        [[ -n "$audio_devices" ]] && audio_devices+="|"
-        audio_devices+="default_input"
-    fi
-
-    [[ -n "$audio_devices" ]] && audio_args=(-a "$audio_devices" -ac aac)
+    [[ "$desktop_audio" == "true" ]] && audio_args+=(-a default_output)
+    [[ "$microphone_audio" == "true" ]] && audio_args+=(-a default_input)
+    ((${#audio_args[@]} > 0)) && audio_args+=(-ac aac)
 
     echo "===== $(date '+%F %T') mode=$mode webcam=$webcam desktop_audio=$desktop_audio microphone_audio=$microphone_audio target=$target args: $* =====" >>"$logfile"
 
@@ -366,7 +368,6 @@ start_recording() {
     fi
 
     echo "$mode" >"$modefile"
-    notify "Recording (${mode}) — re-press hotkey or click the bar indicator to stop"
 }
 
 stop_recording() {
