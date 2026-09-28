@@ -27,6 +27,10 @@ ShellRoot {
         theme: shell.theme
     }
 
+    MicrophoneChooser {
+        theme: shell.theme
+    }
+
     BluetoothMenu {
         id: bluetoothMenu
 

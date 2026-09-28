@@ -25,6 +25,7 @@ set -euo pipefail
 mode="mp4"
 desktop_audio="false"
 microphone_audio="false"
+microphone_device=""
 webcam="false"
 webcam_device=""
 resolution=""
@@ -51,7 +52,8 @@ Usage:
 
 Options:
   --with-desktop-audio       Capture default desktop/output audio
-  --with-microphone-audio    Capture default microphone/input audio
+  --with-microphone-audio    Prompt for a microphone/input to capture
+  --microphone-device=NAME   Capture this microphone without prompting
   --with-webcam              Show/capture a webcam overlay window
   --webcam-device=/dev/videoN
   --resolution=WxH           Pass output resolution to gpu-screen-recorder
@@ -66,6 +68,7 @@ for arg in "$@"; do
         mp4|gif) mode="$arg" ;;
         --with-desktop-audio|--desktop-audio) desktop_audio="true" ;;
         --with-microphone-audio|--microphone-audio|--mic) microphone_audio="true" ;;
+        --microphone-device=*) microphone_audio="true"; microphone_device="${arg#*=}" ;;
         --with-webcam|--webcam) webcam="true" ;;
         --webcam-device=*) webcam_device="${arg#*=}" ;;
         --resolution=*) resolution="${arg#*=}" ;;
@@ -92,6 +95,54 @@ recording_active() {
     local pid
     pid="$(cat "$pidfile" 2>/dev/null || true)"
     [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null
+}
+
+select_microphone_device() {
+    local sources encoded_sources default_source selected choice_file waiter_pid quickshell_config
+
+    if ! command -v pactl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1 || ! command -v qs >/dev/null 2>&1 || ! command -v base64 >/dev/null 2>&1; then
+        notify_critical "Cannot select a microphone: pactl, jq, qs, and base64 are required"
+        return 1
+    fi
+
+    default_source="$(pactl info 2>/dev/null | sed -n 's/^Default Source: //p')"
+    sources="$(pactl -f json list sources 2>/dev/null | jq -c --arg default_source "$default_source" '
+        [
+            .[]
+            | select(.properties["media.class"] == "Audio/Source")
+            | {
+                name: .name,
+                description: .description,
+                isDefault: (.name == $default_source)
+            }
+        ]
+        | unique_by(.name)
+    ')"
+    [[ -n "$sources" ]] || { notify_critical "Could not list microphones"; return 1; }
+    encoded_sources="$(printf '%s' "$sources" | base64 -w 0)"
+
+    quickshell_config="$(dirname "$(readlink -f "$HOME/.config/quickshell/shell.qml")")"
+    choice_file="$state_dir/microphone-choice"
+    rm -f "$choice_file"
+    qs -p "$quickshell_config" ipc wait microphoneChooser selected >"$choice_file" 2>/dev/null &
+    waiter_pid=$!
+    sleep 0.1
+
+    if ! qs -p "$quickshell_config" ipc call -- microphoneChooser show "$encoded_sources" >/dev/null 2>&1; then
+        kill "$waiter_pid" 2>/dev/null || true
+        wait "$waiter_pid" 2>/dev/null || true
+        rm -f "$choice_file"
+        notify_critical "The microphone chooser is unavailable"
+        return 1
+    fi
+
+    wait "$waiter_pid" 2>/dev/null || true
+    selected="$(cat "$choice_file" 2>/dev/null || true)"
+    rm -f "$choice_file"
+    selected="${selected//$'\r'/}"
+    selected="${selected//$'\n'/}"
+    [[ -n "$selected" && "$selected" != "__cancel__" ]] || return 1
+    microphone_device="$selected"
 }
 
 list_webcams() {
@@ -314,6 +365,14 @@ start_recording() {
     rm -f "$videofile" "$logfile" "$pidfile" "$modefile"
     : >"$logfile"
 
+    if [[ "$microphone_audio" == "true" && -z "$microphone_device" ]]; then
+        select_microphone_device || { notify "Cancelled"; exit 0; }
+    fi
+    if [[ "$microphone_device" == "__none__" ]]; then
+        microphone_audio="false"
+        microphone_device=""
+    fi
+
     if [[ "$webcam" == "true" ]]; then
         start_webcam_overlay || return 1
     fi
@@ -342,10 +401,10 @@ start_recording() {
 
     audio_args=()
     [[ "$desktop_audio" == "true" ]] && audio_args+=(-a default_output)
-    [[ "$microphone_audio" == "true" ]] && audio_args+=(-a default_input)
+    [[ "$microphone_audio" == "true" ]] && audio_args+=(-a "$microphone_device")
     ((${#audio_args[@]} > 0)) && audio_args+=(-ac aac)
 
-    echo "===== $(date '+%F %T') mode=$mode webcam=$webcam desktop_audio=$desktop_audio microphone_audio=$microphone_audio target=$target args: $* =====" >>"$logfile"
+    echo "===== $(date '+%F %T') mode=$mode webcam=$webcam desktop_audio=$desktop_audio microphone_audio=$microphone_audio microphone_device=${microphone_device:-none} target=$target args: $* =====" >>"$logfile"
 
     setsid gpu-screen-recorder "${capture_args[@]}" \
         -k auto \
