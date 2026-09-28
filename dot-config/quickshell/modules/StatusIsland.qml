@@ -240,12 +240,11 @@ Pill {
             onActivated: root.wifiMenu.showOnScreen(root.panelScreen)
         }
 
-        StatusButton {
-            visible: root.services.voxText !== "" && !root.compact
-            text: root.services.voxText
-            foreground: root.services.voxAvailable ? (root.monochrome ? root.theme.subtext : root.theme.mauve) : root.theme.red
-            tooltip: root.services.voxTooltip
-            onActivated: root.services.restartVox()
+        VoxMicrophone {
+            bar: root.bar
+            compact: root.compact
+            monochrome: root.monochrome
+            iconSlotWidth: root.statusIconSlotWidth
         }
 
         StatusButton {

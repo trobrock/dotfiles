@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: voxtype-microphone [--set SOURCE_NAME]
+
+Without arguments, list available microphone sources as JSON. With --set,
+make SOURCE_NAME the system default input used by VoxType.
+EOF
+}
+
+list_sources() {
+    local default_source
+
+    default_source="$(pactl get-default-source)"
+    pactl -f json list sources | jq -c --arg default_source "$default_source" '
+        [
+            .[]
+            | select(.properties["media.class"] == "Audio/Source")
+            | {
+                name: .name,
+                description: (.description // .name),
+                isDefault: (.name == $default_source)
+            }
+        ]
+        | unique_by(.name)
+        | sort_by(if .isDefault then 0 else 1 end, (.description | ascii_downcase))
+    '
+}
+
+set_source() {
+    local source_name="$1"
+
+    if ! pactl -f json list sources | jq -e --arg source_name "$source_name" '
+        any(.[];
+            .name == $source_name
+            and .properties["media.class"] == "Audio/Source"
+        )
+    ' >/dev/null; then
+        printf 'Unknown microphone source: %s\n' "$source_name" >&2
+        return 1
+    fi
+
+    pactl set-default-source "$source_name"
+}
+
+case "${1:-}" in
+    "")
+        list_sources
+        ;;
+    --set)
+        [[ $# -eq 2 ]] || { usage >&2; exit 2; }
+        set_source "$2"
+        ;;
+    -h|--help)
+        usage
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
