@@ -38,8 +38,10 @@ seahorse
 # [desktop] Printing
 cups
 cups-pdf
-system-config-printer
 epson-inkjet-printer-escpr
+sane-airscan
+simple-scan
+system-config-printer
 
 # [desktop] Applications
 1password-beta

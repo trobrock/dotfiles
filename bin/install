@@ -504,6 +504,17 @@ setup_firewall() {
   log "Firewall setup complete. Default zone: public, SSH on 22, Syncthing GUI on 8384 (Tailscale only)."
 }
 
+setup_avahi() {
+  log "Enabling Avahi network discovery service..."
+  sudo systemctl enable --now avahi-daemon.service
+
+  if ! sudo firewall-cmd --zone=public --query-service=mdns >/dev/null; then
+    log "Allowing mDNS network discovery through the firewall..."
+    sudo firewall-cmd --zone=public --add-service=mdns --permanent
+    sudo firewall-cmd --reload
+  fi
+}
+
 setup_syncthing() {
   if ! command -v systemctl >/dev/null 2>&1; then
     log_error "systemctl not found; skipping syncthing user service setup."
@@ -799,6 +810,7 @@ if [ "$(uname)" = "Linux" ]; then
   setup_syncthing
 
   if is_desktop_profile; then
+    setup_avahi
     setup_ssh_agent_linux
     install_pacman_hooks
     register_desktop_protocol_handlers
