@@ -547,7 +547,7 @@ def rpc_error_kind(error):
 
 def rpc_request(proc, request_id, method, params=None, timeout=8):
   payload = {"id": request_id, "method": method, "params": params or {}}
-  proc.stdin.write(json.dumps(payload) + "\n")
+  proc.stdin.write((json.dumps(payload) + "\n").encode("utf-8"))
   proc.stdin.flush()
   deadline = time.time() + timeout
   while time.time() < deadline:
@@ -640,7 +640,10 @@ def fetch_codex_rpc():
       stdin=subprocess.PIPE,
       stdout=subprocess.PIPE,
       stderr=subprocess.DEVNULL,
-      text=True,
+      # Keep stdout unbuffered: app-server may emit a notification and the
+      # matching response together. TextIO buffering can hide that response
+      # from select() until another message arrives, causing a false timeout.
+      bufsize=0,
       env=runtime_env(),
     )
   except Exception as exc:
@@ -651,7 +654,7 @@ def fetch_codex_rpc():
 
   try:
     rpc_request(proc, 1, "initialize", {"clientInfo": {"name": "ai-usage", "version": "1"}}, timeout=8)
-    proc.stdin.write(json.dumps({"method": "initialized", "params": {}}) + "\n")
+    proc.stdin.write((json.dumps({"method": "initialized", "params": {}}) + "\n").encode("utf-8"))
     proc.stdin.flush()
     account_msg = rpc_request(proc, 2, "account/read", timeout=4)
     limits_msg = rpc_request(proc, 3, "account/rateLimits/read", timeout=4)

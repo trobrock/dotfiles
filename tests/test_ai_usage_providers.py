@@ -149,10 +149,10 @@ class CodexProviderTests(unittest.TestCase):
 
     def test_expired_rpc_token_has_actionable_status(self) -> None:
         proc = mock.Mock()
-        proc.stdin = io.StringIO()
+        proc.stdin = io.BytesIO()
         with (
             mock.patch.object(codex, "find_command", return_value="/safe/codex"),
-            mock.patch.object(codex.subprocess, "Popen", return_value=proc),
+            mock.patch.object(codex.subprocess, "Popen", return_value=proc) as popen,
             mock.patch.object(codex, "rpc_request", side_effect=[
                 {"result": {}},
                 {"result": {"account": {"planType": "pro"}}},
@@ -161,6 +161,8 @@ class CodexProviderTests(unittest.TestCase):
         ):
             result = codex.fetch_codex_rpc()
         self.assertEqual(result["usageStatusText"], "Codex sign-in expired")
+        self.assertEqual(popen.call_args.kwargs["bufsize"], 0)
+        self.assertNotIn("text", popen.call_args.kwargs)
         self.assertEqual(
             result["authHelpText"],
             "Run `codex login` to refresh your sign-in and restore limits.",
