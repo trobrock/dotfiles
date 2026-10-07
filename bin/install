@@ -374,6 +374,9 @@ install_notch() {
 
   log "Syncing Notch extensions..."
   notch extensions sync
+
+  log "Installing notch-you-should-know extension..."
+  notch extensions install github:trobrock/notch-you-should-know
 }
 
 install_developerly() {
