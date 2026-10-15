@@ -1,114 +1,104 @@
 {
-  "agentPushNotifEnabled": true,
-  "effortLevel": "xhigh",
-  "enabledPlugins": {
-    "comfortly@comfortly": true,
-    "ruby-lsp@claude-plugins-official": true,
-    "stripe@claude-plugins-official": true
+  "permissions": {
+    "allow": [],
+    "deny": [],
+    "defaultMode": "plan",
+    "disableAutoMode": "disable",
+    "additionalDirectories": [
+      "~/.local/share/mise",
+      "~/.cache"
+    ]
   },
-  "extraKnownMarketplaces": {
-    "comfortly": {
-      "source": {
-        "repo": "getcomfortly/claude",
-        "source": "github"
-      }
-    },
-    "trobrock": {
-      "source": {
-        "repo": "trobrock/claude-plugins",
-        "source": "github"
-      }
-    }
-  },
+  "model": "opus[1m]",
   "hooks": {
     "Notification": [
       {
+        "matcher": "permission_prompt",
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting"
           }
-        ],
-        "matcher": "permission_prompt"
+        ]
       },
       {
+        "matcher": "agent_needs_input",
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting"
           }
-        ],
-        "matcher": "agent_needs_input"
+        ]
       },
       {
+        "matcher": "idle_prompt",
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh notification_idle",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh notification_idle"
           }
-        ],
-        "matcher": "idle_prompt"
+        ]
       },
       {
+        "matcher": "agent_completed",
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh notification_idle",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh notification_idle"
           }
-        ],
-        "matcher": "agent_completed"
+        ]
       }
     ],
     "PermissionRequest": [
       {
+        "matcher": "*",
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh permission_request",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh permission_request"
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "PostToolUse": [
       {
+        "matcher": "*",
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh post_tool_use",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh post_tool_use"
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "PostToolUseFailure": [
       {
+        "matcher": "*",
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh post_tool_failure",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh post_tool_failure"
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "PreToolUse": [
       {
+        "matcher": "*",
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh pre_tool_use",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh pre_tool_use"
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "SessionEnd": [
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh session_end",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh session_end"
           }
         ]
       }
@@ -117,8 +107,8 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh stop",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh stop"
           }
         ]
       }
@@ -127,8 +117,8 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh subagent_stop",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh subagent_stop"
           }
         ]
       }
@@ -137,28 +127,38 @@
       {
         "hooks": [
           {
-            "command": "~/.claude/hooks/developerly-status.sh user_prompt_submit",
-            "type": "command"
+            "type": "command",
+            "command": "~/.claude/hooks/developerly-status.sh user_prompt_submit"
           }
         ]
       }
     ]
   },
-  "model": "opus",
-  "permissions": {
-    "additionalDirectories": [
-      "~/.local/share/mise",
-      "~/.cache"
-    ],
-    "allow": [],
-    "defaultMode": "plan",
-    "deny": [],
-    "disableAutoMode": "disable"
-  },
-  "skipDangerousModePermissionPrompt": true,
   "statusLine": {
-    "command": "~/.config/scripts/claude-statusline",
-    "type": "command"
+    "type": "command",
+    "command": "~/.config/scripts/claude-statusline"
   },
-  "tui": "fullscreen"
+  "enabledPlugins": {
+    "comfortly@comfortly": true,
+    "ruby-lsp@claude-plugins-official": true,
+    "stripe@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "comfortly": {
+      "source": {
+        "source": "github",
+        "repo": "getcomfortly/claude"
+      }
+    },
+    "trobrock": {
+      "source": {
+        "source": "github",
+        "repo": "trobrock/claude-plugins"
+      }
+    }
+  },
+  "effortLevel": "xhigh",
+  "tui": "fullscreen",
+  "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true
 }

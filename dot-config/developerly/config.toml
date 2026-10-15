@@ -8,7 +8,7 @@ default_planning_mode = false
 theme = "catppuccin-mocha"
 root_session = "developerly"
 root_session_tui = false
-web_view_enabled = false
+web_view_enabled = true
 
 [keys]
 assign_epic = ["a"]
