@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+startup_failed() {
+  printf '%s\n' 'CAPTIVE_PORTAL_STARTUP_FAILED' >&2
+  exit 1
+}
+
+launcher=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null) || startup_failed
+library=$(readlink -f -- "$(dirname -- "$launcher")/../lib/quickshell/captive_portal.py" 2>/dev/null) || startup_failed
+
+ulimit -S -c 0 2>/dev/null || startup_failed
+ulimit -H -c 0 2>/dev/null || startup_failed
+printf '0\n' 2>/dev/null > /proc/self/coredump_filter || startup_failed
+
+exec /usr/bin/python3 -I "$library" "$@"

@@ -9,6 +9,7 @@ Item {
 
     required property var theme
     required property var service
+    required property var portalService
     property bool menuVisible: false
     property var targetScreen: null
     property int selectedIndex: 0
@@ -90,8 +91,15 @@ Item {
     function networkStatus(network) {
         if (!network)
             return "Unsupported";
-        if (network.connected)
+        if (network.connected) {
+            if (portalService.status === "captive")
+                return "Sign-in required";
+            if (portalService.status === "checking")
+                return "Checking internet…";
+            if (portalService.status === "offline")
+                return "No internet";
             return "Connected";
+        }
         if (!supported(network))
             return network.type === "8021x" ? "Enterprise" : "Unsupported";
         if (network.known)
@@ -502,15 +510,41 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             height: 30
                             spacing: 8
-                            visible: root.service.busy || root.service.errorMessage !== ""
+                            visible: root.service.busy || root.service.errorMessage !== "" || root.portalService.signInRequired
 
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: root.service.busy ? (root.service.pendingCommand === "connect" ? "Connecting…" : "Working…") : root.service.errorMessage
+                                text: root.portalService.signInRequired ? (root.portalService.errorMessage || "Wi-Fi sign-in required") : root.service.busy ? (root.service.pendingCommand === "connect" ? "Connecting…" : "Working…") : root.service.errorMessage
                                 textFormat: Text.PlainText
-                                color: root.service.errorMessage !== "" ? root.theme.red : root.theme.subtext
+                                color: root.service.errorMessage !== "" || root.portalService.errorMessage !== "" ? root.theme.red : root.portalService.signInRequired ? root.theme.yellow : root.theme.subtext
                                 font.family: root.theme.fontFamily
                                 font.pixelSize: 11
+                            }
+
+                            Rectangle {
+                                width: 82
+                                height: 28
+                                visible: root.portalService.signInRequired
+                                radius: root.theme.radius - 3
+                                color: portalHover.hovered ? root.theme.blue : root.theme.lavender
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Sign in"
+                                    textFormat: Text.PlainText
+                                    color: root.theme.base
+                                    font.family: root.theme.fontFamily
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                }
+
+                                HoverHandler {
+                                    id: portalHover
+                                }
+
+                                TapHandler {
+                                    onTapped: root.portalService.openPortal()
+                                }
                             }
 
                             Rectangle {

@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir=/run/quickshell-captive-portal
+
+valid_interface() {
+  [[ $1 =~ ^[A-Za-z0-9_.-]{1,32}$ ]] && [[ -d /sys/class/net/$1/wireless ]]
+}
+
+schedule_cleanup() {
+  local unit=$1 owner_uid=$2 interface=$3
+  if [[ $(/usr/bin/systemctl show -p LoadState --value "$unit.timer" 2>/dev/null || true) == loaded ]]; then
+    /usr/bin/systemctl restart "$unit.timer"
+  else
+    /usr/bin/systemd-run --quiet --unit="$unit" --on-active=90s --timer-property=AccuracySec=5s \
+      /usr/local/libexec/quickshell-captive-portal-dns expire "$owner_uid" "$interface"
+  fi
+}
+
+stop_cleanup() {
+  local unit=$1
+  /usr/bin/systemctl stop "$unit.timer" "$unit.service" >/dev/null 2>&1 || true
+}
+
+if [[ ${1:-} == expire ]]; then
+  [[ $EUID == 0 && $# -eq 3 ]] || exit 2
+  owner_uid=$2
+  interface=$3
+  [[ $owner_uid =~ ^[0-9]+$ ]] || exit 2
+  valid_interface "$interface" || exit 2
+  owner_file=$state_dir/$interface.owner
+  lock_file=$state_dir/$interface.lock
+  /usr/bin/install -d -o root -g root -m 755 "$state_dir"
+  exec 9>"$lock_file"
+  /usr/bin/flock 9
+  if [[ -f $owner_file ]] && [[ $(<"$owner_file") == "$owner_uid" ]]; then
+    /usr/bin/resolvectl revert "$interface"
+    /usr/bin/rm -f "$owner_file"
+  fi
+  exit 0
+fi
+
+if [[ $# -ne 2 ]]; then
+  exit 2
+fi
+
+action=$1
+interface=$2
+caller_uid=${PKEXEC_UID:-}
+
+if [[ ! $caller_uid =~ ^[0-9]+$ ]] || [[ $caller_uid == 0 ]]; then
+  exit 2
+fi
+valid_interface "$interface" || exit 2
+
+owner_file=$state_dir/$interface.owner
+lock_file=$state_dir/$interface.lock
+unit=quickshell-captive-portal-$interface
+/usr/bin/install -d -o root -g root -m 755 "$state_dir"
+exec 9>"$lock_file"
+/usr/bin/flock 9
+
+case "$action" in
+  enable)
+    if [[ -f $owner_file ]] && [[ $(<"$owner_file") != "$caller_uid" ]]; then
+      exit 1
+    fi
+    printf '%s\n' "$caller_uid" >"$owner_file"
+    /usr/bin/chmod 600 "$owner_file"
+    if ! /usr/bin/resolvectl domain "$interface" '~.'; then
+      /usr/bin/rm -f "$owner_file"
+      exit 1
+    fi
+    schedule_cleanup "$unit" "$caller_uid" "$interface"
+    ;;
+  disable)
+    if [[ -f $owner_file ]] && [[ $(<"$owner_file") == "$caller_uid" ]]; then
+      stop_cleanup "$unit"
+      /usr/bin/resolvectl revert "$interface"
+      /usr/bin/rm -f "$owner_file"
+    fi
+    ;;
+  *)
+    exit 2
+    ;;
+esac

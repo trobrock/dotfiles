@@ -96,6 +96,21 @@ security types, and passkey/enterprise credential flows are not supported.
 Closing the panel does not cancel an in-progress connection; its visible Cancel
 control does.
 
+After a Wi-Fi connection becomes routable, the captive portal assistant checks
+a plain HTTP connectivity endpoint. It also honors the standard portal URL from
+DHCP when one is present. A blocked or redirected check shows a **Wi-Fi sign-in
+required** prompt and adds a **Sign in** action to the Wi-Fi panel. The sign-in
+page opens in a temporary Chromium profile that is deleted when the window
+closes.
+
+Public DNS remains the normal default. While a portal is blocking access, the
+assistant temporarily gives the Wi-Fi link's DHCP-provided DNS a `~.` route so
+portal-only names work. It removes that route after the connectivity check
+passes or the Wi-Fi disconnects. A root-owned 90-second lease also restores DNS
+if the desktop assistant crashes. A narrow Polkit helper permits only this DNS
+route change on real wireless interfaces; `bin/install` installs the helper and
+its policy on Linux desktops.
+
 ## Tailscale panel
 
 Left-click the bar's Tailscale mark to open the full panel on that bar's

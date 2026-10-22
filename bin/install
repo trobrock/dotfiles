@@ -515,6 +515,22 @@ setup_avahi() {
   fi
 }
 
+setup_captive_portal_assistant() {
+  local helper_src="$REPO_DIR/system/usr/local/libexec/quickshell-captive-portal-dns"
+  local policy_src="$REPO_DIR/system/usr/share/polkit-1/actions/com.trobrock.quickshell.captive-portal-dns.policy"
+
+  if [ ! -f "$helper_src" ] || [ ! -f "$policy_src" ]; then
+    log_error "Missing captive portal assistant files; skipping privileged DNS helper setup."
+    return
+  fi
+
+  log "Installing captive portal DNS helper..."
+  sudo /usr/bin/install -d -o root -g root -m 755 /usr/local/libexec
+  sudo /usr/bin/install -o root -g root -m 755 "$helper_src" /usr/local/libexec/quickshell-captive-portal-dns
+  sudo /usr/bin/install -d -o root -g root -m 755 /usr/share/polkit-1/actions
+  sudo /usr/bin/install -o root -g root -m 644 "$policy_src" /usr/share/polkit-1/actions/com.trobrock.quickshell.captive-portal-dns.policy
+}
+
 setup_syncthing() {
   if ! command -v systemctl >/dev/null 2>&1; then
     log_error "systemctl not found; skipping syncthing user service setup."
@@ -811,6 +827,7 @@ if [ "$(uname)" = "Linux" ]; then
 
   if is_desktop_profile; then
     setup_avahi
+    setup_captive_portal_assistant
     setup_ssh_agent_linux
     install_pacman_hooks
     register_desktop_protocol_handlers
