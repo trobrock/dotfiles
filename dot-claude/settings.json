@@ -1,155 +1,6 @@
 {
-  "permissions": {
-    "allow": [],
-    "deny": [],
-    "defaultMode": "plan",
-    "disableAutoMode": "disable",
-    "additionalDirectories": [
-      "~/.local/share/mise",
-      "~/.cache"
-    ]
-  },
-  "model": "opus[1m]",
-  "hooks": {
-    "Notification": [
-      {
-        "matcher": "permission_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting"
-          }
-        ]
-      },
-      {
-        "matcher": "agent_needs_input",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting"
-          }
-        ]
-      },
-      {
-        "matcher": "idle_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh notification_idle"
-          }
-        ]
-      },
-      {
-        "matcher": "agent_completed",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh notification_idle"
-          }
-        ]
-      }
-    ],
-    "PermissionRequest": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh permission_request"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh post_tool_use"
-          }
-        ]
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh post_tool_failure"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh pre_tool_use"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh session_end"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh stop"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh subagent_stop"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/developerly-status.sh user_prompt_submit"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "^(startup|resume|clear|compact|fork)$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash '/home/trobrock/.claude/hooks/herdr-agent-state.sh' session",
-            "timeout": 10
-          }
-        ]
-      }
-    ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "~/.config/scripts/claude-statusline"
-  },
+  "agentPushNotifEnabled": true,
+  "effortLevel": "xhigh",
   "enabledPlugins": {
     "comfortly@comfortly": true,
     "ruby-lsp@claude-plugins-official": true,
@@ -158,19 +9,168 @@
   "extraKnownMarketplaces": {
     "comfortly": {
       "source": {
-        "source": "github",
-        "repo": "getcomfortly/claude"
+        "repo": "getcomfortly/claude",
+        "source": "github"
       }
     },
     "trobrock": {
       "source": {
-        "source": "github",
-        "repo": "trobrock/claude-plugins"
+        "repo": "trobrock/claude-plugins",
+        "source": "github"
       }
     }
   },
-  "effortLevel": "xhigh",
-  "tui": "fullscreen",
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting",
+            "type": "command"
+          }
+        ],
+        "matcher": "permission_prompt"
+      },
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh notification_awaiting",
+            "type": "command"
+          }
+        ],
+        "matcher": "agent_needs_input"
+      },
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh notification_idle",
+            "type": "command"
+          }
+        ],
+        "matcher": "idle_prompt"
+      },
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh notification_idle",
+            "type": "command"
+          }
+        ],
+        "matcher": "agent_completed"
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh permission_request",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh post_tool_use",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh post_tool_failure",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh pre_tool_use",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh session_end",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bash '/home/trobrock/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "^(startup|resume|clear|compact|fork)$"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh stop",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh subagent_stop",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "~/.claude/hooks/developerly-status.sh user_prompt_submit",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
+  "model": "opus[1m]",
+  "permissions": {
+    "additionalDirectories": [
+      "~/.local/share/mise",
+      "~/.cache"
+    ],
+    "allow": [],
+    "defaultMode": "plan",
+    "deny": [],
+    "disableAutoMode": "disable"
+  },
   "skipDangerousModePermissionPrompt": true,
-  "agentPushNotifEnabled": true
+  "statusLine": {
+    "command": "~/.config/scripts/claude-statusline",
+    "type": "command"
+  },
+  "tui": "fullscreen"
 }
