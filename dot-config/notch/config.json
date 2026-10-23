@@ -1,6 +1,6 @@
 {
   "provider": "openai-codex",
-  "model": "gpt-5.6-sol",
+  "model": "gpt-6.1-sol",
   "theme": "catppuccin-mocha",
   "presets": {
     "f1": {
@@ -106,13 +106,13 @@
   "profiles": {
     "personal": {
       "provider": "openai-codex",
-      "model": "gpt-6-astra",
+      "model": "gpt-6.1-sol",
       "thinking_level": "high",
       "allowed_providers": [
         "openai-codex"
       ],
       "role_models": {
-        "lead": "gpt-6-astra",
+        "lead": "gpt-6.1-sol",
         "researcher": "gpt-6-astra",
         "product": "gpt-6-astra",
         "architect": "gpt-6-astra",

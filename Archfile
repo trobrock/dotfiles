@@ -63,6 +63,7 @@ bluez
 bluez-utils
 brightnessctl
 iwd
+ollama-rocm
 python-dbus
 python-gobject
 
@@ -114,7 +115,6 @@ mtr
 neovim
 nodejs
 npm
-ollama-rocm
 openai-codex-bin
 openbsd-netcat
 openssh
