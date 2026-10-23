@@ -21,7 +21,6 @@ slurp
 ttf-cascadia-code-nerd
 vulkan-headers
 vulkan-icd-loader
-vulkan-radeon
 wireplumber
 wl-clipboard
 wtype
@@ -29,6 +28,9 @@ xdg-desktop-portal-hyprland
 xdg-utils
 xorg-xhost
 xournalpp
+
+# [desktop][amd] GPU
+vulkan-radeon
 
 # [desktop] Security
 gnome-keyring
@@ -118,6 +120,7 @@ npm
 openai-codex-bin
 openbsd-netcat
 openssh
+pacman-contrib
 power-profiles-daemon
 restic
 ripgrep
@@ -151,3 +154,6 @@ mariadb-clients
 openslide
 poppler-glib
 stripe-cli-bin
+
+# [amd] Local inference
+ollama-rocm

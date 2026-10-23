@@ -199,16 +199,47 @@ init_goose() {
   fi
 }
 
+# 0x1002 is the AMD/ATI PCI vendor id. Read from sysfs rather than lspci so this
+# works before pciutils is installed. Override with DOTFILES_AMD_GPU=1/0.
+has_amd_gpu() {
+  case "${DOTFILES_AMD_GPU:-}" in
+    1) return 0 ;;
+    0) return 1 ;;
+    "") ;;
+    *)
+      log_error "DOTFILES_AMD_GPU must be 1 or 0, not '$DOTFILES_AMD_GPU'."
+      exit 1
+      ;;
+  esac
+
+  local vendor
+  for vendor in /sys/class/drm/card*/device/vendor; do
+    [ -r "$vendor" ] || continue
+    if [ "$(cat "$vendor")" = "0x1002" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 archfile_packages() {
   local profile="${1:-$DOTFILES_PROFILE}"
+  local amd_gpu=0
 
-  awk -v profile="$profile" '
+  if [ "$(uname)" = "Linux" ] && has_amd_gpu; then
+    amd_gpu=1
+  fi
+
+  awk -v profile="$profile" -v amd_gpu="$amd_gpu" '
     /^[[:space:]]*#/ {
       desktop_section = ($0 ~ /\[desktop\]/)
+      amd_section = ($0 ~ /\[amd\]/)
       next
     }
     /^[[:space:]]*$/ { next }
     profile == "server" && desktop_section { next }
+    amd_section && amd_gpu != 1 { next }
     { print }
   ' "$REPO_DIR/Archfile"
 }
@@ -242,7 +273,24 @@ install_packages() {
 
 archfile_write_lock() {
   local packages=("$@")
-  pacman -Qe "${packages[@]}" 2>/dev/null | awk '{print $1}' | sort -u > "$(archfile_lock_file)"
+
+  {
+    pacman -Qe "${packages[@]}" 2>/dev/null | awk '{print $1}'
+
+    # Keep conditional AMD packages in the profile lock even when this machine
+    # does not install them. One shared lock can then remove stale packages on
+    # either GPU type without being rewritten differently by each machine.
+    awk -v profile="$DOTFILES_PROFILE" '
+      /^[[:space:]]*#/ {
+        desktop_section = ($0 ~ /\[desktop\]/)
+        amd_section = ($0 ~ /\[amd\]/)
+        next
+      }
+      /^[[:space:]]*$/ { next }
+      profile == "server" && desktop_section { next }
+      amd_section { print }
+    ' "$REPO_DIR/Archfile"
+  } | sort -u > "$(archfile_lock_file)"
 }
 
 archfile_remove_missing() {
@@ -256,15 +304,23 @@ archfile_remove_missing() {
 
     local packages=()
     while read -r package; do
-      if ! grep -qxF "$package" "$desired_packages"; then
-        packages+=("$package")
+      if grep -qxF "$package" "$desired_packages"; then
+        continue
       fi
+
+      # Skip lock entries that are already gone. pacman aborts the entire batch
+      # on a single unknown target, which would block every valid removal.
+      if ! pacman -Q "$package" >/dev/null 2>&1; then
+        continue
+      fi
+
+      packages+=("$package")
     done < "$lock_file"
     rm -f "$desired_packages"
 
     if [ ${#packages[@]} -gt 0 ]; then
       log "Removing packages not in $(basename "$lock_file"): ${packages[*]}"
-      yay -Rns --noconfirm "${packages[@]}" || true
+      yay -Rns --noconfirm "${packages[@]}"
     fi
   fi
 }
@@ -796,6 +852,205 @@ setup_laptop_sleep() {
   fi
 }
 
+# Cap the journal. The default allows journald to use up to 10% of the
+# filesystem, subject to a 4G default cap. The drop-in uses a smaller percentage
+# so it scales to whatever disk the machine actually has.
+setup_journal_limits() {
+  local src="$REPO_DIR/system/etc/systemd/journald.conf.d/70-size-limits.conf"
+  local dest=/etc/systemd/journald.conf.d/70-size-limits.conf
+
+  if [ ! -f "$src" ]; then
+    log_error "Missing $src; skipping journal size limits."
+    return
+  fi
+
+  if sudo cmp -s "$src" "$dest" 2>/dev/null; then
+    return
+  fi
+
+  log "Installing journal size limits..."
+  sudo install -Dm644 "$src" "$dest"
+  sudo systemctl restart systemd-journald || log_error "Could not restart systemd-journald."
+}
+
+# Point pacman's package cache at $1. Only called when a machine has opted into
+# cache relocation; on a box with room on root, pacman keeps its default.
+setup_pacman_cache_dir() {
+  local target="$1"
+  local conf=/etc/pacman.conf
+  local marker=/etc/pacman.d/dotfiles-cache-root
+  local current
+
+  current="$(pacman-conf CacheDir 2>/dev/null | head -1)"
+  if [ "${current%/}" != "$target" ]; then
+    log "Pointing pacman's package cache at $target..."
+    sudo install -d -o root -g root -m 755 "$target"
+
+    if grep -qE '^[[:space:]]*CacheDir[[:space:]]*=' "$conf"; then
+      sudo sed -i -E "s|^[[:space:]]*CacheDir[[:space:]]*=.*|CacheDir = $target|" "$conf"
+    else
+      sudo sed -i -E "s|^#CacheDir[[:space:]]*=.*|CacheDir = $target|" "$conf"
+    fi
+  fi
+
+  current="$(pacman-conf CacheDir 2>/dev/null | head -1)"
+  if [ "${current%/}" != "$target" ]; then
+    log_error "pacman CacheDir is still '${current}'; set it to $target in $conf by hand."
+    return 1
+  fi
+
+  printf '%s\n' "$target" | sudo tee "$marker" >/dev/null
+}
+
+restore_pacman_cache_dir() {
+  local conf=/etc/pacman.conf
+  local default=/var/cache/pacman/pkg
+  local marker=/etc/pacman.d/dotfiles-cache-root
+  local managed current
+
+  [ -r "$marker" ] || return
+  managed="$(sudo cat "$marker")"
+  current="$(pacman-conf CacheDir 2>/dev/null | head -1)"
+
+  # Only undo the value we set. Leave a later manual change alone.
+  if [ "${current%/}" = "${managed%/}" ]; then
+    log "Restoring pacman's default package cache..."
+    sudo sed -i -E "s|^[[:space:]]*CacheDir[[:space:]]*=.*|CacheDir = $default|" "$conf"
+    current="$(pacman-conf CacheDir 2>/dev/null | head -1)"
+    if [ "${current%/}" != "$default" ]; then
+      log_error "Could not restore pacman CacheDir to $default."
+      return 1
+    fi
+  fi
+
+  sudo rm -f "$marker"
+}
+
+# paccache.timer ships with pacman-contrib and trims the cache to the last 3
+# versions of each package weekly.
+setup_paccache_timer() {
+  if [ ! -f /usr/lib/systemd/system/paccache.timer ]; then
+    log_error "paccache.timer not found; is pacman-contrib installed?"
+    return
+  fi
+
+  if systemctl is-enabled paccache.timer >/dev/null 2>&1; then
+    return
+  fi
+
+  log "Enabling weekly pacman cache trim (paccache.timer)..."
+  sudo systemctl enable --now paccache.timer \
+    || log_error "Could not enable paccache.timer."
+}
+
+# Machines with a small root filesystem can move the heavy tool caches onto
+# another disk by writing an absolute path to ~/.config/dotfiles/cache_root —
+# the same opt-in pattern as the `profile` and `machine_name` files. Most
+# machines have no such file, and every tool keeps its default under $HOME.
+# See docs/disk-space.md.
+cache_root() {
+  local file="${DOTFILES_CACHE_ROOT_FILE:-$HOME/.config/dotfiles/cache_root}"
+  local root
+
+  [ -r "$file" ] || return 1
+  root="$(<"$file")"
+  while [ "${root%/}" != "$root" ]; do
+    root="${root%/}"
+  done
+
+  # Keep this value safe to use in pacman.conf, environment.d, and sed. A cache
+  # root should be a simple absolute path, never the filesystem root itself.
+  case "$root" in
+    ""|/|*[!A-Za-z0-9_./-]*|[!/]*)
+      log_error "cache_root must be a simple absolute path other than '/': $file"
+      return 2
+      ;;
+  esac
+
+  echo "$root"
+}
+
+setup_cache_relocation() {
+  local generated="$HOME/.config/environment.d/10-cache-dirs.conf"
+  local root status
+
+  if root="$(cache_root)"; then
+    :
+  else
+    status=$?
+    if [ "$status" -eq 2 ]; then
+      return 1
+    fi
+
+    # Not opted in. Clear state generated by a previous run.
+    if [ -f "$generated" ]; then
+      log "No cache_root configured; removing stale $generated."
+      rm -f "$generated"
+    fi
+    restore_pacman_cache_dir
+    return
+  fi
+
+  if [ ! -d "$root" ]; then
+    log_error "cache_root '$root' is not a directory; refusing to install into root-backed caches."
+    if [ -f "$generated" ]; then
+      log "Removing stale $generated."
+      rm -f "$generated"
+    fi
+    return 1
+  fi
+
+  root="$(cd "$root" && pwd -P)"
+  if [ "$root" = / ]; then
+    log_error "cache_root resolves to '/'; refusing to place caches on the root filesystem."
+    if [ -f "$generated" ]; then
+      log "Removing stale $generated."
+      rm -f "$generated"
+    fi
+    return 1
+  fi
+
+  log "Relocating tool caches to $root..."
+  mkdir -p \
+    "$root/go/mod" \
+    "$root/go/build" \
+    "$root/uv" \
+    "$root/puppeteer" \
+    "$root/ms-playwright" \
+    "$root/npm" \
+    "$root/yay"
+
+  export GOMODCACHE="$root/go/mod"
+  export GOCACHE="$root/go/build"
+  export UV_CACHE_DIR="$root/uv"
+  export PUPPETEER_CACHE_DIR="$root/puppeteer"
+  export PLAYWRIGHT_BROWSERS_PATH="$root/ms-playwright"
+  export npm_config_cache="$root/npm"
+  export AURDEST="$root/yay"
+
+  # environment.d has no conditionals, so generate it per machine instead of
+  # stowing a file with a hardcoded path. This covers the systemd user session
+  # and anything it launches; dot-zshenv covers plain TTY/SSH shells.
+  mkdir -p "$(dirname "$generated")"
+  cat > "$generated" <<EOF
+# Generated by bin/install from ~/.config/dotfiles/cache_root. Do not edit.
+GOMODCACHE=$root/go/mod
+GOCACHE=$root/go/build
+UV_CACHE_DIR=$root/uv
+PUPPETEER_CACHE_DIR=$root/puppeteer
+PLAYWRIGHT_BROWSERS_PATH=$root/ms-playwright
+npm_config_cache=$root/npm
+AURDEST=$root/yay
+EOF
+
+  setup_pacman_cache_dir "$root/pacman/pkg"
+}
+
+# Apply cache paths before any downloads or builds can fill the root disk.
+if [ "$(uname)" = "Linux" ]; then
+  setup_cache_relocation
+fi
+
 install_package_manager
 install_stow
 change_shell_to_zsh
@@ -824,6 +1079,8 @@ install_secrets || log_error "Continuing despite secrets install failure; re-run
 if [ "$(uname)" = "Linux" ]; then
   setup_firewall
   setup_syncthing
+  setup_journal_limits
+  setup_paccache_timer
 
   if is_desktop_profile; then
     setup_avahi

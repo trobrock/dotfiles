@@ -1,6 +1,7 @@
 ^/bin$
 ^/\.git$
 README.md
+^/AGENTS.md
 ^/CLAUDE.md
 Brewfile
 Brewfile.lock.json
