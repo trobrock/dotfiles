@@ -16,6 +16,12 @@ if [ -n "$CLAUDECODE" ] && command -v mise &> /dev/null; then
 fi
 
 export XDG_CONFIG_HOME="$HOME/.config"
+
+# Linux desktop and server use Codex; macOS selects its work profile locally.
+if [ "$(uname)" = "Linux" ]; then
+  export NOTCH_PROFILE="${NOTCH_PROFILE-personal}"
+fi
+
 export EDITOR="nvim"
 export GOOSE_STATUS_HOOK="$HOME/.config/scripts/goose-hook"
 _dotfiles_profile_file="${DOTFILES_PROFILE_FILE:-$HOME/.config/dotfiles/profile}"

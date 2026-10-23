@@ -30,6 +30,16 @@
     "firecrawl": {
       "url": "https://mcp.firecrawl.dev/v2/mcp-oauth",
       "auth": "oauth"
+    },
+    "weftcut": {
+      "command": "/home/trobrock/.local/bin/weftcut",
+      "args": [
+        "/home/trobrock/.config/WeftCut/cli/weftcut-mcp.cjs"
+      ],
+      "env": {
+        "ELECTRON_RUN_AS_NODE": "1",
+        "WEFTCUT_USERDATA": "/home/trobrock/.config/WeftCut"
+      }
     }
   }
 }

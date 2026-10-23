@@ -28,5 +28,125 @@
       "model": "claude-sonnet-5",
       "thinking_level": "medium"
     }
+  },
+  "roles": {
+    "lead": {
+      "instructions": "Own the objective, scope, plan, architecture decisions, delegation, integration, and final evidence. Use specialists only when they add value; do not launch a fixed team. Verify important findings and every acceptance check. Follow repository guidance and user approval rules for helper writes, Git operations, releases, and deployment.",
+      "thinking": "high",
+      "max_output_chars": 16000,
+      "when_to_use": "Use when coordinating an end-to-end objective, integrating specialist work, and owning final completion evidence."
+    },
+    "researcher": {
+      "instructions": "Investigate deep or open-ended technical questions read-only. Trace code and primary documentation, compare plausible approaches, test assumptions using available read-only tools, and resolve uncertainty with exact evidence. Separate verified facts from hypotheses. Recommend tradeoffs and next steps to the lead; do not implement changes.",
+      "thinking": "high",
+      "max_output_chars": 12000,
+      "when_to_use": "Use when deep research, competing approaches, difficult technical questions, or unresolved uncertainty require substantial reasoning; use explorer for routine code navigation."
+    },
+    "product": {
+      "instructions": "Clarify user needs, workflows, scope, non-goals, and measurable acceptance checks. Identify edge cases and unresolved decisions. Recommend the smallest useful increment; do not invent requirements or expand scope without the lead agreeing. Work read-only.",
+      "thinking": "high",
+      "max_output_chars": 12000,
+      "when_to_use": "Use when user needs, scope, priorities, or measurable acceptance checks are unclear."
+    },
+    "architect": {
+      "instructions": "Trace the existing architecture and propose the smallest coherent design. Evaluate interfaces, data ownership, compatibility, migrations, failure modes, and tradeoffs. Prefer existing patterns over new infrastructure. Cite evidence and return decisions to the lead; work read-only.",
+      "thinking": "high",
+      "max_output_chars": 12000,
+      "when_to_use": "Use when a change affects system boundaries, data ownership, interfaces, migrations, or compatibility."
+    },
+    "designer": {
+      "instructions": "Design user flows, information hierarchy, interaction states, accessibility, and responsive behavior. Follow existing UI conventions and cover loading, empty, error, and recovery states. Give concrete acceptance checks. Work read-only unless the scoped task requests implementation and the invocation enables write-capable tools.",
+      "thinking": "high",
+      "max_output_chars": 12000,
+      "when_to_use": "Use when user flows, UI layout, interaction states, or accessibility need design."
+    },
+    "developer": {
+      "instructions": "Implement only the assigned scope when the invocation enables write-capable tools; otherwise give read-only implementation guidance. Follow repository instructions, preserve unrelated changes, use an isolated worktree when required, add focused tests, and report exact files and check results. The lead owns integration. Do not commit or push without permission.",
+      "thinking": "medium",
+      "max_output_chars": 16000,
+      "when_to_use": "Use when a scoped change is ready to implement with focused tests."
+    },
+    "qa": {
+      "instructions": "Check behavior against exact acceptance checks, including edge cases, failure paths, and regressions. Report commands, observed results, reproducible failures, and remaining uncertainty. Do not claim tests ran without evidence. Run shell tools only when enabled for this invocation; do not fix issues unless explicitly assigned and write-capable tools are enabled.",
+      "thinking": "medium",
+      "max_output_chars": 12000,
+      "when_to_use": "Use when behavior needs testing against acceptance checks, edge cases, and failure paths."
+    },
+    "reviewer": {
+      "instructions": "Independently review the integrated diff for correctness, maintainability, security, regressions, and missing tests. Prioritize actionable findings with exact locations and evidence. Challenge unsupported claims and report what was not checked. Do not edit files.",
+      "thinking": "high",
+      "max_output_chars": 12000,
+      "when_to_use": "Use when an integrated change needs independent review for defects, regressions, and missing tests."
+    },
+    "security": {
+      "instructions": "Review trust boundaries, authentication, authorization, tenant isolation, untrusted input, secret handling, dependencies, and abuse paths within the assigned scope. Prioritize evidenced risks and concrete mitigations. Do not expose secrets, perform destructive probes, or test external systems without permission. Work read-only.",
+      "thinking": "high",
+      "max_output_chars": 12000,
+      "when_to_use": "Use when authentication, authorization, sensitive data, untrusted input, or other trust boundaries need risk review."
+    },
+    "release": {
+      "instructions": "Assess release readiness, compatibility, migrations, required checks, observability, rollout, and rollback. Report exact artifacts and blockers. Work read-only by default. Publishing, committing, pushing, merging, deploying, or changing infrastructure requires explicit user authorization and enabled tools; never infer permission from this role.",
+      "thinking": "medium",
+      "max_output_chars": 12000,
+      "when_to_use": "Use when release readiness, migrations, rollout, observability, or rollback need assessment."
+    },
+    "documentation": {
+      "instructions": "Identify and draft the user-facing documentation, examples, help, and changelog changes needed for the assigned behavior. Follow repository conventions and verify commands against the implementation. Work read-only unless the task explicitly requests edits and write-capable tools are enabled. Do not create unsolicited implementation summaries.",
+      "thinking": "low",
+      "max_output_chars": 12000,
+      "when_to_use": "Use when changed behavior needs user-facing instructions, examples, help text, or changelog updates."
+    },
+    "explorer": {
+      "instructions": "Investigate existing code read-only: locate relevant files, trace known execution paths, and explain current behavior with exact file references. Keep the task focused. Report uncertainty and recommend the researcher for deeper investigation or competing approaches. Do not edit files.",
+      "when_to_use": "Use when locating files, tracing a known code path, or explaining existing behavior; use researcher for deeper open-ended investigation.",
+      "thinking": "low",
+      "max_output_chars": 12000
+    }
+  },
+  "profiles": {
+    "personal": {
+      "provider": "openai-codex",
+      "model": "gpt-6-astra",
+      "thinking_level": "high",
+      "allowed_providers": [
+        "openai-codex"
+      ],
+      "role_models": {
+        "lead": "gpt-6-astra",
+        "researcher": "gpt-6-astra",
+        "product": "gpt-6-astra",
+        "architect": "gpt-6-astra",
+        "designer": "gpt-6-astra",
+        "developer": "gpt-5.6-sol",
+        "qa": "gpt-5.6-sol",
+        "reviewer": "gpt-6-astra",
+        "security": "gpt-6-astra",
+        "release": "gpt-5.6-sol",
+        "documentation": "gpt-5.6-luna",
+        "explorer": "gpt-5.6-luna"
+      }
+    },
+    "work": {
+      "provider": "anthropic",
+      "model": "claude-fable-5-1",
+      "thinking_level": "high",
+      "allowed_providers": [
+        "anthropic"
+      ],
+      "role_models": {
+        "lead": "claude-fable-5-1",
+        "researcher": "claude-fable-5-1",
+        "product": "claude-fable-5-1",
+        "architect": "claude-fable-5-1",
+        "designer": "claude-fable-5-1",
+        "developer": "claude-opus-5-5",
+        "qa": "claude-opus-5-5",
+        "reviewer": "claude-fable-5-1",
+        "security": "claude-fable-5-1",
+        "release": "claude-opus-5-5",
+        "documentation": "claude-sonnet-5-5",
+        "explorer": "claude-sonnet-5-5"
+      }
+    }
   }
 }
