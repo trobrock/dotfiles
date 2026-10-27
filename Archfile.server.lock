@@ -22,9 +22,10 @@ fzf
 gcalcli
 gifski
 git
-github-cli
 git-lfs
+github-cli
 gum
+herdr-bin
 imagemagick
 inetutils
 jq
@@ -48,6 +49,7 @@ openai-codex-bin
 openbsd-netcat
 openslide
 openssh
+pacman-contrib
 poppler-glib
 power-profiles-daemon
 restic
