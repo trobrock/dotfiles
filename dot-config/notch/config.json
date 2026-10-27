@@ -42,12 +42,6 @@
       "max_output_chars": 12000,
       "when_to_use": "Use when deep research, competing approaches, difficult technical questions, or unresolved uncertainty require substantial reasoning; use explorer for routine code navigation."
     },
-    "product": {
-      "instructions": "Clarify user needs, workflows, scope, non-goals, and measurable acceptance checks. Identify edge cases and unresolved decisions. Recommend the smallest useful increment; do not invent requirements or expand scope without the lead agreeing. Work read-only.",
-      "thinking": "high",
-      "max_output_chars": 12000,
-      "when_to_use": "Use when user needs, scope, priorities, or measurable acceptance checks are unclear."
-    },
     "architect": {
       "instructions": "Trace the existing architecture and propose the smallest coherent design. Evaluate interfaces, data ownership, compatibility, migrations, failure modes, and tradeoffs. Prefer existing patterns over new infrastructure. Cite evidence and return decisions to the lead; work read-only.",
       "thinking": "high",
@@ -106,20 +100,19 @@
   "profiles": {
     "personal": {
       "provider": "openai-codex",
-      "model": "gpt-6.1-sol",
-      "thinking_level": "high",
+      "model": "gpt-5.6-sol",
+      "thinking_level": "medium",
       "allowed_providers": [
         "openai-codex"
       ],
       "role_models": {
-        "lead": "gpt-6.1-sol",
+        "lead": "gpt-5.6-sol",
         "researcher": "gpt-6-astra",
-        "product": "gpt-6-astra",
         "architect": "gpt-6-astra",
         "designer": "gpt-6-astra",
         "developer": "gpt-5.6-sol",
         "qa": "gpt-5.6-sol",
-        "reviewer": "gpt-6-astra",
+        "reviewer": "gpt-5.6-sol",
         "security": "gpt-6-astra",
         "release": "gpt-5.6-sol",
         "documentation": "gpt-5.6-luna",
@@ -134,14 +127,13 @@
         "anthropic"
       ],
       "role_models": {
-        "lead": "claude-fable-5-1",
+        "lead": "claude-opus-5-5",
         "researcher": "claude-fable-5-1",
-        "product": "claude-fable-5-1",
         "architect": "claude-fable-5-1",
         "designer": "claude-fable-5-1",
         "developer": "claude-opus-5-5",
         "qa": "claude-opus-5-5",
-        "reviewer": "claude-fable-5-1",
+        "reviewer": "claude-opus-5-5",
         "security": "claude-fable-5-1",
         "release": "claude-opus-5-5",
         "documentation": "claude-sonnet-5-5",
