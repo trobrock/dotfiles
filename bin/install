@@ -908,7 +908,7 @@ restore_pacman_cache_dir() {
   local marker=/etc/pacman.d/dotfiles-cache-root
   local managed current
 
-  [ -r "$marker" ] || return
+  [ -r "$marker" ] || return 0
   managed="$(sudo cat "$marker")"
   current="$(pacman-conf CacheDir 2>/dev/null | head -1)"
 
@@ -988,7 +988,7 @@ setup_cache_relocation() {
       rm -f "$generated"
     fi
     restore_pacman_cache_dir
-    return
+    return 0
   fi
 
   if [ ! -d "$root" ]; then
