@@ -14,7 +14,6 @@ Archfile.server.lock
 .claude
 dot-zsh/compcache
 __pycache__
-\.pytest_cache
 .*\.py[co]$
 dot-config/systemd/user/.*\.target\.wants
 .*\.target\.wants
@@ -26,4 +25,3 @@ darwin
 docs
 linux
 server
-^/tests$

@@ -26,6 +26,7 @@ Use `pacman` only when `yay` cannot (e.g., inside scripts where AUR is irrelevan
 
 # Working in this repo
 
+- **Do not write tests** — do not add test files, test cases, test fixtures, test-only helpers, or test frameworks. Do not recreate a test suite. Validate changes with focused syntax checks, linters, config validation, and direct manual checks instead.
 - **"Hooks" is ambiguous** — could mean Claude Code hooks (`dot-claude/settings.json`), pacman hooks, systemd units, tmux hooks, or shell hooks. Ask which before acting.
 - **Regressions → check git log first** — when the user says "this used to work", run `git log -- <file>` on the relevant config and bisect recent commits before theorizing.
 - **Don't preserve adjacent legacy defensively** — when modifying a keybind/hook/script, ask whether the surrounding old behavior should be removed too, rather than leaving it untouched "to be safe".
