@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-title="Pi task"
+title="Agent task"
 
 usage() {
   cat <<'EOF'

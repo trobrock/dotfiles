@@ -5,14 +5,6 @@ dot-zsh/compcache
 dot-config/systemd/user/*.target.wants/
 /dot-config/developerly/credentials.toml
 /dot-config/developerly/projects.toml
-/dot-pi/agent/extensions/developerly-*
-/dot-pi/agent/extensions/ask-user-question.ts
-/dot-pi/agent/mcp-onboarding.json
-/dot-pi/agent/models-store.json
-/dot-pi/agent/skills/developerly/SKILL.md
 __pycache__/
 *.py[cod]
-/dot-pi/agent/trust.json
-/dot-pi/agent/mcp-npx-cache.json
-/dot-pi/agent/models-store.json
 /dot-agents/skills/developerly/SKILL.md

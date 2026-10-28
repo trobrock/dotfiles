@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-config_dir="${PI_NOTIFY_CONFIG_DIR:-$HOME/.config/pi-notify}"
+config_dir="${AGENT_NOTIFY_CONFIG_DIR:-$HOME/.config/agent-notify}"
 server="${NTFY_SERVER:-}"
 topic="${NTFY_TOPIC:-}"
 token="${NTFY_TOKEN:-}"
-title="Pi"
+title="Agent"
 priority="default"
 tags="computer"
 message=""

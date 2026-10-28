@@ -3,7 +3,7 @@
 
 Everything the agents panel shows for Claude comes from this one
 command: local transcript stats from ~/.claude/projects, the stats-cache and
-history fallbacks for machines without transcripts, pi/omp and opencode
+history fallbacks for machines without transcripts, omp and opencode
 sessions that ran on an Anthropic provider, and the authoritative rate
 limits from Anthropic's OAuth usage endpoint. The panel itself only ever
 reads the JSON this prints; it never talks to disk formats or endpoints.
@@ -386,22 +386,21 @@ def today_prompts_from_history(claude_dir: Path) -> tuple[int, int]:
   return prompts, len(sessions)
 
 
-# --------------------------------------------------------------- pi and omp
+# --------------------------------------------------------------------- omp
 #
 # These agents can consume a Claude subscription without writing native
 # Claude Code transcripts. Their compatible JSONL session formats carry the
 # provider, model, and token usage on every assistant message.
 
 
-def scan_pi_usage(max_age_seconds: float) -> dict[str, Any] | None:
+def scan_omp_usage(max_age_seconds: float) -> dict[str, Any] | None:
   roots = [
-    Path.home() / ".pi" / "agent" / "sessions",
     Path.home() / ".omp" / "agent" / "sessions",
   ]
   try:
-    cache_file = cache_root() / "claude-pi-sessions.json"
+    cache_file = cache_root() / "claude-omp-sessions.json"
   except Exception as error:
-    debug_exception("pi session cache unavailable", error)
+    debug_exception("omp session cache unavailable", error)
     cache_file = None
   cached = read_fresh_json(cache_file, max_age_seconds) if cache_file is not None else None
   if cached is not None:
@@ -494,7 +493,7 @@ def scan_pi_usage(max_age_seconds: float) -> dict[str, Any] | None:
     try:
       write_json(cache_file, {"stats": stats})
     except Exception as error:
-      debug_exception("pi session cache write failed", error)
+      debug_exception("omp session cache write failed", error)
   return stats
 
 
@@ -983,9 +982,9 @@ def main() -> int:
       if today_prompts or today_sessions:
         stats = dict(stats, todayPrompts=today_prompts, todaySessions=today_sessions)
 
-  pi_usage = scan_pi_usage(scan_age)
-  if pi_usage is not None:
-    stats = merge_stats(stats, pi_usage)
+  omp_usage = scan_omp_usage(scan_age)
+  if omp_usage is not None:
+    stats = merge_stats(stats, omp_usage)
 
   opencode = scan_opencode_usage(scan_age)
   if opencode is not None:

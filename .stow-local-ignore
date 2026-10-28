@@ -16,7 +16,6 @@ dot-zsh/compcache
 __pycache__
 \.pytest_cache
 .*\.py[co]$
-dot-pi
 dot-config/systemd/user/.*\.target\.wants
 .*\.target\.wants
 ^/dot-config/developerly/credentials\.toml$

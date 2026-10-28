@@ -756,13 +756,11 @@ Pill {
         foreground: root.alarming ? root.theme.red : root.theme.subtext
         tooltip: root.tooltipText()
         horizontalPadding: 5
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-        Accessible.description: "Left click for details, middle click for the next provider, right click to launch the AI agent"
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+        Accessible.description: "Left click for details, middle click for the next provider"
         onClicked: function(mouseButton) {
             if (mouseButton === Qt.MiddleButton)
                 root.selectProvider(root.providerIndex + 1);
-            else if (mouseButton === Qt.RightButton)
-                root.bar.services.launchAiAgent();
             else if (mouseButton === Qt.LeftButton)
                 root.popupOpen = !root.popupOpen;
         }

@@ -553,7 +553,7 @@ class AiUsageTests(unittest.TestCase):
         self.assertLessEqual(data["sync"]["deviceCount"], 256)
         self.assertIn("Usage snapshot file limit reached", data["sync"]["status"])
 
-    def test_claude_native_pi_omp_and_opencode_scanners(self) -> None:
+    def test_claude_native_omp_and_opencode_scanners(self) -> None:
         env = environment(self.tmp_path)
         home = Path(env["HOME"])
         today = dt.datetime.now().astimezone().isoformat()
@@ -579,30 +579,30 @@ class AiUsageTests(unittest.TestCase):
         (project / "one.jsonl").write_text(
             json.dumps(native) + "\n" + json.dumps(native) + "\n"
         )
-        for folder, model in ((".pi", "claude-pi"), (".omp", "claude-omp")):
-            session = home / folder / "agent/sessions/p/a.jsonl"
-            session.parent.mkdir(parents=True)
-            session.write_text(
-                json.dumps(
-                    {
-                        "type": "message",
-                        "id": model,
-                        "timestamp": today,
-                        "message": {
-                            "role": "assistant",
-                            "provider": "anthropic",
-                            "model": model,
-                            "usage": {
-                                "input": 1,
-                                "output": 1,
-                                "cacheRead": 1,
-                                "cacheWrite": 1,
-                            },
+        model = "claude-omp"
+        session = home / ".omp/agent/sessions/p/a.jsonl"
+        session.parent.mkdir(parents=True)
+        session.write_text(
+            json.dumps(
+                {
+                    "type": "message",
+                    "id": model,
+                    "timestamp": today,
+                    "message": {
+                        "role": "assistant",
+                        "provider": "anthropic",
+                        "model": model,
+                        "usage": {
+                            "input": 1,
+                            "output": 1,
+                            "cacheRead": 1,
+                            "cacheWrite": 1,
                         },
-                    }
-                )
-                + "\n"
+                    },
+                }
             )
+            + "\n"
+        )
         db = Path(env["XDG_DATA_HOME"]) / "opencode/opencode.db"
         db.parent.mkdir(parents=True)
         with contextlib.closing(sqlite3.connect(db)) as connection, connection:
@@ -635,8 +635,8 @@ class AiUsageTests(unittest.TestCase):
             check=True,
         )
         data = json.loads(result.stdout)
-        self.assertEqual(data["todayTotalTokens"], 29)
-        self.assertEqual(data["totalPrompts"], 4)
+        self.assertEqual(data["todayTotalTokens"], 25)
+        self.assertEqual(data["totalPrompts"], 3)
         self.assertEqual(
             data["modelUsage"]["claude-native"],
             {
@@ -648,7 +648,7 @@ class AiUsageTests(unittest.TestCase):
         )
         self.assertEqual(data["usageStatusText"], "Waiting for auth")
 
-    def test_codex_native_pi_omp_opencode_and_limits_fixture(self) -> None:
+    def test_codex_native_omp_opencode_and_limits_fixture(self) -> None:
         env = environment(self.tmp_path)
         home = Path(env["HOME"])
         today = dt.datetime.now().astimezone().isoformat()
@@ -681,34 +681,33 @@ class AiUsageTests(unittest.TestCase):
             )
             + "\n"
         )
-        for folder, provider, api, model in (
-            (".pi", "openai-codex", "", "gpt-pi"),
-            (".omp", "custom", "openai-codex-responses", "gpt-omp"),
-        ):
-            path = home / folder / "agent/sessions/p/a.jsonl"
-            path.parent.mkdir(parents=True)
-            path.write_text(
-                json.dumps(
-                    {
-                        "type": "message",
-                        "id": model,
-                        "timestamp": today,
-                        "message": {
-                            "role": "assistant",
-                            "provider": provider,
-                            "api": api,
-                            "model": model,
-                            "usage": {
-                                "input": 1,
-                                "output": 2,
-                                "cacheRead": 3,
-                                "cacheWrite": 4,
-                            },
+        provider = "custom"
+        api = "openai-codex-responses"
+        model = "gpt-omp"
+        path = home / ".omp/agent/sessions/p/a.jsonl"
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "type": "message",
+                    "id": model,
+                    "timestamp": today,
+                    "message": {
+                        "role": "assistant",
+                        "provider": provider,
+                        "api": api,
+                        "model": model,
+                        "usage": {
+                            "input": 1,
+                            "output": 2,
+                            "cacheRead": 3,
+                            "cacheWrite": 4,
                         },
-                    }
-                )
-                + "\n"
+                    },
+                }
             )
+            + "\n"
+        )
         db = Path(env["XDG_DATA_HOME"]) / "opencode/opencode.db"
         db.parent.mkdir(parents=True)
         with contextlib.closing(sqlite3.connect(db)) as connection, connection:
@@ -760,11 +759,11 @@ class AiUsageTests(unittest.TestCase):
             check=True,
         )
         data = json.loads(result.stdout)
-        self.assertEqual(data["todayTotalTokens"], 40)
-        self.assertEqual(data["totalPrompts"], 4)
+        self.assertEqual(data["todayTotalTokens"], 30)
+        self.assertEqual(data["totalPrompts"], 3)
         self.assertEqual(
             set(data["modelUsage"]),
-            {"gpt-native", "gpt-pi", "gpt-omp", "gpt-open"},
+            {"gpt-native", "gpt-omp", "gpt-open"},
         )
         self.assertEqual(data["tierLabel"], "pro")
         self.assertEqual(data["limits"][0]["percent"], 0.25)

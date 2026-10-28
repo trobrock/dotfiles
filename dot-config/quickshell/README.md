@@ -162,15 +162,14 @@ written into this repository.
 The AI dashboard runs `ai-usage update` every 15 minutes and keeps the last
 valid Claude, Codex, and Fireworks record if one collector fails. It includes
 subscription limits and resets, seven-day/model token charts, prepaid balance,
-and local usage from native CLIs, Pi/OMP, and OpenCode. Left-click opens the
-dashboard, middle-click changes provider, and right-click launches Pi. Refresh
-inside the panel forces a rescan.
+and local usage from native CLIs, OMP, and OpenCode. Left-click opens the
+dashboard, and middle-click changes provider. Refresh inside the panel forces a
+rescan.
 
 Optional runtime configuration is environment-only:
 
 ```sh
 AI_USAGE_PROVIDERS=claude,codex
-AI_USAGE_AGENT_COMMAND='["ghostty","-e","pi"]'
 AI_USAGE_SYNC_DIR="$HOME/Sync/ai-usage"
 AI_USAGE_SYNC_DEVICE_ID=laptop
 AI_USAGE_SYNC_FILE_NAME=laptop.json

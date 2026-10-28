@@ -130,8 +130,8 @@ Developerly:
 `dot-local/bin/codex-usage-bars` renders the `api $N 7d` pill from two sources,
 because no single tool sees everything:
 
-- **ccusage** (`npm:ccusage`, pinned in `dot-config/mise/config.toml`) covers Pi.
-  It auto-detects agent CLIs by their log formats.
+- **ccusage** (`npm:ccusage`, pinned in `dot-config/mise/config.toml`) reads
+  supported agent CLI logs automatically.
 - **Notch sessions** are read directly from `~/.local/share/notch/sessions`.
   ccusage cannot see Notch, which writes an unrelated schema. Notch >= 0.4.14
   reports `cost_usd` per turn, so the widget sums that rather than pricing

@@ -80,7 +80,7 @@ check_services_running() {
     elif netstat -tln 2>/dev/null | grep -q ":$DB_PORT "; then
         return 0
     # Last resort: try lsof
-    elif lsof -Pi :$DB_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
+    elif lsof -P -i :$DB_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
         return 0
     else
         return 1

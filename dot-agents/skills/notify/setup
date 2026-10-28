@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-config_dir="${PI_NOTIFY_CONFIG_DIR:-$HOME/.config/pi-notify}"
+config_dir="${AGENT_NOTIFY_CONFIG_DIR:-$HOME/.config/agent-notify}"
 server="https://ntfy.sh"
 force=false
 
@@ -9,7 +9,7 @@ usage() {
   cat <<'EOF'
 Usage: setup [--server URL] [--force]
 
-Creates a private random ntfy topic under ~/.config/pi-notify.
+Creates a private random ntfy topic under ~/.config/agent-notify.
 EOF
 }
 
@@ -44,7 +44,7 @@ fi
 umask 077
 mkdir -p "$config_dir"
 chmod 700 "$config_dir"
-topic="pi-$(openssl rand -hex 24)"
+topic="agent-$(openssl rand -hex 24)"
 printf '%s\n' "$server" > "$config_dir/server"
 printf '%s\n' "$topic" > "$config_dir/topic"
 chmod 600 "$config_dir/server" "$config_dir/topic"
@@ -58,5 +58,5 @@ Topic:  $topic
 Treat the topic as a password. In the ntfy mobile app, add the server above and
 subscribe to the topic exactly as shown. Then run:
 
-  ~/.agents/skills/notify/notify --title "Pi test" "Notifications are working."
+  ~/.agents/skills/notify/notify --title "Agent test" "Notifications are working."
 EOF
