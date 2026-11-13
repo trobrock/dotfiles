@@ -181,6 +181,34 @@ funding metadata from `~/.config/quickshell-agent-usage/fireworks.json`.
 Provider collectors and assets are adapted from Omarchy Quattro under MIT;
 exact source commits and license text are recorded beside the vendored files.
 
+## Todoist
+
+The Todoist widget shows overdue and due-today tasks. Click it to open the task
+list. In Quickshell, click a task title to open it or its check button to finish
+it. In sketchybar, click a task to finish it or right-click to open it. Both
+popups also have a link to the Todoist Today view.
+
+Keep the API token outside this public repository. The shared helper checks
+`TODOIST_API_TOKEN` first, then this private file:
+
+```sh
+install -d -m 700 "$HOME/.config/dotfiles-secrets"
+umask 077
+restore_echo() { stty echo; }
+trap restore_echo EXIT HUP INT TERM
+printf 'Todoist API token: '
+stty -echo; IFS= read -r TODOIST_TOKEN; restore_echo; printf '\n'
+trap - EXIT HUP INT TERM
+install -m 600 /dev/null "$HOME/.config/dotfiles-secrets/todoist-api-token"
+printf '%s\n' "$TODOIST_TOKEN" > "$HOME/.config/dotfiles-secrets/todoist-api-token"
+unset TODOIST_TOKEN
+```
+
+Use the private file when the desktop session does not inherit shell
+environment variables. The widget refreshes every five minutes and keeps its
+last good result in `$XDG_CACHE_HOME/todoist-bar/tasks.json` (or
+`~/.cache/todoist-bar/tasks.json`) during a network error.
+
 ## Checks
 
 ```sh
@@ -202,4 +230,5 @@ versions containing machine-specific build or import paths.
 - [SplitParser](https://quickshell.org/docs/v0.3.0/types/Quickshell.Io/SplitParser/)
 - [PipeWire](https://quickshell.org/docs/v0.3.0/types/Quickshell.Services.Pipewire/Pipewire/)
 - [UPower and power profiles](https://quickshell.org/docs/v0.3.0/types/Quickshell.Services.UPower/)
+- [Todoist API v1](https://developer.todoist.com/api/v1/)
 - [Hyprland integration](https://quickshell.org/docs/v0.3.0/types/Quickshell.Hyprland/Hyprland/)

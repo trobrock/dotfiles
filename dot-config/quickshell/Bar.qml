@@ -14,6 +14,7 @@ Item {
     required property var wifiMenu
     required property var tailscaleMenu
     required property var tailscaleService
+    required property var todoistService
     readonly property bool testMode: Quickshell.env("QUICKSHELL_BAR_TEST") === "1"
     property var activePopup: null
     property var tooltipTarget: null
@@ -152,11 +153,22 @@ Item {
                         theme: root.theme
                         itemSpacing: 3
 
+                        Todoist {
+                            id: todoist
+
+                            embedded: true
+                            bar: root
+                        }
+
+                        BarDivider {
+                            theme: root.theme
+                        }
+
                         AiUsage {
                             id: ai
 
                             embedded: true
-                            visible: hasProviders && leftGroup.implicitWidth + panel.rightCoreWidth + implicitWidth + 18 <= content.width
+                            visible: hasProviders && leftGroup.implicitWidth + panel.rightCoreWidth + todoist.implicitWidth + implicitWidth + 28 <= content.width
                             bar: root
                             onVisibleChanged: {
                                 if (!visible)
