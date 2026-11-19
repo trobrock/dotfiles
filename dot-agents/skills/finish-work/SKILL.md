@@ -62,14 +62,14 @@ Choose checks from repository instructions and changed-file evidence rather than
 - Run focused tests covering changed behavior first.
 - Run relevant linters, type checks, formatting checks, migration checks, or build checks.
 - Use broader tests when the change is cross-cutting or the focused checks cannot establish confidence.
-- Perform manual or browser QA when explicitly requested, when required by project instructions, or when automated checks cannot reasonably validate user-facing behavior.
+- Perform manual or browser QA when explicitly requested, when required by project instructions, or when automated checks cannot reasonably validate user-facing behavior. Delegate that QA to a subagent with the `qa` role and omit any model override so it uses the configured QA instructions and role model. Give it the exact acceptance checks, relevant setup, changed behavior, applicable skill paths, and known constraints. Enable only the tools needed to run the checks, and tell it to report observed results without editing files or fixing issues.
 - For plans, documentation, configuration, or other non-code artifacts, use the corresponding structural validation instead of forcing code checks.
 
 Record exact commands and outcomes. A pre-existing or unrelated failure must be identified as such only when evidence supports that conclusion.
 
 ## 3. Request an Independent Review
 
-Use one focused, read-only subagent by default. Add parallel reviewers only when the diff is broad enough to contain genuinely independent domains, such as financial correctness and UI behavior. More reviewers are not inherently better.
+Use one focused, read-only subagent with the `reviewer` role by default. Selecting the role is required so the review uses the configured reviewer instructions and role model; do not substitute a generic subagent prompt or the default/explore model. Keep write-capable tools disabled. Add parallel reviewer subagents only when the diff is broad enough to contain genuinely independent domains, such as financial correctness and UI behavior. More reviewers are not inherently better.
 
 Give the reviewer enough context to work independently:
 
@@ -99,7 +99,7 @@ Require each finding to include:
 
 Tell the reviewer to omit preferences unsupported by project guidance or nearby conventions and to return `CLEAN` when there are no material findings.
 
-Do not hard-code a provider or model. Use the configured subagent/explore model unless the user requested a particular provider or model. If a requested model is unavailable, discover valid models rather than guessing identifiers.
+Do not hard-code a provider or model. Select the `reviewer` role and omit any model override so Notch applies that role's configured model. If the user explicitly requests a different provider or model and it is unavailable, discover valid models rather than guessing identifiers.
 
 ## 4. Verify Findings
 

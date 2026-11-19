@@ -1,6 +1,7 @@
 ^/bin$
 ^/\.git$
 README.md
+^/AGENTS.md
 ^/CLAUDE.md
 Brewfile
 Brewfile.lock.json
@@ -13,9 +14,7 @@ Archfile.server.lock
 .claude
 dot-zsh/compcache
 __pycache__
-\.pytest_cache
 .*\.py[co]$
-dot-pi
 dot-config/systemd/user/.*\.target\.wants
 .*\.target\.wants
 ^/dot-config/developerly/credentials\.toml$
@@ -26,4 +25,3 @@ darwin
 docs
 linux
 server
-^/tests$

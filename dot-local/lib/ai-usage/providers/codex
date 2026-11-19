@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """Collect Codex usage into one display-ready JSON record.
 
-Local stats come from native Codex CLI session files, pi/omp sessions that
+Local stats come from native Codex CLI session files, omp sessions that
 ran through openai-codex, and opencode sessions that ran on an OpenAI
 provider; rate limits and the plan come from the Codex app-server RPC. The agents
 panel only ever reads the JSON this prints.
@@ -68,7 +68,7 @@ def local_day(value):
   if value is None:
     return datetime.now().strftime("%Y-%m-%d")
   if isinstance(value, (int, float)):
-    # pi message timestamps are milliseconds; Codex timestamps are usually seconds.
+    # OMP message timestamps are milliseconds; Codex timestamps are usually seconds.
     if value > 10_000_000_000:
       value = value / 1000
     return datetime.fromtimestamp(value).strftime("%Y-%m-%d")
@@ -146,7 +146,7 @@ today_prompts = 0
 today_total_tokens = 0
 total_prompts = 0
 total_sessions = set()
-seen_pi_messages = set()
+seen_omp_messages = set()
 
 
 def add_usage(day, session_key, model, input_tokens, output_tokens, cache_read, cache_write):
@@ -177,9 +177,8 @@ def add_usage(day, session_key, model, input_tokens, output_tokens, cache_read, 
     today_tokens_by_model[model] = today_tokens_by_model.get(model, 0) + total
 
 
-def scan_pi_sessions():
+def scan_omp_sessions():
   roots = [
-    Path.home() / ".pi" / "agent" / "sessions",
     Path.home() / ".omp" / "agent" / "sessions",
   ]
   rg = find_command("rg") or "rg"
@@ -205,7 +204,7 @@ def scan_pi_sessions():
         if event.get("type") != "match":
           continue
         line = event.get("data", {}).get("lines", {}).get("text", "")
-        path = event.get("data", {}).get("path", {}).get("text", "pi-session")
+        path = event.get("data", {}).get("path", {}).get("text", "omp-session")
         entry = json.loads(line)
       except Exception:
         continue
@@ -213,9 +212,9 @@ def scan_pi_sessions():
       if not isinstance(entry, dict) or entry.get("type") != "message":
         continue
       message_key = path + ":" + str(entry.get("id") or "")
-      if message_key in seen_pi_messages:
+      if message_key in seen_omp_messages:
         continue
-      seen_pi_messages.add(message_key)
+      seen_omp_messages.add(message_key)
       message = entry.get("message") or {}
       if message.get("role") != "assistant":
         continue
@@ -393,7 +392,7 @@ def scan_cache_paths():
   codex_home = Path(os.environ.get("CODEX_HOME") or (Path.home() / ".codex"))
   db = Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share")) / "opencode" / "opencode.db"
   # The digest covers every data path the scan reads: the codex session
-  # roots, the opencode DB, and (via Path.home()) the pi/omp session roots.
+  # roots, the opencode DB, and (via Path.home()) the OMP session root.
   digest = hashlib.sha1((str(Path.home()) + "\n" + str(codex_home) + "\n" + str(db)).encode("utf-8")).hexdigest()[:16]
   root = cache_root()
   return root / f"codex-scan-{digest}.json", root / f"codex-scan-{digest}.lock"
@@ -485,7 +484,7 @@ def local_stats():
 
 
 def run_local_scans():
-  scan_pi_sessions()
+  scan_omp_sessions()
   scan_native_codex_sessions()
   complete = scan_opencode_sessions()
   return local_stats(), complete

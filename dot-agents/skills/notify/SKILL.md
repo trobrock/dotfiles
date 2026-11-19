@@ -5,7 +5,7 @@ description: Send mobile push notifications through ntfy, but only when the user
 
 # ntfy notifications
 
-Send notifications using the scripts in this skill directory. Configuration is private and stored outside the dotfiles repository under `~/.config/pi-notify/`.
+Send notifications using the scripts in this skill directory. Configuration is private and stored outside the dotfiles repository under `~/.config/agent-notify/`.
 
 Only send or arrange a notification when the user explicitly requests one. Never infer that a notification is wanted from the task duration, the use of a monitor, or the user saying they will be away.
 
@@ -30,9 +30,9 @@ Do not interpolate or include credentials in notification titles or messages. Av
 ## Direct notifications
 
 ```bash
-~/.agents/skills/notify/notify --title "Pi" "Task completed"
+~/.agents/skills/notify/notify --title "Agent" "Task completed"
 ~/.agents/skills/notify/notify --title "Tests failed" --priority high --tags warning "3 test failures"
-printf '%s\n' "Multiline message" | ~/.agents/skills/notify/notify --title "Pi"
+printf '%s\n' "Multiline message" | ~/.agents/skills/notify/notify --title "Agent"
 ```
 
 Priorities: `min`, `low`, `default`, `high`, `max`, or numeric `1` through `5`.
@@ -47,8 +47,8 @@ If configuration is missing, run:
 ~/.agents/skills/notify/setup
 ```
 
-This creates an unguessable topic and stores it in `~/.config/pi-notify/topic`, with mode `0600`. It defaults to `https://ntfy.sh`. The topic is a secret and must never be committed or printed in normal responses.
+This creates an unguessable topic and stores it in `~/.config/agent-notify/topic`, with mode `0600`. It defaults to `https://ntfy.sh`. The topic is a secret and must never be committed or printed in normal responses.
 
-Configuration can instead be supplied through `NTFY_SERVER`, `NTFY_TOPIC`, and optional `NTFY_TOKEN` environment variables. File configuration uses `server`, `topic`, and optional `token` in `~/.config/pi-notify/`. An access token is sent as `Authorization: Bearer ...`.
+Configuration can instead be supplied through `NTFY_SERVER`, `NTFY_TOPIC`, and optional `NTFY_TOKEN` environment variables. File configuration uses `server`, `topic`, and optional `token` in `~/.config/agent-notify/`. An access token is sent as `Authorization: Bearer ...`.
 
 After setup, tell the user to install the ntfy mobile app, add `https://ntfy.sh` (or their configured server), and subscribe using the topic printed by `setup`. Send a test only after setup succeeds.

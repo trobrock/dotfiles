@@ -343,37 +343,6 @@ Item {
         runDetached(["pavucontrol"]);
     }
 
-    function launchAiAgent() {
-        var raw = String(Quickshell.env("AI_USAGE_AGENT_COMMAND") || "").trim();
-        var command = [];
-        if (raw !== "") {
-            try {
-                var configured = JSON.parse(raw);
-                if (Array.isArray(configured) && configured.length > 0) {
-                    var valid = true;
-                    for (var i = 0; i < configured.length; i++) {
-                        if (typeof configured[i] !== "string" || configured[i] === "" || configured[i].indexOf("\u0000") >= 0) {
-                            valid = false;
-                            break;
-                        }
-                        command.push(configured[i]);
-                    }
-                    if (!valid)
-                        command = [];
-
-                }
-            } catch (error) {
-                if (!/\s/.test(raw) && raw.indexOf("\u0000") < 0)
-                    command = [raw];
-
-            }
-        }
-        if (command.length === 0)
-            command = ["ghostty", "-e", home + "/.local/bin/pi"];
-
-        runDetached(command);
-    }
-
     function requestAgentUsage(mode) {
         if (agentUsageCommand.running || agentUsageRunActive) {
             agentUsagePendingMode = Math.max(agentUsagePendingMode, mode);

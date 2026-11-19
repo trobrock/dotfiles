@@ -38,7 +38,7 @@ Use project-specific judgment for tests, PR wording, merge strategy, and failure
 
 ## 4. Wait for checks
 
-- Prefer the `monitor_github_pr_checks` tool over manual `gh pr checks` polling. Start one monitor for the PR and wait for Pi to be woken when checks finish or fail.
+- Prefer the `monitor_github_pr_checks` tool over manual `gh pr checks` polling. Start one monitor for the PR and wait for the agent to be woken when checks finish or fail.
 - If the monitor reports no checks yet, queued, pending, or another transient non-final state, keep waiting with the monitor/check rollup rather than polling repeatedly in chat.
 - If no CI is configured for the repo, continue to merge after confirming the PR/check rollup says there are no required checks.
 

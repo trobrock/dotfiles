@@ -17,6 +17,41 @@ fi
 
 export XDG_CONFIG_HOME="$HOME/.config"
 
+# Machines with a small root filesystem can move the heavy tool caches onto
+# another disk by writing an absolute path to ~/.config/dotfiles/cache_root (the
+# same opt-in pattern as the `profile` and `machine_name` files). With no such
+# file — the normal case — every tool keeps its default under $HOME.
+#
+# bin/install generates ~/.config/environment.d/10-cache-dirs.conf for the
+# systemd user session; this zsh file covers plain TTY/SSH shells.
+# See docs/disk-space.md.
+_dotfiles_cache_root_file="${DOTFILES_CACHE_ROOT_FILE:-$HOME/.config/dotfiles/cache_root}"
+if [ -r "$_dotfiles_cache_root_file" ]; then
+  _dotfiles_cache_root="$(<"$_dotfiles_cache_root_file")"
+  while [ "${_dotfiles_cache_root%/}" != "$_dotfiles_cache_root" ]; do
+    _dotfiles_cache_root="${_dotfiles_cache_root%/}"
+  done
+  case "$_dotfiles_cache_root" in
+    ""|/|*[!A-Za-z0-9_./-]*|[!/]*) ;;
+    *)
+      if [ -d "$_dotfiles_cache_root" ]; then
+        _dotfiles_cache_root="$(cd "$_dotfiles_cache_root" && pwd -P)"
+        if [ "$_dotfiles_cache_root" != / ]; then
+          export GOMODCACHE="$_dotfiles_cache_root/go/mod"
+          export GOCACHE="$_dotfiles_cache_root/go/build"
+          export UV_CACHE_DIR="$_dotfiles_cache_root/uv"
+          export PUPPETEER_CACHE_DIR="$_dotfiles_cache_root/puppeteer"
+          export PLAYWRIGHT_BROWSERS_PATH="$_dotfiles_cache_root/ms-playwright"
+          export npm_config_cache="$_dotfiles_cache_root/npm"
+          export AURDEST="$_dotfiles_cache_root/yay"
+        fi
+      fi
+      ;;
+  esac
+  unset _dotfiles_cache_root
+fi
+unset _dotfiles_cache_root_file
+
 # Linux desktop and server use Codex; macOS selects its work profile locally.
 if [ "$(uname)" = "Linux" ]; then
   export NOTCH_PROFILE="${NOTCH_PROFILE-personal}"

@@ -76,6 +76,7 @@ ollama-rocm
 openai-codex-bin
 openbsd-netcat
 openslide
+pacman-contrib
 pipewire
 polkit-gnome
 power-profiles-daemon

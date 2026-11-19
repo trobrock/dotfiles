@@ -9,6 +9,7 @@ ShellRoot {
     property WifiService wifiService: WifiService {}
     property CaptivePortalService captivePortalService: CaptivePortalService {}
     property TailscaleService tailscaleService: TailscaleService {}
+    property TodoistService todoistService: TodoistService {}
 
     Bar {
         theme: shell.theme
@@ -18,6 +19,7 @@ ShellRoot {
         wifiMenu: wifiMenu
         tailscaleMenu: tailscaleMenu
         tailscaleService: shell.tailscaleService
+        todoistService: shell.todoistService
     }
 
     Launcher {

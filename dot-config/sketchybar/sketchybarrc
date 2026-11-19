@@ -5,7 +5,7 @@
 #
 #   left    workspaces (minimal: no pill, colored label + underline indicator)
 #           | upcoming calendar event, shown only when there is one
-#   right   tailscale coffee bluetooth wifi mic battery | audio | clock
+#   right   todoist | tailscale coffee bluetooth wifi mic battery | audio | clock
 #
 # The calendar sits on the left rather than centered: there is more room there,
 # and true center collides with the MacBook camera notch.
@@ -93,6 +93,8 @@ divider "audio" "right"
 source "$ITEM_DIR/audio.sh"
 divider "status" "right"
 source "$ITEM_DIR/status.sh"
+divider "todoist" "right"
+source "$ITEM_DIR/todoist.sh"
 
 # The power menu is a hidden anchor for the alt-shift-esc popup; it draws
 # nothing in the bar itself.

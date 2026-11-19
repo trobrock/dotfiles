@@ -345,10 +345,6 @@ def codex_auth_file() -> Path:
     return Path(os.environ.get("CODEX_AUTH_FILE", "~/.codex/auth.json")).expanduser()
 
 
-def pi_auth_file() -> Path:
-    return Path(os.environ.get("CODEX_USAGE_BARS_PI_AUTH_FILE", "~/.local/share/pi/agent/auth.json")).expanduser()
-
-
 def codex_usage_url() -> str:
     return os.environ.get("CODEX_USAGE_BARS_URL", CODEX_USAGE_URL)
 
@@ -695,12 +691,8 @@ def read_codex_auth() -> tuple[str, str | None]:
         tokens = auth.get("tokens") or {}
         access_token = tokens.get("access_token")
         account_id = tokens.get("account_id")
-    except FileNotFoundError:
-        with pi_auth_file().open(encoding="utf-8") as handle:
-            auth = json.load(handle)
-        tokens = auth.get("openai-codex") or {}
-        access_token = tokens.get("access")
-        account_id = tokens.get("accountId")
+    except FileNotFoundError as error:
+        raise UsageError("Codex ChatGPT access token is unavailable") from error
 
     if not isinstance(access_token, str) or not access_token:
         raise UsageError("Codex ChatGPT access token is unavailable")
