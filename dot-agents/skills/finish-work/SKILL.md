@@ -9,10 +9,11 @@ description: Run the opt-in /finish quality workflow. Use only when the user exp
 
 Use this skill only when:
 
-- the user invokes `/finish`; or
-- the user explicitly asks to “run the finish workflow” or “use the finish skill.”
+- the user invokes `/finish`;
+- the user explicitly asks to “run the finish workflow” or “use the finish skill”; or
+- workspace instructions (`AGENTS.md`, `AGENTS.local.md`, or equivalent) name this skill as a required step, such as a review gate before a pull request.
 
-Do not infer activation from requests to finish implementation, run tests, review code, fix issues, polish behavior, or prepare a normal final response.
+Without one of those, do not infer activation from requests to finish implementation, run tests, review code, fix issues, polish behavior, or prepare a normal final response.
 
 This skill orchestrates an explicit final quality pass; it does not replace project-specific coding, design, testing, or QA guidance.
 
@@ -80,14 +81,12 @@ Give the reviewer enough context to work independently:
 - baseline validation results; and
 - known constraints or deliberate tradeoffs.
 
-Ask the reviewer to inspect, not edit. The review must prioritize:
+Ask the reviewer to inspect, not edit. The review must cover four lenses and return a verdict for each: `CLEAN`, findings, or `N/A` with the reason.
 
-1. behavioral correctness and conformity to the request;
-2. regressions, edge cases, invalid states, error handling, and data integrity;
-3. security, authorization, tenancy, concurrency, and financial risks when applicable;
-4. missing or weak behavior-focused tests;
-5. conformity with repository instructions and relevant project skills; and
-6. opportunities to remove accidental complexity without speculative refactoring.
+1. **Correctness:** conformity to the request; regressions, edge cases, invalid states, error handling, data integrity, and concurrency; missing or weak behavior-focused tests; conformity with repository instructions and relevant project skills.
+2. **Security:** authorization and tenant isolation on every changed entry point, untrusted input, secrets and sensitive data in code, logs, or responses, and financial risk. Use a separate reviewer with the `security` role when the diff touches authentication, authorization, tenancy, money, or data that crosses a trust boundary.
+3. **Simplicity:** what can be deleted while still meeting the request. Look for unused options, abstractions with one caller, speculative configuration, duplicated logic, new concepts where an existing pattern fits, and comments that restate the code or record change history.
+4. **Visual design:** only when the diff changes what a user sees. The parent captures screenshots of every changed screen and state (empty, loading, error, long content, narrow viewport) with the project's browser QA tooling, then has the reviewer judge them against the project's design system for layout, spacing, hierarchy, consistency with neighboring screens, and accessibility. Reading templates alone does not satisfy this lens. If the screens cannot be rendered, report the lens as not verified rather than `CLEAN`.
 
 Require each finding to include:
 
@@ -97,7 +96,7 @@ Require each finding to include:
 - supporting evidence or a reproduction path; and
 - the smallest reasonable correction.
 
-Tell the reviewer to omit preferences unsupported by project guidance or nearby conventions and to return `CLEAN` when there are no material findings.
+Tell the reviewer to omit preferences unsupported by project guidance or nearby conventions and to return `CLEAN` for a lens when it has no material findings.
 
 Do not hard-code a provider or model. Select the `reviewer` role and omit any model override so Notch applies that role's configured model. If the user explicitly requests a different provider or model and it is unavailable, discover valid models rather than guessing identifiers.
 
@@ -152,7 +151,7 @@ Summarize concisely:
 - **Findings fixed:** verified issues and corrections.
 - **Findings rejected or deferred:** only material items, with reasons.
 - **Validation:** exact checks and outcomes, including QA when performed.
-- **Review passes:** number and the final review result.
+- **Review passes:** number and the final verdict for each lens (correctness, security, simplicity, visual design).
 - **Remaining uncertainty:** skipped checks, environment limitations, or unresolved questions.
 
 Distinguish direct verification from reviewer opinion. Say that checks passed only for checks actually run. Do not claim the work is fully correct, production-ready, or ready to ship beyond the available evidence.
