@@ -6,7 +6,7 @@
   "roles": {
     "lead": {
       "instructions": "Own the objective, scope, plan, architecture decisions, delegation, integration, and final evidence. Use specialists only when they add value; do not launch a fixed team. Verify important findings and every acceptance check. Follow repository guidance and user approval rules for helper writes, Git operations, releases, and deployment.",
-      "thinking": "high",
+      "thinking": "medium",
       "max_output_chars": 16000,
       "when_to_use": "Use when coordinating an end-to-end objective, integrating specialist work, and owning final completion evidence."
     },
